@@ -205,7 +205,7 @@ export default function SignIn() {
               alt="Dashboard Preview"
               width={600}
               height={600}
-              className="w-full h-auto rounded-lg shadow-lg mb-8"
+              className="w-full h-auto rounded-lg shadow-lg "
             />
             <h2 className="text-3xl font-bold mb-4">
               Welcome to Digital Specification Estimation
