@@ -1,49 +1,50 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import Link from "next/link"
-import Image from "next/image"
-import { Eye, EyeOff, User, Mail, Lock } from "lucide-react"
-import { Logo } from "@/components/logo"
+import { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { Eye, EyeOff, User, Mail, Lock } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 export default function SignUp() {
-  const [showPassword, setShowPassword] = useState(false)
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     businessName: "",
     adminName: "",
     email: "",
     password: "",
     agreeToTerms: false,
-  })
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target
+    const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
       [name]: type === "checkbox" ? checked : value,
-    })
-  }
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     // In a real app, you would handle form submission here
-    console.log("Form submitted:", formData)
-    window.location.href = "/dashboard"
-  }
+    console.log("Form submitted:", formData);
+    window.location.href = "/dashboard";
+  };
 
   return (
     <div className="w-full min-h-screen lg:grid lg:grid-cols-2 bg-white">
-      <div className="flex items-center justify-center py-12 bg-white">
-        <div className="mx-auto w-[350px] space-y-6">
-          <div className="mb-8">
-            <Logo />
-          </div>
-
-          <div className="space-y-2">
+      <div className="flex flex-col items-center justify-center py-3 bg-white border">
+        <div className="mb-8 mr-[400px]">
+          <Logo />
+        </div>
+        <div className="mx-auto w-full px-20 space-y-6">
+          <div className="space-y-2 flex flex-col items-center justify-center">
             <h1 className="text-3xl font-bold">Sign up to LCM</h1>
-            <p className="text-muted-foreground">Smart Attendance & Payroll Management</p>
+            <p className="text-muted-foreground">
+              Smart Attendance & Payroll Management
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -152,7 +153,10 @@ export default function SignUp() {
                 className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                 required
               />
-              <label htmlFor="agreeToTerms" className="ml-2 block text-sm text-gray-600">
+              <label
+                htmlFor="agreeToTerms"
+                className="ml-2 block text-sm text-gray-600"
+              >
                 By signing up, you agree to our Terms & Privacy Policy.
               </label>
             </div>
@@ -176,7 +180,13 @@ export default function SignUp() {
 
           <div className="grid grid-cols-2 gap-3">
             <button className="flex items-center justify-center gap-2 py-2 px-4 border rounded-md hover:bg-gray-50">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 18 18"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
                 <path
                   d="M17.64 9.20455C17.64 8.56636 17.5827 7.95273 17.4764 7.36364H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5614V15.8195H14.9564C16.6582 14.2527 17.64 11.9455 17.64 9.20455Z"
                   fill="#4285F4"
@@ -197,7 +207,13 @@ export default function SignUp() {
               <span className="text-sm font-medium">Sign in with Google</span>
             </button>
             <button className="flex items-center justify-center gap-2 py-2 px-4 border rounded-md hover:bg-gray-50">
-              <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg
+                width="16"
+                height="20"
+                viewBox="0 0 16 20"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
                 <path
                   d="M12.6442 10.4392C12.6362 8.83984 13.4022 7.6582 14.9522 6.82617C14.0922 5.5957 12.8282 4.92578 11.1842 4.81055C9.63223 4.69922 7.94023 5.74805 7.32423 5.74805C6.67223 5.74805 5.14823 4.85547 3.95623 4.85547C2.02023 4.88281 0 6.43555 0 9.60156C0 10.5762 0.16 11.582 0.48 12.6172C0.91 14.0137 2.53223 17.4219 4.22423 17.3633C5.05223 17.3398 5.63223 16.7051 6.72423 16.7051C7.77223 16.7051 8.30423 17.3633 9.23623 17.3633C10.9442 17.3398 12.4042 14.2344 12.8122 12.834C10.6122 11.8398 10.6442 10.5 10.6442 10.4392H12.6442Z"
                   fill="black"
@@ -220,25 +236,26 @@ export default function SignUp() {
         </div>
       </div>
 
-      <div className="hidden lg:block bg-blue-900 relative">
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-white">
+      <div className="hidden lg:block bg-blue-900 relative h-full m-3 mb-3 rounded-lg">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
           <div className="w-full max-w-md mx-auto">
             <Image
-              src="/placeholder.svg?height=600&width=600"
+              src="/home.png"
               alt="Dashboard Preview"
               width={600}
               height={600}
               className="w-full h-auto rounded-lg shadow-lg mb-8"
             />
-            <h2 className="text-3xl font-bold mb-4">Welcome to Digital Specification Estimation</h2>
-            <p className="text-lg">
-              A Smart Attendance & Payroll Management to track attendance, automate payroll, and optimize costs with
-              ease!
+            <h2 className="text-3xl font-bold mb-4">
+              Welcome to Digital Specification Estimation
+            </h2>
+            <p className="text-sm">
+              A Smart Attendance & Payroll Management to track attendance,
+              automate payroll, and optimize costs with ease!
             </p>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
-
