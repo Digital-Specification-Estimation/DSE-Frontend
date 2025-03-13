@@ -1,18 +1,24 @@
-import type { LucideIcon } from "lucide-react"
+import type { LucideIcon } from "lucide-react";
 
 interface StatCardProps {
-  title: string
-  value: string | number
-  icon: LucideIcon
+  title: string;
+  value: string | number;
+  icon: LucideIcon;
   change?: {
-    value: string
-    type: "increase" | "decrease"
-    text?: string
-  }
-  iconBackground?: string
+    value: string;
+    type: "increase" | "decrease";
+    text?: string;
+  };
+  iconBackground?: string;
 }
 
-export function StatCard({ title, value, icon: Icon, change, iconBackground = "bg-gray-900" }: StatCardProps) {
+export function StatCard({
+  title,
+  value,
+  icon: Icon,
+  change,
+  iconBackground = "bg-gray-900",
+}: StatCardProps) {
   return (
     <div className="bg-white p-4 rounded-lg border">
       <div className="flex justify-between items-start mb-3">
@@ -24,14 +30,21 @@ export function StatCard({ title, value, icon: Icon, change, iconBackground = "b
       <div className="text-2xl font-bold mb-2">{value}</div>
       {change && (
         <div className="flex items-center text-xs">
-          <span className={change.type === "increase" ? "text-green-500" : "text-red-500"}>
+          <span
+            className={
+              change.type === "increase"
+                ? "text-green-500 border border-green-500 rounded-md h-5 w-10 flex items-center justify-center bg-green-50"
+                : "text-red-500 border border-red-500 rounded-md h-5 w-10 flex items-center justify-center bg-red-50"
+            }
+          >
             {change.type === "increase" ? "+" : "-"}
             {change.value}
           </span>
-          {change.text && <span className="ml-1 text-muted-foreground">{change.text}</span>}
+          {change.text && (
+            <span className="ml-1 text-muted-foreground">{change.text}</span>
+          )}
         </div>
       )}
     </div>
-  )
+  );
 }
-

@@ -1,18 +1,29 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Search, RefreshCw, DollarSign, ChevronDown, MoreHorizontal, Plus, Upload, User, Calendar } from "lucide-react"
-import { Sidebar } from "@/components/sidebar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useState } from "react";
+import {
+  Search,
+  RefreshCw,
+  DollarSign,
+  ChevronDown,
+  MoreHorizontal,
+  Plus,
+  Upload,
+  User,
+  Calendar,
+  BellDot,
+} from "lucide-react";
+import { Sidebar } from "@/components/sidebar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Employee {
-  id: number
-  name: string
-  avatar: string
-  position: string
-  dailyRate: number
+  id: number;
+  name: string;
+  avatar: string;
+  position: string;
+  dailyRate: number;
 }
 
 export default function EmployeeManagement() {
@@ -20,7 +31,7 @@ export default function EmployeeManagement() {
     name: "Kristin Watson",
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
-  })
+  });
 
   const [employees] = useState<Employee[]>([
     {
@@ -107,16 +118,16 @@ export default function EmployeeManagement() {
       position: "Construction Worker",
       dailyRate: 100,
     },
-  ])
+  ]);
 
-  const [showAddEmployee, setShowAddEmployee] = useState(false)
+  const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
     name: "",
     position: "",
     dailyRate: "",
     startDate: "",
     status: "",
-  })
+  });
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -125,15 +136,19 @@ export default function EmployeeManagement() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white border-b px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="relative w-64">
+            <div className="relative w-52">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search" className="pl-10 h-9 w-full" />
+              <Input
+                type="search"
+                placeholder="Search"
+                className="pl-10 h-9 w-full border border-gray-300 rounded-2xl"
+              />
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+              <div className="h-8 w-16 border-r border-gray-300 flex items-center justify-center">
+                <BellDot className="" />
+              </div>
               <Button className="bg-blue-700 hover:bg-blue-800 text-white rounded-full">
                 <DollarSign className="h-4 w-4 mr-2" />
                 Total Payroll $25,000
@@ -151,7 +166,10 @@ export default function EmployeeManagement() {
                 <Upload className="h-4 w-4" />
                 Upload CSV
               </Button>
-              <Button onClick={() => setShowAddEmployee(true)} className="bg-orange-500 hover:bg-orange-600 gap-2">
+              <Button
+                onClick={() => setShowAddEmployee(true)}
+                className="bg-orange-500 hover:bg-orange-600 gap-2"
+              >
                 <Plus className="h-4 w-4" />
                 Add Employee
               </Button>
@@ -176,7 +194,11 @@ export default function EmployeeManagement() {
 
               <div className="relative w-64 ml-auto">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input type="search" placeholder="Search trade/position..." className="pl-10 h-9 w-full" />
+                <Input
+                  type="search"
+                  placeholder="Search trade/position..."
+                  className="pl-10 h-9 w-full"
+                />
               </div>
             </div>
 
@@ -185,7 +207,10 @@ export default function EmployeeManagement() {
                 <thead>
                   <tr className="border-t border-b text-sm text-muted-foreground">
                     <th className="w-10 px-4 py-3 text-left">
-                      <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
                     </th>
                     <th className="px-4 py-3 text-left">Employee Name</th>
                     <th className="px-4 py-3 text-left">Position/Trade</th>
@@ -197,13 +222,21 @@ export default function EmployeeManagement() {
                   {employees.map((employee) => (
                     <tr key={employee.id} className="border-b hover:bg-gray-50">
                       <td className="px-4 py-3">
-                        <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={employee.avatar} alt={employee.name} />
-                            <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+                            <AvatarImage
+                              src={employee.avatar}
+                              alt={employee.name}
+                            />
+                            <AvatarFallback>
+                              {employee.name.charAt(0)}
+                            </AvatarFallback>
                           </Avatar>
                           <span className="font-medium">{employee.name}</span>
                         </div>
@@ -230,7 +263,11 @@ export default function EmployeeManagement() {
             <div className="p-6 border-b">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Add Employee</h2>
-                <Button variant="ghost" size="icon" onClick={() => setShowAddEmployee(false)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowAddEmployee(false)}
+                >
                   &times;
                 </Button>
               </div>
@@ -255,7 +292,12 @@ export default function EmployeeManagement() {
                         type="text"
                         placeholder="Johny William"
                         value={newEmployee.name}
-                        onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                        onChange={(e) =>
+                          setNewEmployee({
+                            ...newEmployee,
+                            name: e.target.value,
+                          })
+                        }
                         className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                         required
                       />
@@ -288,7 +330,12 @@ export default function EmployeeManagement() {
                         type="text"
                         placeholder="Enter rate"
                         value={newEmployee.dailyRate}
-                        onChange={(e) => setNewEmployee({ ...newEmployee, dailyRate: e.target.value })}
+                        onChange={(e) =>
+                          setNewEmployee({
+                            ...newEmployee,
+                            dailyRate: e.target.value,
+                          })
+                        }
                         className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                         required
                       />
@@ -330,7 +377,10 @@ export default function EmployeeManagement() {
             </div>
 
             <div className="p-6 mt-auto">
-              <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={() => setShowAddEmployee(false)}>
+              <Button
+                className="w-full bg-orange-500 hover:bg-orange-600"
+                onClick={() => setShowAddEmployee(false)}
+              >
                 Add Employee
               </Button>
             </div>
@@ -338,6 +388,5 @@ export default function EmployeeManagement() {
         </div>
       )}
     </div>
-  )
+  );
 }
-

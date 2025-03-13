@@ -1,18 +1,38 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Search, RefreshCw, Users, Clock, Calendar, DollarSign } from "lucide-react"
-import { Sidebar } from "@/components/sidebar"
-import { StatCard } from "@/components/dashboard/stat-card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useState } from "react";
+import {
+  Search,
+  RefreshCw,
+  Users,
+  Clock,
+  Calendar,
+  DollarSign,
+  BellDot,
+  Upload,
+  Plus,
+  User,
+  ChevronDown,
+} from "lucide-react";
+import { Sidebar } from "@/components/sidebar";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function Dashboard() {
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
-  })
+  });
+  const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [newEmployee, setNewEmployee] = useState({
+    name: "",
+    position: "",
+    dailyRate: "",
+    startDate: "",
+    status: "",
+  });
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -21,15 +41,19 @@ export default function Dashboard() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white border-b px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="relative w-64">
+            <div className="relative w-52">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search" className="pl-10 h-9 w-full" />
+              <Input
+                type="search"
+                placeholder="Search"
+                className="pl-10 h-9 w-full border border-gray-300 rounded-2xl"
+              />
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+              <div className="h-8 w-16 border-r border-gray-300 flex items-center justify-center">
+                <BellDot className="" />
+              </div>
               <Button className="bg-blue-700 hover:bg-blue-800 text-white rounded-full">
                 <DollarSign className="h-4 w-4 mr-2" />
                 Total Payroll $25,000
@@ -40,28 +64,62 @@ export default function Dashboard() {
 
         <main className="flex-1 overflow-y-auto p-6">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold">Dashboard</h1>
+
+              <div className="flex gap-2">
+                <Button size="lg" variant="outline" className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  Upload CSV
+                </Button>
+                <Button size="lg" variant="outline" className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  Upload CSV
+                </Button>
+                <Button
+                  size="lg"
+                  variant="text"
+                  onClick={() => setShowAddEmployee(true)}
+                  className="bg-orange-500 text-white hover:bg-orange-600 gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Employee
+                </Button>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <StatCard
                 title="Total Employees"
                 value="120"
                 icon={Users}
-                change={{ value: "2.5%", type: "increase", text: "from last month" }}
+                change={{
+                  value: "2.5%",
+                  type: "increase",
+                  text: "+5 new hires",
+                }}
               />
               <StatCard
                 title="Attendance Today"
                 value="92%"
                 icon={Clock}
                 iconBackground="bg-blue-700"
-                change={{ value: "3.2%", type: "increase", text: "from yesterday" }}
+                change={{
+                  value: "3.2%",
+                  type: "increase",
+                  text: "from yesterday",
+                }}
               />
               <StatCard
                 title="Late Arrivals"
                 value="08"
                 icon={Calendar}
                 iconBackground="bg-red-600"
-                change={{ value: "1", type: "decrease", text: "from last week" }}
+                change={{
+                  value: "1",
+                  type: "decrease",
+                  text: "from last week",
+                }}
               />
               <StatCard
                 title="Total Payroll"
@@ -76,7 +134,9 @@ export default function Dashboard() {
               <div className="bg-white p-4 rounded-lg border">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-medium">Total Payroll Cost</h3>
-                  <div className="text-sm bg-gray-100 px-2 py-1 rounded">This Year</div>
+                  <div className="text-sm bg-gray-100 px-2 py-1 rounded">
+                    This Year
+                  </div>
                 </div>
                 <div className="text-2xl font-bold mb-6">$236,788.12</div>
                 <div className="h-40 flex items-end justify-between">
@@ -113,7 +173,9 @@ export default function Dashboard() {
               <div className="bg-white p-4 rounded-lg border">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-medium">Total Attendance</h3>
-                  <div className="text-sm bg-gray-100 px-2 py-1 rounded">This Month</div>
+                  <div className="text-sm bg-gray-100 px-2 py-1 rounded">
+                    This Month
+                  </div>
                 </div>
                 <div className="text-2xl font-bold mb-6">98%</div>
                 <div className="h-40 relative">
@@ -121,17 +183,30 @@ export default function Dashboard() {
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full h-px bg-gray-200"></div>
                   </div>
-                  <div className="absolute inset-0 flex items-center" style={{ top: "25%" }}>
+                  <div
+                    className="absolute inset-0 flex items-center"
+                    style={{ top: "25%" }}
+                  >
                     <div className="w-full h-px bg-gray-200"></div>
                   </div>
-                  <div className="absolute inset-0 flex items-center" style={{ top: "50%" }}>
+                  <div
+                    className="absolute inset-0 flex items-center"
+                    style={{ top: "50%" }}
+                  >
                     <div className="w-full h-px bg-gray-200"></div>
                   </div>
-                  <div className="absolute inset-0 flex items-center" style={{ top: "75%" }}>
+                  <div
+                    className="absolute inset-0 flex items-center"
+                    style={{ top: "75%" }}
+                  >
                     <div className="w-full h-px bg-gray-200"></div>
                   </div>
 
-                  <svg className="w-full h-full" viewBox="0 0 300 100" preserveAspectRatio="none">
+                  <svg
+                    className="w-full h-full"
+                    viewBox="0 0 300 100"
+                    preserveAspectRatio="none"
+                  >
                     <path
                       d="M0,50 C20,40 40,60 60,50 C80,40 100,60 120,50 C140,40 160,60 180,30 C200,20 220,40 240,30 C260,20 280,40 300,30"
                       fill="none"
@@ -218,7 +293,136 @@ export default function Dashboard() {
           </div>
         </main>
       </div>
-    </div>
-  )
-}
+      {showAddEmployee && (
+        <div className="fixed inset-0 bg-black/50 flex justify-end z-50">
+          <div className="bg-white w-full max-w-md h-full overflow-y-auto">
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">Add Employee</h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowAddEmployee(false)}
+                >
+                  &times;
+                </Button>
+              </div>
 
+              <div className="space-y-6">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-medium">Employee details</h3>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="name" className="text-sm font-medium">
+                      Name
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                        <User className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        id="name"
+                        name="name"
+                        type="text"
+                        placeholder="Johny William"
+                        value={newEmployee.name}
+                        onChange={(e) =>
+                          setNewEmployee({
+                            ...newEmployee,
+                            name: e.target.value,
+                          })
+                        }
+                        className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="position" className="text-sm font-medium">
+                      Position/Trade
+                    </label>
+                    <div className="relative">
+                      <div className="flex items-center border rounded-md px-3 py-2">
+                        <span className="text-sm">Select</span>
+                        <ChevronDown className="h-4 w-4 ml-auto" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="dailyRate" className="text-sm font-medium">
+                      Daily Rate
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                        <DollarSign className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        id="dailyRate"
+                        name="dailyRate"
+                        type="text"
+                        placeholder="Enter rate"
+                        value={newEmployee.dailyRate}
+                        onChange={(e) =>
+                          setNewEmployee({
+                            ...newEmployee,
+                            dailyRate: e.target.value,
+                          })
+                        }
+                        className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="startDate" className="text-sm font-medium">
+                      Start Date
+                    </label>
+                    <div className="relative">
+                      <div className="flex items-center border rounded-md px-3 py-2">
+                        <span className="text-sm">Pick Date</span>
+                        <Calendar className="h-4 w-4 ml-auto" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="status" className="text-sm font-medium">
+                      Attendance Status
+                    </label>
+                    <div className="relative">
+                      <div className="flex items-center border rounded-md px-3 py-2">
+                        <span className="text-sm">Select</span>
+                        <ChevronDown className="h-4 w-4 ml-auto" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-sm">
+                    Want to upload multiple employees? Use{" "}
+                    <a href="#" className="text-primary underline">
+                      CSV instead
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 mt-auto">
+              <Button
+                className="w-full bg-orange-500 hover:bg-orange-600"
+                onClick={() => setShowAddEmployee(false)}
+              >
+                Add Employee
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
