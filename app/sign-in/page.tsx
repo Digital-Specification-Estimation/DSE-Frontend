@@ -28,7 +28,7 @@ export default function SignIn() {
     e.preventDefault();
     // In a real app, you would handle form submission here
     console.log("Form submitted:", formData);
-    window.location.href = "/dashboard";
+    window.location.href = "/settings";
   };
 
   return (
