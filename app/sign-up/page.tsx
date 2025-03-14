@@ -238,13 +238,13 @@ export default function SignUp() {
 
       <div className="hidden lg:block bg-blue-900 relative h-full m-3 mb-3 rounded-lg">
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white py-5">
-          <div className="w-full max-w-2xl max-h-xl mx-auto h-full">
+          <div className="w-full max-w-2xl max-h-xl mx-auto h-full px-5">
             <Image
               src="/home.png"
               alt="Dashboard Preview"
               width={600}
               height={600}
-              className="w-full h-auto rounded-lg shadow-lg mb-10"
+              className=" h-2/3 rounded-lg shadow-lg mb-10 xx-10"
             />
             <h2 className="text-3xl font-bold mb-4">
               Welcome to Digital Specification Estimation

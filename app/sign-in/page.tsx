@@ -198,25 +198,25 @@ export default function SignIn() {
       </div>
 
       <div className="hidden lg:block bg-blue-900 relative h-full m-3 mb-3 rounded-lg">
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white py-5">
-                <div className="w-full max-w-2xl max-h-xl mx-auto h-full">
-                  <Image
-                    src="/home.png"
-                    alt="Dashboard Preview"
-                    width={600}
-                    height={600}
-                    className="w-full h-auto rounded-lg shadow-lg mb-10"
-                  />
-                  <h2 className="text-3xl font-bold mb-4">
-                    Welcome to Digital Specification Estimation
-                  </h2>
-                  <p className="text-sm">
-                    A Smart Attendance & Payroll Management to track attendance,
-                    automate payroll, and optimize costs with ease!
-                  </p>
-                </div>
-              </div>
-            </div>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white py-5">
+          <div className="w-full max-w-2xl max-h-xl mx-auto h-full px-3 flex flex-col items-center justify-center">
+            <Image
+              src="/home.png"
+              alt="Dashboard Preview"
+              width={600}
+              height={600}
+              className=" h-[400px] w-[500px] rounded-lg shadow-lg mb-10"
+            />
+            <h2 className="text-3xl font-bold mb-4">
+              Welcome to Digital Specification Estimation
+            </h2>
+            <p className="text-sm">
+              A Smart Attendance & Payroll Management to track attendance,
+              automate payroll, and optimize costs with ease!
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
