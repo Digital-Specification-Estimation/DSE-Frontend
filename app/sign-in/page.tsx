@@ -33,7 +33,7 @@ export default function SignIn() {
 
   return (
     <div className="w-full h-full lg:grid lg:grid-cols-2 bg-white">
-      <div className="flex flex-col items-center justify-center py-3 bg-white">
+      <div className="flex flex-col items-center justify-center py-3 bg-white h-screen ">
         <div className="mb-8 mt-0 mr-[400px] ">
           <Logo />
         </div>
@@ -198,25 +198,25 @@ export default function SignIn() {
       </div>
 
       <div className="hidden lg:block bg-blue-900 relative h-full m-3 mb-3 rounded-lg">
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-          <div className="w-full max-w-md mx-auto">
-            <Image
-              src="/home.png"
-              alt="Dashboard Preview"
-              width={600}
-              height={600}
-              className="w-full h-auto rounded-lg shadow-lg "
-            />
-            <h2 className="text-3xl font-bold mb-4">
-              Welcome to Digital Specification Estimation
-            </h2>
-            <p className="text-sm">
-              A Smart Attendance & Payroll Management to track attendance,
-              automate payroll, and optimize costs with ease!
-            </p>
-          </div>
-        </div>
-      </div>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white py-5">
+                <div className="w-full max-w-2xl max-h-xl mx-auto h-full">
+                  <Image
+                    src="/home.png"
+                    alt="Dashboard Preview"
+                    width={600}
+                    height={600}
+                    className="w-full h-auto rounded-lg shadow-lg mb-10"
+                  />
+                  <h2 className="text-3xl font-bold mb-4">
+                    Welcome to Digital Specification Estimation
+                  </h2>
+                  <p className="text-sm">
+                    A Smart Attendance & Payroll Management to track attendance,
+                    automate payroll, and optimize costs with ease!
+                  </p>
+                </div>
+              </div>
+            </div>
     </div>
   );
 }

@@ -237,8 +237,8 @@ export default function SignUp() {
       </div>
 
       <div className="hidden lg:block bg-blue-900 relative h-full m-3 mb-3 rounded-lg">
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-          <div className="w-full max-w-md mx-auto">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white py-5">
+          <div className="w-full max-w-2xl max-h-xl mx-auto h-full">
             <Image
               src="/home.png"
               alt="Dashboard Preview"
