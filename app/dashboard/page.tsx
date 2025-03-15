@@ -1,12 +1,23 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Search, Users, Clock, Calendar, DollarSign, Upload, Plus, User, ChevronDown, MoreVertical } from "lucide-react"
-import { Sidebar } from "@/components/sidebar"
-import { StatCard } from "@/components/dashboard/stat-card"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import DashboardHeader from "@/components/DashboardHeader"
+import { useState } from "react";
+import {
+  Search,
+  Users,
+  Clock,
+  Calendar,
+  DollarSign,
+  Upload,
+  Plus,
+  User,
+  ChevronDown,
+  MoreVertical,
+} from "lucide-react";
+import { Sidebar } from "@/components/sidebar";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import DashboardHeader from "@/components/DashboardHeader";
 import {
   Bar,
   BarChart,
@@ -18,22 +29,14 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-} from "recharts"
+} from "recharts";
 
 export default function Dashboard() {
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
-  })
-  const [showAddEmployee, setShowAddEmployee] = useState(false)
-  const [newEmployee, setNewEmployee] = useState({
-    name: "",
-    position: "",
-    dailyRate: "",
-    startDate: "",
-    status: "",
-  })
+  });
 
   // Payroll data for the bar chart
   const payrollData = [
@@ -49,7 +52,7 @@ export default function Dashboard() {
     { month: "Oct", cost: 13000, planned: 13000 },
     { month: "Nov", cost: 14000, planned: 14000 },
     { month: "Dec", cost: 15000, planned: 15000 },
-  ]
+  ];
 
   // Attendance data for the line chart - matching the exact pattern in the image
   const attendanceData = [
@@ -83,7 +86,7 @@ export default function Dashboard() {
     { day: 28, attendance: 75 },
     { day: 29, attendance: 35 },
     { day: 30, attendance: 35 },
-  ]
+  ];
 
   const employeeData = [
     {
@@ -119,26 +122,43 @@ export default function Dashboard() {
       icon: "👨‍💼",
     },
   ];
-  
 
   // Custom tooltip for payroll chart
-  const PayrollTooltip = ({ active, payload, label }: { active?: boolean; payload?: any; label?: string }) => {
+  const PayrollTooltip = ({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: any;
+    label?: string;
+  }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border rounded-md shadow-md">
           <p className="text-sm font-medium mb-1">May, 2025</p>
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm">Planned Cost</span>
-            <span className="text-sm font-medium">${payload[0].value.toLocaleString()}</span>
+            <span className="text-sm font-medium">
+              ${payload[0].value.toLocaleString()}
+            </span>
           </div>
         </div>
-      )
+      );
     }
-    return null
-  }
+    return null;
+  };
 
   // Custom tooltip for attendance chart
-  const AttendanceTooltip = ({ active, payload, label }: { active?: boolean; payload?: any; label?: string }) => {
+  const AttendanceTooltip = ({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: any;
+    label?: string;
+  }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border rounded-md shadow-md">
@@ -148,10 +168,10 @@ export default function Dashboard() {
             <span className="text-sm font-medium">95%</span>
           </div>
         </div>
-      )
+      );
     }
-    return null
-  }
+    return null;
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -174,7 +194,7 @@ export default function Dashboard() {
                   <Upload className="h-4 w-4" />
                   Upload CSV
                 </Button>
-                <Button
+                {/* <Button
                   size="lg"
                   variant="text"
                   onClick={() => setShowAddEmployee(true)}
@@ -182,7 +202,7 @@ export default function Dashboard() {
                 >
                   <Plus className="h-4 w-4" />
                   Add Employee
-                </Button>
+                </Button> */}
               </div>
             </div>
 
@@ -245,8 +265,17 @@ export default function Dashboard() {
                 <div className="px-5 pb-5">
                   <div className="h-[220px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={payrollData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }} barGap={0}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEEEEE" strokeWidth={1} />
+                      <BarChart
+                        data={payrollData}
+                        margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                        barGap={0}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          stroke="#EEEEEE"
+                          strokeWidth={1}
+                        />
                         <XAxis
                           dataKey="month"
                           axisLine={false}
@@ -269,9 +298,20 @@ export default function Dashboard() {
                           isFront={true}
                           label={false}
                         />
-                        <Tooltip content={<PayrollTooltip active={undefined} payload={undefined} label={undefined} />} cursor={false} />
+                        <Tooltip
+                          content={
+                            <PayrollTooltip
+                              active={undefined}
+                              payload={undefined}
+                              label={undefined}
+                            />
+                          }
+                          cursor={false}
+                        />
                         <Bar
-                          dataKey={(entry) => (entry.highlight ? 0 : entry.planned)}
+                          dataKey={(entry) =>
+                            entry.highlight ? 0 : entry.planned
+                          }
                           fill="#EEEEEE"
                           barSize={20}
                           radius={[0, 0, 0, 0]}
@@ -279,7 +319,9 @@ export default function Dashboard() {
                           isAnimationActive={false}
                         />
                         <Bar
-                          dataKey={(entry) => (entry.highlight ? entry.planned : 0)}
+                          dataKey={(entry) =>
+                            entry.highlight ? entry.planned : 0
+                          }
                           fill="#FFA500"
                           barSize={20}
                           radius={[0, 0, 0, 0]}
@@ -287,7 +329,9 @@ export default function Dashboard() {
                           isAnimationActive={false}
                         />
                         <Bar
-                          dataKey={(entry) => (entry.highlight ? entry.cost : 0)}
+                          dataKey={(entry) =>
+                            entry.highlight ? entry.cost : 0
+                          }
                           fill="#1D4ED8"
                           barSize={20}
                           radius={[0, 0, 0, 0]}
@@ -316,7 +360,10 @@ export default function Dashboard() {
                 <div className="px-5 pb-5">
                   <div className="h-[220px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={attendanceData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                      <LineChart
+                        data={attendanceData}
+                        margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                      >
                         <CartesianGrid
                           strokeDasharray="3 3"
                           vertical={true}
@@ -340,7 +387,16 @@ export default function Dashboard() {
                           ticks={[0, 10, 30, 50, 70, 100]}
                           domain={[0, 100]}
                         />
-                        <Tooltip content={<AttendanceTooltip active={undefined} payload={undefined} label={undefined} />} cursor={false} />
+                        <Tooltip
+                          content={
+                            <AttendanceTooltip
+                              active={undefined}
+                              payload={undefined}
+                              label={undefined}
+                            />
+                          }
+                          cursor={false}
+                        />
                         <Line
                           type="monotone"
                           dataKey="attendance"
@@ -371,7 +427,13 @@ export default function Dashboard() {
                     />
                   </div>
                   <Button variant="outline" size="icon" className="h-9 w-9">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
                       <path
                         d="M2 4H14M2 8H14M2 12H14"
                         stroke="currentColor"
@@ -385,213 +447,106 @@ export default function Dashboard() {
               </div>
 
               <div className="border-t">
-              <table className="w-full">
-          <thead>
-            <tr className="border-b">
-              <th className="w-12 p-4">
-                <Checkbox />
-              </th>
-              <th className="text-left p-4 font-medium text-sm text-gray-500">
-                Trade/Position
-              </th>
-              <th className="text-left p-4 font-medium text-sm text-gray-500">
-                Planned Budget
-              </th>
-              <th className="text-left p-4 font-medium text-sm text-gray-500">
-                Actual Cost
-              </th>
-              <th className="text-left p-4 font-medium text-sm text-gray-500">
-                Difference
-              </th>
-              <th className="w-12 p-4"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {employeeData.map((employee) => (
-              <tr key={employee.id} className="border-b">
-                <td className="p-4">
-                  <Checkbox />
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm">{employee.icon}</span>
-                    </div>
-                    <span className="font-medium">{employee.position}</span>
-                  </div>
-                </td>
-                <td className="p-4">{employee.plannedBudget}</td>
-                <td className="p-4">{employee.actualCost}</td>
-                <td className="p-4">
-                  <div className="flex items-center gap-1">
-                    <div
-                      className={`h-5 w-5 rounded-full flex items-center justify-center ${
-                        parseFloat(employee.difference.replace(/[^0-9.-]+/g, "")) > 0
-                          ? "bg-green-100"
-                          : "bg-red-100"
-                      }`}
-                    >
-                      <span
-                        className={`text-xs ${
-                          parseFloat(employee.difference.replace(/[^0-9.-]+/g, "")) > 0
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {parseFloat(employee.difference.replace(/[^0-9.-]+/g, "")) > 0
-                          ? "+"
-                          : ""}
-                      </span>
-                    </div>
-                    <span
-                      className={`${
-                        parseFloat(employee.difference.replace(/[^0-9.-]+/g, "")) > 0
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {employee.difference}
-                    </span>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="w-12 p-4">
+                        <Checkbox />
+                      </th>
+                      <th className="text-left p-4 font-medium text-sm text-gray-500">
+                        Trade/Position
+                      </th>
+                      <th className="text-left p-4 font-medium text-sm text-gray-500">
+                        Planned Budget
+                      </th>
+                      <th className="text-left p-4 font-medium text-sm text-gray-500">
+                        Actual Cost
+                      </th>
+                      <th className="text-left p-4 font-medium text-sm text-gray-500">
+                        Difference
+                      </th>
+                      <th className="w-12 p-4"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {employeeData.map((employee) => (
+                      <tr key={employee.id} className="border-b">
+                        <td className="p-4">
+                          <Checkbox />
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
+                              <span className="text-sm">{employee.icon}</span>
+                            </div>
+                            <span className="font-medium">
+                              {employee.position}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-4">{employee.plannedBudget}</td>
+                        <td className="p-4">{employee.actualCost}</td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-1">
+                            <div
+                              className={`h-5 w-5 rounded-full flex items-center justify-center ${
+                                parseFloat(
+                                  employee.difference.replace(/[^0-9.-]+/g, "")
+                                ) > 0
+                                  ? "bg-green-100"
+                                  : "bg-red-100"
+                              }`}
+                            >
+                              <span
+                                className={`text-xs ${
+                                  parseFloat(
+                                    employee.difference.replace(
+                                      /[^0-9.-]+/g,
+                                      ""
+                                    )
+                                  ) > 0
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                {parseFloat(
+                                  employee.difference.replace(/[^0-9.-]+/g, "")
+                                ) > 0
+                                  ? "+"
+                                  : ""}
+                              </span>
+                            </div>
+                            <span
+                              className={`${
+                                parseFloat(
+                                  employee.difference.replace(/[^0-9.-]+/g, "")
+                                ) > 0
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                              }`}
+                            >
+                              {employee.difference}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         </main>
       </div>
-      {showAddEmployee && (
-        <div className="fixed inset-0 bg-black/50 flex justify-end z-50">
-          <div className="bg-white w-full max-w-md h-full overflow-y-auto">
-            <div className="p-6 border-b">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Add Employee</h2>
-                <Button variant="ghost" size="icon" onClick={() => setShowAddEmployee(false)}>
-                  &times;
-                </Button>
-              </div>
-
-              <div className="space-y-6">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-medium">Employee details</h3>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="name" className="text-sm font-medium">
-                      Name
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        <User className="h-4 w-4 text-gray-400" />
-                      </div>
-                      <input
-                        id="name"
-                        name="name"
-                        type="text"
-                        placeholder="Johny William"
-                        value={newEmployee.name}
-                        onChange={(e) =>
-                          setNewEmployee({
-                            ...newEmployee,
-                            name: e.target.value,
-                          })
-                        }
-                        className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="position" className="text-sm font-medium">
-                      Position/Trade
-                    </label>
-                    <div className="relative">
-                      <div className="flex items-center border rounded-md px-3 py-2">
-                        <span className="text-sm">Select</span>
-                        <ChevronDown className="h-4 w-4 ml-auto" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="dailyRate" className="text-sm font-medium">
-                      Daily Rate
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        <DollarSign className="h-4 w-4 text-gray-400" />
-                      </div>
-                      <input
-                        id="dailyRate"
-                        name="dailyRate"
-                        type="text"
-                        placeholder="Enter rate"
-                        value={newEmployee.dailyRate}
-                        onChange={(e) =>
-                          setNewEmployee({
-                            ...newEmployee,
-                            dailyRate: e.target.value,
-                          })
-                        }
-                        className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="startDate" className="text-sm font-medium">
-                      Start Date
-                    </label>
-                    <div className="relative">
-                      <div className="flex items-center border rounded-md px-3 py-2">
-                        <span className="text-sm">Pick Date</span>
-                        <Calendar className="h-4 w-4 ml-auto" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="status" className="text-sm font-medium">
-                      Attendance Status
-                    </label>
-                    <div className="relative">
-                      <div className="flex items-center border rounded-md px-3 py-2">
-                        <span className="text-sm">Select</span>
-                        <ChevronDown className="h-4 w-4 ml-auto" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-sm">
-                    Want to upload multiple employees? Use{" "}
-                    <a href="#" className="text-primary underline">
-                      CSV instead
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 mt-auto">
-              <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={() => setShowAddEmployee(false)}>
-                Add Employee
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
-  )
+  );
 }
-

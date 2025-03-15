@@ -34,6 +34,11 @@ export function Sidebar({ user }: SidebarProps) {
       icon: Settings,
     },
     {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: Home,
+    },
+    {
       name: "Business Setup",
       href: "/business-setup",
       icon: Home,
@@ -43,11 +48,7 @@ export function Sidebar({ user }: SidebarProps) {
       href: "/budget-planning",
       icon: Wallet,
     },
-    {
-      name: "Dashboard",
-      href: "/dashboard",
-      icon: Home,
-    },
+
     {
       name: "Employee Management",
       href: "/employee-management",
