@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Search, RefreshCw, ChevronDown, BarChart2 } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import { Button } from "@/components/ui/button"
@@ -73,8 +73,8 @@ const initialEmployees: Employee[] = [
   {
     id: 2,
     name: "Annette Black",
-    avatar: "johndoe.jpeg",
-    position: "Technician",
+    avatar: "/johndoe.jpeg",
+    position: "Electrician",
     assignedProject: "Mall Construction",
     contractStartDate: "May 31, 2015",
     contractEndDate: "May 20, 2015",
@@ -91,7 +91,7 @@ const initialEmployees: Employee[] = [
   {
     id: 3,
     name: "Kathryn Murphy",
-    avatar: "johndoe.jpeg",
+    avatar: "/johndoe.jpeg",
     position: "HR Manager",
     assignedProject: "Metro Bridge",
     contractStartDate: "May 12, 2019",
@@ -551,8 +551,8 @@ export default function AttendancePayroll() {
                   </thead>
                   <tbody>
                     {filteredEmployees.map((employee) => (
-                      <>
-                        <tr key={employee.id} className="border-b hover:bg-gray-50">
+                      <React.Fragment key={employee.id}>
+                        <tr className="border-b hover:bg-gray-50">
                           <td className="px-4 py-3 border-r">
                             <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
                           </td>
@@ -660,7 +660,7 @@ export default function AttendancePayroll() {
                                 <circle cx="12" cy="19" r="1" />
                               </svg>
                             </Button>
-                          </td>
+                          </td> 
                         </tr>
                         {expandedEmployee === employee.id && employee.attendanceCalendar && (
                           <tr className="bg-gray-50">
@@ -754,7 +754,7 @@ export default function AttendancePayroll() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>

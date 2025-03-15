@@ -1,46 +1,164 @@
-"use client";
+"use client"
 
-import { useState } from "react";
+import { useState } from "react"
+import { Search, Users, Clock, Calendar, DollarSign, Upload, Plus, User, ChevronDown, MoreVertical } from "lucide-react"
+import { Sidebar } from "@/components/sidebar"
+import { StatCard } from "@/components/dashboard/stat-card"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import DashboardHeader from "@/components/DashboardHeader"
 import {
-  Search,
-  RefreshCw,
-  Users,
-  Clock,
-  Calendar,
-  DollarSign,
-  BellDot,
-  Upload,
-  Plus,
-  User,
-  ChevronDown,
-} from "lucide-react";
-import { Sidebar } from "@/components/sidebar";
-import { StatCard } from "@/components/dashboard/stat-card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import DashboardHeader from "@/components/DashboardHeader";
+  Bar,
+  BarChart,
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from "recharts"
 
 export default function Dashboard() {
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
-  });
-  const [showAddEmployee, setShowAddEmployee] = useState(false);
+  })
+  const [showAddEmployee, setShowAddEmployee] = useState(false)
   const [newEmployee, setNewEmployee] = useState({
     name: "",
     position: "",
     dailyRate: "",
     startDate: "",
     status: "",
-  });
+  })
+
+  // Payroll data for the bar chart
+  const payrollData = [
+    { month: "Jan", cost: 5000, planned: 5000 },
+    { month: "Feb", cost: 6000, planned: 6000 },
+    { month: "Mar", cost: 7000, planned: 7000 },
+    { month: "Apr", cost: 8000, planned: 8000 },
+    { month: "May", cost: 14000, planned: 14056, highlight: true },
+    { month: "Jun", cost: 9000, planned: 9000 },
+    { month: "Jul", cost: 10000, planned: 10000 },
+    { month: "Aug", cost: 11000, planned: 11000 },
+    { month: "Sep", cost: 12000, planned: 12000 },
+    { month: "Oct", cost: 13000, planned: 13000 },
+    { month: "Nov", cost: 14000, planned: 14000 },
+    { month: "Dec", cost: 15000, planned: 15000 },
+  ]
+
+  // Attendance data for the line chart - matching the exact pattern in the image
+  const attendanceData = [
+    { day: 1, attendance: 10 },
+    { day: 2, attendance: 35 },
+    { day: 3, attendance: 40 },
+    { day: 4, attendance: 25 },
+    { day: 5, attendance: 35 },
+    { day: 6, attendance: 30 },
+    { day: 7, attendance: 60 },
+    { day: 8, attendance: 45 },
+    { day: 9, attendance: 55 },
+    { day: 10, attendance: 95, highlight: true },
+    { day: 11, attendance: 45 },
+    { day: 12, attendance: 50 },
+    { day: 13, attendance: 45 },
+    { day: 14, attendance: 50 },
+    { day: 15, attendance: 48 },
+    { day: 16, attendance: 48 },
+    { day: 17, attendance: 48 },
+    { day: 18, attendance: 65 },
+    { day: 19, attendance: 60 },
+    { day: 20, attendance: 65 },
+    { day: 21, attendance: 65 },
+    { day: 22, attendance: 65 },
+    { day: 23, attendance: 45 },
+    { day: 24, attendance: 65 },
+    { day: 25, attendance: 65 },
+    { day: 26, attendance: 40 },
+    { day: 27, attendance: 70 },
+    { day: 28, attendance: 75 },
+    { day: 29, attendance: 35 },
+    { day: 30, attendance: 35 },
+  ]
+
+  const employeeData = [
+    {
+      id: 1,
+      position: "Construction Workers",
+      plannedBudget: "$5,000",
+      actualCost: "$5,500",
+      difference: "$500",
+      icon: "👷",
+    },
+    {
+      id: 2,
+      position: "Electricians",
+      plannedBudget: "$4,200",
+      actualCost: "$4,100",
+      difference: "-$100",
+      icon: "⚡",
+    },
+    {
+      id: 3,
+      position: "IT Staff",
+      plannedBudget: "$6,000",
+      actualCost: "$6,500",
+      difference: "$500",
+      icon: "💻",
+    },
+    {
+      id: 4,
+      position: "Admin Staff",
+      plannedBudget: "$3,800",
+      actualCost: "$3,700",
+      difference: "-$100",
+      icon: "👨‍💼",
+    },
+  ];
+  
+
+  // Custom tooltip for payroll chart
+  const PayrollTooltip = ({ active, payload, label }: { active?: boolean; payload?: any; label?: string }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border rounded-md shadow-md">
+          <p className="text-sm font-medium mb-1">May, 2025</p>
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm">Planned Cost</span>
+            <span className="text-sm font-medium">${payload[0].value.toLocaleString()}</span>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
+
+  // Custom tooltip for attendance chart
+  const AttendanceTooltip = ({ active, payload, label }: { active?: boolean; payload?: any; label?: string }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border rounded-md shadow-md">
+          <p className="text-sm font-medium mb-1">May10, 2025</p>
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm">Attendance</span>
+            <span className="text-sm font-medium">95%</span>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-      <DashboardHeader/>
+        <DashboardHeader />
 
         <main className="flex-1 overflow-y-auto p-6">
           <div className="mb-6">
@@ -111,163 +229,240 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              <div className="bg-white p-4 rounded-lg border">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-medium">Total Payroll Cost</h3>
-                  <div className="text-sm bg-gray-100 px-2 py-1 rounded">
-                    This Year
+              {/* Total Payroll Cost Card */}
+              <div className="bg-white rounded-lg border">
+                <div className="p-5">
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className="font-medium">Total Payroll Cost</h3>
+                    <div className="flex items-center gap-2 border rounded-full px-3 py-1.5 text-sm">
+                      <span>This Year</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </div>
                   </div>
+                  <div className="text-3xl font-bold mb-6">$236,788.12</div>
                 </div>
-                <div className="text-2xl font-bold mb-6">$236,788.12</div>
-                <div className="h-40 flex items-end justify-between">
-                  {/* Placeholder for chart */}
-                  <div className="w-1/12 h-10 bg-gray-200 rounded-t"></div>
-                  <div className="w-1/12 h-16 bg-gray-200 rounded-t"></div>
-                  <div className="w-1/12 h-24 bg-gray-200 rounded-t"></div>
-                  <div className="w-1/12 h-12 bg-gray-200 rounded-t"></div>
-                  <div className="w-1/12 h-20 bg-gray-200 rounded-t"></div>
-                  <div className="w-1/12 h-28 bg-gray-200 rounded-t"></div>
-                  <div className="w-1/12 h-32 bg-orange-500 rounded-t"></div>
-                  <div className="w-1/12 h-36 bg-blue-700 rounded-t"></div>
-                  <div className="w-1/12 h-8 bg-gray-200 rounded-t"></div>
-                  <div className="w-1/12 h-14 bg-gray-200 rounded-t"></div>
-                  <div className="w-1/12 h-18 bg-gray-200 rounded-t"></div>
-                  <div className="w-1/12 h-22 bg-gray-200 rounded-t"></div>
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                  <span>Jan</span>
-                  <span>Feb</span>
-                  <span>Mar</span>
-                  <span>Apr</span>
-                  <span>May</span>
-                  <span>Jun</span>
-                  <span>Jul</span>
-                  <span>Aug</span>
-                  <span>Sep</span>
-                  <span>Oct</span>
-                  <span>Nov</span>
-                  <span>Dec</span>
+
+                <div className="px-5 pb-5">
+                  <div className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={payrollData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }} barGap={0}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEEEEE" strokeWidth={1} />
+                        <XAxis
+                          dataKey="month"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: "#888888" }}
+                          dy={10}
+                        />
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: "#888888" }}
+                          tickFormatter={(value) => `$${value / 1000}K`}
+                          ticks={[0, 5000, 10000, 15000]}
+                        />
+                        <ReferenceLine
+                          y={8000}
+                          stroke="#FFA500"
+                          strokeDasharray="3 3"
+                          strokeWidth={1}
+                          isFront={true}
+                          label={false}
+                        />
+                        <Tooltip content={<PayrollTooltip active={undefined} payload={undefined} label={undefined} />} cursor={false} />
+                        <Bar
+                          dataKey={(entry) => (entry.highlight ? 0 : entry.planned)}
+                          fill="#EEEEEE"
+                          barSize={20}
+                          radius={[0, 0, 0, 0]}
+                          name="Other Months"
+                          isAnimationActive={false}
+                        />
+                        <Bar
+                          dataKey={(entry) => (entry.highlight ? entry.planned : 0)}
+                          fill="#FFA500"
+                          barSize={20}
+                          radius={[0, 0, 0, 0]}
+                          name="Planned Cost"
+                          isAnimationActive={false}
+                        />
+                        <Bar
+                          dataKey={(entry) => (entry.highlight ? entry.cost : 0)}
+                          fill="#1D4ED8"
+                          barSize={20}
+                          radius={[0, 0, 0, 0]}
+                          name="Actual Cost"
+                          isAnimationActive={false}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-white p-4 rounded-lg border">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-medium">Total Attendance</h3>
-                  <div className="text-sm bg-gray-100 px-2 py-1 rounded">
-                    This Month
+              {/* Total Attendance Card */}
+              <div className="bg-white rounded-lg border">
+                <div className="p-5">
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className="font-medium">Total Attendance</h3>
+                    <div className="flex items-center gap-2 border rounded-full px-3 py-1.5 text-sm">
+                      <span>This Month</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </div>
                   </div>
+                  <div className="text-3xl font-bold mb-6">98%</div>
                 </div>
-                <div className="text-2xl font-bold mb-6">98%</div>
-                <div className="h-40 relative">
-                  {/* Placeholder for line chart */}
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full h-px bg-gray-200"></div>
-                  </div>
-                  <div
-                    className="absolute inset-0 flex items-center"
-                    style={{ top: "25%" }}
-                  >
-                    <div className="w-full h-px bg-gray-200"></div>
-                  </div>
-                  <div
-                    className="absolute inset-0 flex items-center"
-                    style={{ top: "50%" }}
-                  >
-                    <div className="w-full h-px bg-gray-200"></div>
-                  </div>
-                  <div
-                    className="absolute inset-0 flex items-center"
-                    style={{ top: "75%" }}
-                  >
-                    <div className="w-full h-px bg-gray-200"></div>
-                  </div>
 
-                  <svg
-                    className="w-full h-full"
-                    viewBox="0 0 300 100"
-                    preserveAspectRatio="none"
-                  >
-                    <path
-                      d="M0,50 C20,40 40,60 60,50 C80,40 100,60 120,50 C140,40 160,60 180,30 C200,20 220,40 240,30 C260,20 280,40 300,30"
-                      fill="none"
-                      stroke="#1d4ed8"
-                      strokeWidth="2"
-                    />
-                  </svg>
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                  <span>1</span>
-                  <span>5</span>
-                  <span>10</span>
-                  <span>15</span>
-                  <span>20</span>
-                  <span>25</span>
-                  <span>30</span>
+                <div className="px-5 pb-5">
+                  <div className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={attendanceData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={true}
+                          horizontal={true}
+                          stroke="#EEEEEE"
+                          strokeWidth={1}
+                        />
+                        <XAxis
+                          dataKey="day"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: "#888888" }}
+                          ticks={[1, 30]}
+                          dy={10}
+                        />
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: "#888888" }}
+                          tickFormatter={(value) => `${value}%`}
+                          ticks={[0, 10, 30, 50, 70, 100]}
+                          domain={[0, 100]}
+                        />
+                        <Tooltip content={<AttendanceTooltip active={undefined} payload={undefined} label={undefined} />} cursor={false} />
+                        <Line
+                          type="monotone"
+                          dataKey="attendance"
+                          stroke="#1D4ED8"
+                          strokeWidth={2}
+                          dot={{ r: 4, fill: "#1D4ED8", strokeWidth: 0 }}
+                          activeDot={{ r: 6, fill: "#1D4ED8", strokeWidth: 0 }}
+                          isAnimationActive={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
             </div>
 
+            {/* Budget vs Actual Report */}
             <div className="bg-white rounded-lg border">
-              <div className="p-4 border-b">
+              <div className="p-4 flex justify-between items-center">
                 <h3 className="font-medium">Budget vs Actual Report</h3>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search trade/position..."
+                      className="pl-9 pr-4 py-2 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <Button variant="outline" size="icon" className="h-9 w-9">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M2 4H14M2 8H14M2 12H14"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </Button>
+                </div>
               </div>
-              <div className="p-4">
-                <div className="flex justify-between items-center mb-4 text-sm text-muted-foreground">
-                  <div className="w-1/4">Trade/Position</div>
-                  <div className="w-1/4">Planned Budget</div>
-                  <div className="w-1/4">Actual Cost</div>
-                  <div className="w-1/4">Difference</div>
-                </div>
 
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <div className="w-1/4 flex items-center gap-2">
-                      <div className="h-6 w-6 bg-gray-100 rounded-full flex items-center justify-center text-xs">
-                        👷
-                      </div>
-                      <span className="font-medium">Construction Workers</span>
+              <div className="border-t">
+              <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="w-12 p-4">
+                <Checkbox />
+              </th>
+              <th className="text-left p-4 font-medium text-sm text-gray-500">
+                Trade/Position
+              </th>
+              <th className="text-left p-4 font-medium text-sm text-gray-500">
+                Planned Budget
+              </th>
+              <th className="text-left p-4 font-medium text-sm text-gray-500">
+                Actual Cost
+              </th>
+              <th className="text-left p-4 font-medium text-sm text-gray-500">
+                Difference
+              </th>
+              <th className="w-12 p-4"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {employeeData.map((employee) => (
+              <tr key={employee.id} className="border-b">
+                <td className="p-4">
+                  <Checkbox />
+                </td>
+                <td className="p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
+                      <span className="text-sm">{employee.icon}</span>
                     </div>
-                    <div className="w-1/4">$5,000</div>
-                    <div className="w-1/4">$5,500</div>
-                    <div className="w-1/4 text-green-600">+$500</div>
+                    <span className="font-medium">{employee.position}</span>
                   </div>
-
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <div className="w-1/4 flex items-center gap-2">
-                      <div className="h-6 w-6 bg-gray-100 rounded-full flex items-center justify-center text-xs">
-                        ⚡
-                      </div>
-                      <span className="font-medium">Electricians</span>
+                </td>
+                <td className="p-4">{employee.plannedBudget}</td>
+                <td className="p-4">{employee.actualCost}</td>
+                <td className="p-4">
+                  <div className="flex items-center gap-1">
+                    <div
+                      className={`h-5 w-5 rounded-full flex items-center justify-center ${
+                        parseFloat(employee.difference.replace(/[^0-9.-]+/g, "")) > 0
+                          ? "bg-green-100"
+                          : "bg-red-100"
+                      }`}
+                    >
+                      <span
+                        className={`text-xs ${
+                          parseFloat(employee.difference.replace(/[^0-9.-]+/g, "")) > 0
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {parseFloat(employee.difference.replace(/[^0-9.-]+/g, "")) > 0
+                          ? "+"
+                          : ""}
+                      </span>
                     </div>
-                    <div className="w-1/4">$4,200</div>
-                    <div className="w-1/4">$4,100</div>
-                    <div className="w-1/4 text-red-600">-$100</div>
+                    <span
+                      className={`${
+                        parseFloat(employee.difference.replace(/[^0-9.-]+/g, "")) > 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {employee.difference}
+                    </span>
                   </div>
-
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <div className="w-1/4 flex items-center gap-2">
-                      <div className="h-6 w-6 bg-gray-100 rounded-full flex items-center justify-center text-xs">
-                        💻
-                      </div>
-                      <span className="font-medium">IT Staff</span>
-                    </div>
-                    <div className="w-1/4">$6,000</div>
-                    <div className="w-1/4">$6,500</div>
-                    <div className="w-1/4 text-green-600">+$500</div>
-                  </div>
-
-                  <div className="flex justify-between items-center py-2">
-                    <div className="w-1/4 flex items-center gap-2">
-                      <div className="h-6 w-6 bg-gray-100 rounded-full flex items-center justify-center text-xs">
-                        👨‍💼
-                      </div>
-                      <span className="font-medium">Admin Staff</span>
-                    </div>
-                    <div className="w-1/4">$3,800</div>
-                    <div className="w-1/4">$3,700</div>
-                    <div className="w-1/4 text-red-600">-$100</div>
-                  </div>
-                </div>
+                </td>
+                <td className="p-4">
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
               </div>
             </div>
           </div>
@@ -279,11 +474,7 @@ export default function Dashboard() {
             <div className="p-6 border-b">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Add Employee</h2>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowAddEmployee(false)}
-                >
+                <Button variant="ghost" size="icon" onClick={() => setShowAddEmployee(false)}>
                   &times;
                 </Button>
               </div>
@@ -393,10 +584,7 @@ export default function Dashboard() {
             </div>
 
             <div className="p-6 mt-auto">
-              <Button
-                className="w-full bg-orange-500 hover:bg-orange-600"
-                onClick={() => setShowAddEmployee(false)}
-              >
+              <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={() => setShowAddEmployee(false)}>
                 Add Employee
               </Button>
             </div>
@@ -404,5 +592,6 @@ export default function Dashboard() {
         </div>
       )}
     </div>
-  );
+  )
 }
+
