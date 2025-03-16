@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -15,7 +14,9 @@ export default function SignIn() {
     password: "••••••••",
     rememberMe: false,
   });
+  const [error, setError] = useState(""); // Error state for handling failed login
 
+  // Handle input change for form fields
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData({
@@ -24,16 +25,33 @@ export default function SignIn() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handle form submission and simulate the backend response
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you would handle form submission here
-    console.log("Form submitted:", formData);
-    window.location.href = "/settings";
+
+    try {
+      // Simulating a mock successful response (Replace this with the real API later)
+      // Normally you would use axios.post("backend_endpoint", formData)
+      const mockResponse = {
+        status: 200,
+        message: "Login successful",
+      };
+
+      if (mockResponse.status === 200) {
+        // Successful login, redirect to another page
+        window.location.href = "/settings"; // Redirect after successful login
+      } else {
+        setError("Invalid credentials, please try again.");
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+      console.error("Login failed:", err);
+    }
   };
 
   return (
     <div className="w-full h-full lg:grid lg:grid-cols-2 bg-white">
-      <div className="flex flex-col items-center justify-center py-3 bg-white h-screen ">
+      <div className="flex flex-col items-center justify-center py-3 bg-white h-screen">
         <div className="mb-8 mt-0 mr-[400px] ">
           <Logo />
         </div>
@@ -44,6 +62,13 @@ export default function SignIn() {
               Smart Attendance & Payroll Management
             </p>
           </div>
+
+          {/* Display error message if login fails */}
+          {error && (
+            <div className="bg-red-100 text-red-700 p-2 rounded mb-4 text-center">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
