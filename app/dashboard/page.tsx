@@ -30,6 +30,8 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { SelectValue } from "@radix-ui/react-select";
 
 export default function Dashboard() {
   const [user] = useState({
@@ -122,6 +124,27 @@ export default function Dashboard() {
       icon: "👨‍💼",
     },
   ];
+  type Trade = {
+    id: number;
+    name: string;
+    location: string;
+    dailyRate: number;
+    icon: string;
+  };
+
+  const trades: Trade[] = [
+    { id: 1, name: "Electricians", location: "Main Office", dailyRate: 120, icon: "⚡" },
+    { id: 2, name: "Technicians", location: "Site A", dailyRate: 100, icon: "🔧" },
+    { id: 3, name: "HR & Admin", location: "Site B", dailyRate: 90, icon: "👨‍💼" },
+    { id: 4, name: "Supervisors", location: "Site C", dailyRate: 120, icon: "👷" },
+  ]
+  const [filters, setFilters] = useState({
+    trade: "",
+    project: "",
+    dailyRate: "",
+    search: "",
+  })
+  
 
   // Custom tooltip for payroll chart
   const PayrollTooltip = ({
@@ -186,14 +209,30 @@ export default function Dashboard() {
               <h1 className="text-2xl font-bold">Dashboard</h1>
 
               <div className="flex gap-2">
-                <Button size="lg" variant="outline" className="gap-2">
-                  <Upload className="h-4 w-4" />
-                  Upload CSV
-                </Button>
-                <Button size="lg" variant="outline" className="gap-2">
-                  <Upload className="h-4 w-4" />
-                  Upload CSV
-                </Button>
+              <Select onValueChange={(value) => setFilters((prev) => ({ ...prev, trade: value }))}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select by Trade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {trades.map((trade) => (
+                    <SelectItem key={trade.id} value={trade.name}>
+                      {trade.name}
+                      </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select onValueChange={(value) => setFilters((prev) => ({ ...prev, trade: value }))}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select by location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {trades.map((trade) => (
+                    <SelectItem key={trade.id} value={trade.location}>
+                      {trade.location}
+                      </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
                 {/* <Button
                   size="lg"
                   variant="text"

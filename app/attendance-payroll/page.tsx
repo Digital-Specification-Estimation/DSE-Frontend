@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { Search, RefreshCw, ChevronDown, BarChart2 } from "lucide-react"
+import { Search, RefreshCw, ChevronDown } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,18 +24,11 @@ interface Employee {
   attendance: "Present" | "Absent" | "Late"
   daysWorked: number
   budgetBaseline: number
-  plannedBudget: number
+  plannedVsActual?: string
   sickDays: number
   vacationDays: number
   unpaidLeave: number
-  attendanceCalendar?: {
-    month: string
-    days: {
-      day: number
-      weekday: string
-      status: "Present" | "Late" | "Absent"
-    }[]
-  }
+  totalActual?: number
 }
 
 // Sample data
@@ -43,32 +36,21 @@ const initialEmployees: Employee[] = [
   {
     id: 1,
     name: "Courtney Henry",
-    avatar: "/placeholder.svg?height=40&width=40",
+    avatar: "/johndoe.jpeg",
     position: "Electrician",
     assignedProject: "Metro Bridge",
     contractStartDate: "Feb 28, 2018",
     contractEndDate: "Feb 28, 2018",
     dailyRate: 120,
-    remainingDays: 12,
+    remainingDays: 1,
     attendance: "Present",
     daysWorked: 22,
     budgetBaseline: 137760,
-    plannedBudget: 2500,
+    plannedVsActual: "Planned: $2,500",
     sickDays: 22,
     vacationDays: 20,
     unpaidLeave: 20,
-    attendanceCalendar: {
-      month: "May 2025",
-      days: [
-        { day: 1, weekday: "Mon", status: "Present" },
-        { day: 2, weekday: "Tue", status: "Present" },
-        { day: 3, weekday: "Wed", status: "Present" },
-        { day: 4, weekday: "Thu", status: "Present" },
-        { day: 5, weekday: "Fri", status: "Present" },
-        { day: 6, weekday: "Sun", status: "Present" },
-        { day: 7, weekday: "Wed", status: "Present" },
-      ],
-    },
+    totalActual: 2200,
   },
   {
     id: 2,
@@ -78,15 +60,16 @@ const initialEmployees: Employee[] = [
     assignedProject: "Mall Construction",
     contractStartDate: "May 31, 2015",
     contractEndDate: "May 20, 2015",
-    dailyRate: 120,
-    remainingDays: 11,
+    dailyRate: 200,
+    remainingDays: 2,
     attendance: "Present",
-    daysWorked: 22,
-    budgetBaseline: 137760,
-    plannedBudget: 2500,
+    daysWorked: 20,
+    budgetBaseline: 4000,
+    plannedVsActual: "Within Budget",
     sickDays: 20,
     vacationDays: 22,
     unpaidLeave: 18,
+    totalActual: 4000,
   },
   {
     id: 3,
@@ -97,14 +80,15 @@ const initialEmployees: Employee[] = [
     contractStartDate: "May 12, 2019",
     contractEndDate: "Nov 16, 2014",
     dailyRate: 140,
-    remainingDays: 10,
+    remainingDays: 3,
     attendance: "Present",
-    daysWorked: 22,
-    budgetBaseline: 137760,
-    plannedBudget: 2500,
+    daysWorked: 18,
+    budgetBaseline: 2520,
+    plannedVsActual: "+$300 Over Budget",
     sickDays: 18,
     vacationDays: 18,
     unpaidLeave: 22,
+    totalActual: 2520,
   },
   {
     id: 4,
@@ -114,15 +98,16 @@ const initialEmployees: Employee[] = [
     assignedProject: "Mall Construction",
     contractStartDate: "Sep 9, 2013",
     contractEndDate: "May 29, 2017",
-    dailyRate: 120,
-    remainingDays: 9,
+    dailyRate: 100,
+    remainingDays: 4,
     attendance: "Present",
     daysWorked: 22,
-    budgetBaseline: 137760,
-    plannedBudget: 2500,
+    budgetBaseline: 2200,
+    plannedVsActual: "Within Budget",
     sickDays: 22,
     vacationDays: 22,
     unpaidLeave: 22,
+    totalActual: 2200,
   },
   {
     id: 5,
@@ -132,15 +117,16 @@ const initialEmployees: Employee[] = [
     assignedProject: "Metro Bridge",
     contractStartDate: "Jul 14, 2015",
     contractEndDate: "May 12, 2019",
-    dailyRate: 140,
-    remainingDays: 8,
+    dailyRate: 100,
+    remainingDays: 5,
     attendance: "Present",
     daysWorked: 22,
-    budgetBaseline: 137760,
-    plannedBudget: 2500,
+    budgetBaseline: 2640,
+    plannedVsActual: "Planned: $2,500",
     sickDays: 22,
     vacationDays: 22,
     unpaidLeave: 22,
+    totalActual: 4000,
   },
   {
     id: 6,
@@ -150,15 +136,16 @@ const initialEmployees: Employee[] = [
     assignedProject: "Mall Construction",
     contractStartDate: "Sep 24, 2017",
     contractEndDate: "Dec 2, 2018",
-    dailyRate: 120,
-    remainingDays: 7,
+    dailyRate: 140,
+    remainingDays: 6,
     attendance: "Present",
-    daysWorked: 22,
-    budgetBaseline: 137760,
-    plannedBudget: 2500,
+    daysWorked: 18,
+    budgetBaseline: 4000,
+    plannedVsActual: "Within Budget",
     sickDays: 18,
     vacationDays: 18,
     unpaidLeave: 18,
+    totalActual: 2520,
   },
   {
     id: 7,
@@ -168,15 +155,16 @@ const initialEmployees: Employee[] = [
     assignedProject: "Metro Bridge",
     contractStartDate: "Mar 6, 2018",
     contractEndDate: "Apr 28, 2016",
-    dailyRate: 120,
-    remainingDays: 6,
+    dailyRate: 100,
+    remainingDays: 7,
     attendance: "Present",
     daysWorked: 22,
-    budgetBaseline: 137760,
-    plannedBudget: 2500,
+    budgetBaseline: 2520,
+    plannedVsActual: "+$300 Over Budget",
     sickDays: 22,
     vacationDays: 22,
     unpaidLeave: 22,
+    totalActual: 2200,
   },
   {
     id: 8,
@@ -186,15 +174,16 @@ const initialEmployees: Employee[] = [
     assignedProject: "Mall Construction",
     contractStartDate: "Aug 2, 2013",
     contractEndDate: "Feb 29, 2012",
-    dailyRate: 120,
-    remainingDays: 5,
+    dailyRate: 140,
+    remainingDays: 8,
     attendance: "Present",
-    daysWorked: 22,
-    budgetBaseline: 137760,
-    plannedBudget: 2500,
+    daysWorked: 18,
+    budgetBaseline: 2200,
+    plannedVsActual: "Within Budget",
     sickDays: 18,
     vacationDays: 18,
     unpaidLeave: 18,
+    totalActual: 2640,
   },
   {
     id: 9,
@@ -204,15 +193,16 @@ const initialEmployees: Employee[] = [
     assignedProject: "Metro Bridge",
     contractStartDate: "Aug 7, 2017",
     contractEndDate: "May 31, 2015",
-    dailyRate: 120,
-    remainingDays: 4,
+    dailyRate: 100,
+    remainingDays: 9,
     attendance: "Present",
-    daysWorked: 22,
-    budgetBaseline: 137760,
-    plannedBudget: 2500,
+    daysWorked: 18,
+    budgetBaseline: 2640,
+    plannedVsActual: "Planned: $2,500",
     sickDays: 18,
     vacationDays: 18,
     unpaidLeave: 22,
+    totalActual: 4000,
   },
   {
     id: 10,
@@ -222,15 +212,16 @@ const initialEmployees: Employee[] = [
     assignedProject: "Mall Construction",
     contractStartDate: "May 6, 2012",
     contractEndDate: "Mar 13, 2014",
-    dailyRate: 120,
-    remainingDays: 3,
+    dailyRate: 140,
+    remainingDays: 10,
     attendance: "Present",
     daysWorked: 22,
-    budgetBaseline: 137760,
-    plannedBudget: 2500,
+    budgetBaseline: 4000,
+    plannedVsActual: "Within Budget",
     sickDays: 22,
     vacationDays: 22,
     unpaidLeave: 18,
+    totalActual: 2520,
   },
   {
     id: 11,
@@ -240,15 +231,16 @@ const initialEmployees: Employee[] = [
     assignedProject: "Metro Bridge",
     contractStartDate: "Oct 30, 2017",
     contractEndDate: "Mar 23, 2013",
-    dailyRate: 120,
-    remainingDays: 2,
+    dailyRate: 100,
+    remainingDays: 11,
     attendance: "Present",
-    daysWorked: 22,
-    budgetBaseline: 137760,
-    plannedBudget: 2500,
+    daysWorked: 18,
+    budgetBaseline: 2520,
+    plannedVsActual: "+$300 Over Budget",
     sickDays: 18,
     vacationDays: 18,
     unpaidLeave: 18,
+    totalActual: 2640,
   },
   {
     id: 12,
@@ -258,15 +250,16 @@ const initialEmployees: Employee[] = [
     assignedProject: "Mall Construction",
     contractStartDate: "Nov 7, 2017",
     contractEndDate: "Oct 31, 2017",
-    dailyRate: 120,
-    remainingDays: 1,
+    dailyRate: 100,
+    remainingDays: 12,
     attendance: "Present",
     daysWorked: 22,
-    budgetBaseline: 137760,
-    plannedBudget: 2500,
+    budgetBaseline: 2520,
+    plannedVsActual: "Within Budget",
     sickDays: 22,
     vacationDays: 22,
     unpaidLeave: 22,
+    totalActual: 2520,
   },
 ]
 
@@ -283,42 +276,46 @@ export default function AttendancePayroll() {
 
   const [activeTab, setActiveTab] = useState("attendance")
   const [expandedEmployee, setExpandedEmployee] = useState<number | null>(null)
-  const [showFilters, setShowFilters] = useState(false)
-  const [filters, setFilters] = useState({
-    trade: "",
-    project: "",
-    dailyRate: "",
-    startDate: "",
-    endDate: "",
-    search: "",
-  })
+  const [searchTerm, setSearchTerm] = useState("")
+  const [currentMonth, setCurrentMonth] = useState("May 2025")
+  const [showFilters, setShowFilters] = useState(true)
   const [openAttendanceDropdown, setOpenAttendanceDropdown] = useState<number | null>(null)
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees)
 
-  // Filter employees based on selected filters
-  const filteredEmployees = employees.filter((employee) => {
-    if (filters.trade && employee.position !== filters.trade) return false
-    if (filters.project && employee.assignedProject !== filters.project) return false
-    if (filters.dailyRate && `$${employee.dailyRate}` !== filters.dailyRate) return false
-    if (filters.search && !employee.name.toLowerCase().includes(filters.search.toLowerCase())) return false
-    return true
+  const [filters, setFilters] = useState({
+    trade: "Electrician",
+    project: "Metro Bridge",
+    dailyRate: "",
+    startDate: "",
+    endDate: "",
   })
 
-  const toggleEmployeeExpansion = (employeeId: number) => {
-    if (expandedEmployee === employeeId) {
-      setExpandedEmployee(null)
-    } else {
-      setExpandedEmployee(employeeId)
-    }
-  }
-
-  const updateEmployeeAttendance = (employeeId: number, status: "Present" | "Late" | "Absent") => {
-    // Update the employee's attendance status
+  const updateEmployeeAttendance = (employeeId: number, status: "Present" | "Absent" | "Late") => {
     setEmployees((prevEmployees) =>
       prevEmployees.map((employee) => (employee.id === employeeId ? { ...employee, attendance: status } : employee)),
     )
     setOpenAttendanceDropdown(null)
   }
+
+  const filteredEmployees = employees.filter((employee) => {
+    if (searchTerm && !employee.name.toLowerCase().includes(searchTerm.toLowerCase())) return false
+    if (filters.trade && filters.trade !== "Electrician" && employee.position !== filters.trade) return false
+    if (filters.project && filters.project !== "Metro Bridge" && employee.assignedProject !== filters.project)
+      return false
+    if (filters.dailyRate && `$${employee.dailyRate}` !== filters.dailyRate) return false
+    return true
+  })
+
+  // Calendar days for the expanded employee view
+  const calendarDays = [
+    { day: 1, weekday: "Mon", status: "Present" },
+    { day: 2, weekday: "Tue", status: "Present" },
+    { day: 3, weekday: "Wed", status: "Present" },
+    { day: 4, weekday: "Thu", status: "Present" },
+    { day: 5, weekday: "Fri", status: "Present" },
+    { day: 6, weekday: "Sun", status: "Present" },
+    { day: 7, weekday: "Wed", status: "Present" },
+  ]
 
   return (
     <div className="flex h-screen bg-white">
@@ -364,11 +361,27 @@ export default function AttendancePayroll() {
             <h1 className="text-2xl font-bold">Attendance & Payroll Management</h1>
 
             <div className="flex gap-2">
-              <Button variant="outline" className="gap-2 flex items-center">
-                <BarChart2 className="h-4 w-4" />
+              <Button variant="outline" className="gap-2 flex items-center border-2 border-gray-300 rounded-full h-14">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <path d="M16 13H8" />
+                  <path d="M16 17H8" />
+                  <path d="M10 9H8" />
+                </svg>
                 View Payroll Report
               </Button>
-              <Button className="bg-orange-500 hover:bg-orange-600 gap-2 flex items-center">
+              <Button className="bg-orange-500 hover:bg-orange-600 gap-2 flex items-center h-14 rounded-full">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="20"
@@ -391,51 +404,40 @@ export default function AttendancePayroll() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border">
+          <div className="bg-white rounded-lg border flex justify-between items-center h-20 mb-5 pl-2">
             {/* Tabs */}
-            <div className="border-b">
-              <div className="flex">
+            <div className="flex h-10 items-center rounded-lg ">
+              {[
+                { id: "attendance", label: "Attendance" },
+                { id: "payroll", label: "Payroll Calculation" },
+                { id: "leave", label: "Leave Tracking" },
+              ].map((tab, index) => (
                 <button
-                  className={`px-4 py-3 text-sm font-medium ${
-                    activeTab === "attendance" ? "border-b-2 border-primary" : ""
-                  }`}
-                  onClick={() => setActiveTab("attendance")}
+                  key={tab.id}
+                  className={`px-6 py-2 text-sm font-medium transition-all duration-200 rounded-lg
+                    ${activeTab === tab.id ? " border bg-white text-black font-semibold" : "bg-gray-100 text-gray-700"} 
+                    ${index !== 0 ? "border border-gray-300" : ""}`}
+                  onClick={() => setActiveTab(tab.id)}
                 >
-                  Attendence
+                  {tab.label}
                 </button>
-                <button
-                  className={`px-4 py-3 text-sm font-medium ${
-                    activeTab === "payroll" ? "border-b-2 border-primary" : ""
-                  }`}
-                  onClick={() => setActiveTab("payroll")}
-                >
-                  Payroll Calculation
-                </button>
-                <button
-                  className={`px-4 py-3 text-sm font-medium ${
-                    activeTab === "leave" ? "border-b-2 border-primary" : ""
-                  }`}
-                  onClick={() => setActiveTab("leave")}
-                >
-                  Leave Tracking
-                </button>
-              </div>
+              ))}
             </div>
 
-            {/* Search and Filter */}
-            <div className="p-4 flex justify-between items-center">
-              <div className="relative w-64">
+            {/* Search */}
+            <div className="p-4 flex items-center gap-2">
+              <div className="relative w-64 ">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Search employee..."
-                  className="pl-10 h-9 w-full"
-                  onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+                  className="pl-10 w-full h-14 rounded-full border "
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <Button
                 variant="outline"
-                className="gap-2 flex items-center border-orange-500 text-orange-500"
+                className="gap-2 flex items-center border-orange-500 text-orange-500 h-14 rounded-full"
                 onClick={() => setShowFilters(!showFilters)}
               >
                 <svg
@@ -454,102 +456,125 @@ export default function AttendancePayroll() {
                 Add Filter
               </Button>
             </div>
+          </div>
 
-            {/* Filter Row */}
-            {showFilters && (
-              <div className="px-4 pb-4 grid grid-cols-5 gap-4">
-                <Select
-                  value={filters.trade}
-                  onValueChange={(value) => setFilters((prev) => ({ ...prev, trade: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Electrician" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {trades.map((trade) => (
-                      <SelectItem key={trade} value={trade}>
-                        {trade}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* Filter Row */}
+          {showFilters && (
+            <div className="px-4 pb-4 grid grid-cols-5 gap-4">
+              <Select
+                value={filters.trade}
+                onValueChange={(value) => setFilters((prev) => ({ ...prev, trade: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Electrician" />
+                </SelectTrigger>
+                <SelectContent>
+                  {trades.map((trade) => (
+                    <SelectItem key={trade} value={trade}>
+                      {trade}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                <Select
-                  value={filters.project}
-                  onValueChange={(value) => setFilters((prev) => ({ ...prev, project: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Metro Bridge" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((project) => (
-                      <SelectItem key={project} value={project}>
-                        {project}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <Select
+                value={filters.project}
+                onValueChange={(value) => setFilters((prev) => ({ ...prev, project: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Metro Bridge" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((project) => (
+                    <SelectItem key={project} value={project}>
+                      {project}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                <Select
-                  value={filters.dailyRate}
-                  onValueChange={(value) => setFilters((prev) => ({ ...prev, dailyRate: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select by Daily Rate" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dailyRates.map((rate) => (
-                      <SelectItem key={rate} value={rate}>
-                        {rate}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <Select
+                value={filters.dailyRate}
+                onValueChange={(value) => setFilters((prev) => ({ ...prev, dailyRate: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select by Daily Rate" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dailyRates.map((rate) => (
+                    <SelectItem key={rate} value={rate}>
+                      {rate}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="State Date" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="date1">Jan 1, 2025</SelectItem>
-                    <SelectItem value="date2">Feb 1, 2025</SelectItem>
-                    <SelectItem value="date3">Mar 1, 2025</SelectItem>
-                  </SelectContent>
-                </Select>
+              <Select
+                value={filters.startDate}
+                onValueChange={(value) => setFilters((prev) => ({ ...prev, startDate: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="State Date" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date1">Jan 1, 2025</SelectItem>
+                  <SelectItem value="date2">Feb 1, 2025</SelectItem>
+                  <SelectItem value="date3">Mar 1, 2025</SelectItem>
+                </SelectContent>
+              </Select>
 
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Finish Date" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="date1">Dec 31, 2025</SelectItem>
-                    <SelectItem value="date2">Nov 30, 2025</SelectItem>
-                    <SelectItem value="date3">Oct 31, 2025</SelectItem>
-                  </SelectContent>
-                </Select>
+              <Select
+                value={filters.endDate}
+                onValueChange={(value) => setFilters((prev) => ({ ...prev, endDate: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Finish Date" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date1">Dec 31, 2025</SelectItem>
+                  <SelectItem value="date2">Nov 30, 2025</SelectItem>
+                  <SelectItem value="date3">Oct 31, 2025</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Attendance Tab */}
+          {activeTab === "attendance" && (
+            <>
+              {/* Summary Cards */}
+              <div className="px-4 pb-4">
+                <div className="flex gap-4 mb-4">
+                  <div className="bg-white border rounded-lg p-4 flex-1">
+                    <div className="text-sm text-gray-500 mb-1">Total Budget Baseline</div>
+                    <div className="text-xl font-bold">$11,200.56</div>
+                  </div>
+                  <div className="bg-white border rounded-lg p-4 flex-1">
+                    <div className="text-sm text-gray-500 mb-1">Total Actual Payroll</div>
+                    <div className="text-xl font-bold">$6,765.12</div>
+                  </div>
+                </div>
               </div>
-            )}
 
-            {/* Attendance Tab */}
-            {activeTab === "attendance" && (
+              {/* Attendance Table */}
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-[10px]">
+                <table className="w-full border rounded-md">
                   <thead>
-                    <tr className="border-t border-b text-sm text-muted-foreground">
+                    <tr className="border-t border-b text-[10px] text-gray-500">
                       <th className="w-10 px-4 py-3 text-left border-r">
                         <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
                       </th>
-                      <th className="px-4 py-3 text-left border-r text-[10px]">Employee Name</th>
-                      <th className="px-4 py-3 text-left border-r text-[10px]">Position/Trade</th>
-                      <th className="px-4 py-3 text-left border-r text-[10px]">Assigned Project</th>
-                      <th className="px-4 py-3 text-left border-r text-[10px]">Contract Start Date</th>
-                      <th className="px-4 py-3 text-left border-r text-[10px]">Contract Finish Date</th>
-                      <th className="px-4 py-3 text-left border-r text-[10px]">Remaining Days</th>
-                      <th className="px-4 py-3 text-left border-r text-[10px]">Attendance</th>
-                      <th className="w-10 px-4 py-3 text-center border-r"></th>
+                      <th className="px-4 py-3 text-left border-r">Employee Name</th>
+                      <th className="px-4 py-3 text-left border-r">Position/Trade</th>
+                      <th className="px-4 py-3 text-left border-r">Assigned Project</th>
+                      <th className="px-4 py-3 text-left border-r">Contract Start Date</th>
+                      <th className="px-4 py-3 text-left border-r">Contract Finish Date</th>
+                      <th className="px-4 py-3 text-left border-r">Remaining Days</th>
+                      <th className="px-4 py-3 text-left border-r">Attendance</th>
+                      <th className="w-10 px-4 py-3 text-center"></th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="text-[10px]">
                     {filteredEmployees.map((employee) => (
                       <React.Fragment key={employee.id}>
                         <tr className="border-b hover:bg-gray-50">
@@ -571,15 +596,7 @@ export default function AttendancePayroll() {
                           <td className="px-4 py-3 border-r">{employee.contractEndDate}</td>
                           <td className="px-4 py-3 border-r">
                             <Badge
-                              variant="outline"
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium 
-                  ${
-                    employee.remainingDays > 10
-                      ? "bg-green-50 text-green-700 border-green-200"
-                      : employee.remainingDays > 5
-                        ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                        : "bg-red-50 text-red-700 border-red-200"
-                  }`}
+                              className={`rounded-full px-2 py-0.5 text-xs font-medium bg-red-50 text-red-600 border-0`}
                             >
                               {employee.remainingDays < 10 ? `0${employee.remainingDays}` : employee.remainingDays}
                             </Badge>
@@ -602,19 +619,19 @@ export default function AttendancePayroll() {
                                       employee.attendance === "Present"
                                         ? "bg-green-50 text-green-700 border-0"
                                         : employee.attendance === "Late"
-                                          ? "bg-yellow-50 text-yellow-700 border-0"
+                                          ? "bg-orange-50 text-orange-500 border-0"
                                           : "bg-red-50 text-red-700 border-0"
                                     }
                                   >
-                                    {employee.attendance}
+                                    {employee.attendance === "Late" ? "late" : employee.attendance}
                                   </Badge>
                                   <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                 </div>
                               </PopoverTrigger>
                               <PopoverContent className="w-auto p-0" align="start">
-                                <div className="p-2 space-y-2">
+                                <div className="p-4 space-y-2">
                                   <div className="text-sm font-medium text-muted-foreground mb-2">
-                                    Attendence Status
+                                    Attendance Dropdown
                                   </div>
                                   <Button
                                     variant="outline"
@@ -625,10 +642,10 @@ export default function AttendancePayroll() {
                                   </Button>
                                   <Button
                                     variant="outline"
-                                    className="w-full justify-center bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800 border-orange-100"
+                                    className="w-full justify-center bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 border-orange-100"
                                     onClick={() => updateEmployeeAttendance(employee.id, "Late")}
                                   >
-                                    Late
+                                    late
                                   </Button>
                                   <Button
                                     variant="outline"
@@ -641,8 +658,12 @@ export default function AttendancePayroll() {
                               </PopoverContent>
                             </Popover>
                           </td>
-                          <td className="px-4 py-3 text-center border-r">
-                            <Button variant="ghost" size="icon" onClick={() => toggleEmployeeExpansion(employee.id)}>
+                          <td className="px-4 py-3 text-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setExpandedEmployee(employee.id === expandedEmployee ? null : employee.id)}
+                            >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="16"
@@ -660,15 +681,15 @@ export default function AttendancePayroll() {
                                 <circle cx="12" cy="19" r="1" />
                               </svg>
                             </Button>
-                          </td> 
+                          </td>
                         </tr>
-                        {expandedEmployee === employee.id && employee.attendanceCalendar && (
+                        {expandedEmployee === employee.id && (
                           <tr className="bg-gray-50">
-                            <td colSpan={10} className="px-4 py-4">
+                            <td colSpan={9} className="px-4 py-4">
                               <div className="border rounded-md bg-white p-4">
                                 <div className="flex justify-between items-center mb-4">
                                   <div className="flex items-center gap-2">
-                                    <h3 className="font-medium">{employee.attendanceCalendar.month}</h3>
+                                    <h3 className="font-medium">{currentMonth}</h3>
                                     <div className="flex gap-1">
                                       <Button variant="ghost" size="icon" className="h-6 w-6">
                                         <svg
@@ -716,7 +737,7 @@ export default function AttendancePayroll() {
                                   </div>
                                 </div>
                                 <div className="grid grid-cols-7 gap-4">
-                                  {employee.attendanceCalendar.days.map((day, index) => (
+                                  {calendarDays.map((day, index) => (
                                     <div key={index} className="text-center">
                                       <div className="text-sm font-medium mb-1">
                                         {day.day < 10 ? `0${day.day}` : day.day}
@@ -759,14 +780,43 @@ export default function AttendancePayroll() {
                   </tbody>
                 </table>
               </div>
-            )}
+            </>
+          )}
 
-            {/* Payroll Tab */}
-            {activeTab === "payroll" && (
+          {/* Payroll Tab */}
+          {activeTab === "payroll" && (
+            <>
+              {/* Summary Cards */}
+              <div className="px-4 pb-4">
+                <div className="grid grid-cols-5 gap-4 mb-4">
+                  <div className="bg-white border rounded-lg p-4">
+                    <div className="text-sm text-gray-500 mb-1">Total Employees</div>
+                    <div className="text-xl font-bold">45</div>
+                  </div>
+                  <div className="bg-white border rounded-lg p-4">
+                    <div className="text-sm text-gray-500 mb-1">Total Days Worked</div>
+                    <div className="text-xl font-bold">365</div>
+                  </div>
+                  <div className="bg-white border rounded-lg p-4">
+                    <div className="text-sm text-gray-500 mb-1">Total Budget Baseline</div>
+                    <div className="text-xl font-bold">$11,200.56</div>
+                  </div>
+                  <div className="bg-white border rounded-lg p-4">
+                    <div className="text-sm text-gray-500 mb-1">Total Actual Payroll</div>
+                    <div className="text-xl font-bold">$6,765.12</div>
+                  </div>
+                  <div className="bg-white border rounded-lg p-4">
+                    <div className="text-sm text-gray-500 mb-1">Daily Actual Payroll</div>
+                    <div className="text-xl font-bold">$500</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payroll Table */}
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
+                <table className="w-full border rounded-md">
                   <thead>
-                    <tr className="border-t border-b text-sm text-muted-foreground">
+                    <tr className="border-t border-b text-[10px] text-gray-500">
                       <th className="w-10 px-4 py-3 text-left border-r">
                         <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
                       </th>
@@ -774,11 +824,12 @@ export default function AttendancePayroll() {
                       <th className="px-4 py-3 text-left border-r">Daily Rate</th>
                       <th className="px-4 py-3 text-left border-r">Days Worked</th>
                       <th className="px-4 py-3 text-left border-r">Budget Baseline</th>
+                      <th className="px-4 py-3 text-left border-r">Total Actual</th>
                       <th className="px-4 py-3 text-left border-r">Planned vs Actual</th>
                       <th className="w-10 px-4 py-3 text-center"></th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="text-xs">
                     {filteredEmployees.map((employee) => (
                       <tr key={employee.id} className="border-b hover:bg-gray-50">
                         <td className="px-4 py-3 border-r">
@@ -795,18 +846,16 @@ export default function AttendancePayroll() {
                         </td>
                         <td className="px-4 py-3 border-r">${employee.dailyRate}</td>
                         <td className="px-4 py-3 border-r">{employee.daysWorked}</td>
-                        <td className="px-4 py-3 border-r">${employee.budgetBaseline}</td>
+                        <td className="px-4 py-3 border-r">${employee.budgetBaseline.toLocaleString()}</td>
+                        <td className="px-4 py-3 border-r">${employee.totalActual?.toLocaleString()}</td>
                         <td className="px-4 py-3 border-r">
-                          <div className="flex items-center gap-2">
-                            <span>Planned: ${employee.plannedBudget}</span>
-                            {employee.dailyRate * employee.daysWorked > employee.plannedBudget ? (
-                              <Badge className="bg-red-50 text-red-700 border-0">
-                                +${employee.dailyRate * employee.daysWorked - employee.plannedBudget} Over Budget
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-green-50 text-green-700 border-0">Within Budget</Badge>
-                            )}
-                          </div>
+                          {employee.plannedVsActual?.includes("Over Budget") ? (
+                            <Badge className="bg-red-50 text-red-700 border-0">{employee.plannedVsActual}</Badge>
+                          ) : employee.plannedVsActual?.includes("Planned") ? (
+                            <span className="text-gray-700">{employee.plannedVsActual}</span>
+                          ) : (
+                            <Badge className="bg-green-50 text-green-700 border-0">{employee.plannedVsActual}</Badge>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <Button variant="ghost" size="icon">
@@ -833,69 +882,69 @@ export default function AttendancePayroll() {
                   </tbody>
                 </table>
               </div>
-            )}
+            </>
+          )}
 
-            {/* Leave Tab */}
-            {activeTab === "leave" && (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-t border-b text-sm text-muted-foreground">
-                      <th className="w-10 px-4 py-3 text-left border-r">
+          {/* Leave Tab */}
+          {activeTab === "leave" && (
+            <div className="overflow-x-auto">
+              <table className="w-full border rounded-lg">
+                <thead>
+                  <tr className="border-t border-b text-[10px] text-gray-500">
+                    <th className="w-10 px-4 py-3 text-left border-r">
+                      <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
+                    </th>
+                    <th className="px-4 py-3 text-left border-r">Employee Name</th>
+                    <th className="px-4 py-3 text-left border-r">Sick Days</th>
+                    <th className="px-4 py-3 text-left border-r">Vacation Days</th>
+                    <th className="px-4 py-3 text-left border-r">Unpaid Leave</th>
+                    <th className="w-10 px-4 py-3 text-center"></th>
+                  </tr>
+                </thead>
+                <tbody className="text-xs">
+                  {filteredEmployees.map((employee) => (
+                    <tr key={employee.id} className="border-b hover:bg-gray-50">
+                      <td className="px-4 py-3 border-r">
                         <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
-                      </th>
-                      <th className="px-4 py-3 text-left border-r">Employee Name</th>
-                      <th className="px-4 py-3 text-left border-r">Sick Days</th>
-                      <th className="px-4 py-3 text-left border-r">Vacation Days</th>
-                      <th className="px-4 py-3 text-left border-r">Unpaid Leave</th>
-                      <th className="w-10 px-4 py-3 text-center"></th>
+                      </td>
+                      <td className="px-4 py-3 border-r">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={employee.avatar} alt={employee.name} />
+                            <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">{employee.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 border-r">{employee.sickDays}</td>
+                      <td className="px-4 py-3 border-r">{employee.vacationDays}</td>
+                      <td className="px-4 py-3 border-r">{employee.unpaidLeave}</td>
+                      <td className="px-4 py-3 text-center">
+                        <Button variant="ghost" size="icon">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-muted-foreground"
+                          >
+                            <circle cx="12" cy="12" r="1" />
+                            <circle cx="12" cy="5" r="1" />
+                            <circle cx="12" cy="19" r="1" />
+                          </svg>
+                        </Button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filteredEmployees.map((employee) => (
-                      <tr key={employee.id} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-3 border-r">
-                          <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
-                        </td>
-                        <td className="px-4 py-3 border-r">
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={employee.avatar} alt={employee.name} />
-                              <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">{employee.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 border-r">{employee.sickDays}</td>
-                        <td className="px-4 py-3 border-r">{employee.vacationDays}</td>
-                        <td className="px-4 py-3 border-r">{employee.unpaidLeave}</td>
-                        <td className="px-4 py-3 text-center">
-                          <Button variant="ghost" size="icon">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="text-muted-foreground"
-                            >
-                              <circle cx="12" cy="12" r="1" />
-                              <circle cx="12" cy="5" r="1" />
-                              <circle cx="12" cy="19" r="1" />
-                            </svg>
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </main>
       </div>
     </div>

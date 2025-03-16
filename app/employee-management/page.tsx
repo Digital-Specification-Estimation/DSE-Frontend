@@ -233,11 +233,11 @@ export default function EmployeeManagement() {
             <h1 className="text-2xl font-bold">Employee Management</h1>
 
             <div className="flex gap-2">
-              <Button variant="outline" className="gap-2">
+              <Button variant="outline" className="gap-2  h-12 rounded-full">
                 <Upload className="h-4 w-4" />
                 Upload CSV
               </Button>
-              <Button onClick={() => setShowAddEmployee(true)} className="bg-orange-500 hover:bg-orange-600 gap-2">
+              <Button onClick={() => setShowAddEmployee(true)} className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full">
                 <Plus className="h-4 w-4" />
                 Add New Employee
               </Button>
@@ -246,7 +246,7 @@ export default function EmployeeManagement() {
 
           <div className="bg-white rounded-lg border">
             {/* Filters */}
-            <div className="p-4 flex gap-4">
+            <div className="p-4 flex gap-4 rounded-lg">
               <Select onValueChange={(value) => setFilters((prev) => ({ ...prev, trade: value }))}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Select by Trade" />
@@ -287,11 +287,11 @@ export default function EmployeeManagement() {
               </Select>
 
               <div className="relative w-64 ml-auto">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground " />
                 <Input
                   type="search"
                   placeholder="Search trade/position..."
-                  className="pl-10 h-9 w-full"
+                  className="pl-10 h-9 w-full rounded-full"
                   onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
                 />
               </div>

@@ -198,7 +198,7 @@ export default function BusinessSetup() {
                           <h2 className="text-lg font-semibold text-gray-900">Work Locations</h2>
                           <p className="text-sm text-gray-500">Define different locations where employees work.</p>
                         </div>
-                        <Button onClick={() => setShowAddLocation(true)} className="bg-orange-500 hover:bg-orange-600">
+                        <Button onClick={() => setShowAddLocation(true)} className="bg-orange-400 hover:bg-orange-500">
                           <Plus className="h-4 w-4 mr-2" />
                           Add New Location
                         </Button>
@@ -225,7 +225,7 @@ export default function BusinessSetup() {
                           <h2 className="text-lg font-semibold text-gray-900">Trade/Job Role & Daily Rates</h2>
                           <p className="text-sm text-gray-500">Define different roles and set daily rates for each.</p>
                         </div>
-                        <Button onClick={() => setShowAddTrade(true)} className="bg-orange-500 hover:bg-orange-600">
+                        <Button onClick={() => setShowAddTrade(true)} className="bg-orange-400 hover:bg-orange-5  00">
                           <Plus className="h-4 w-4 mr-2" />
                           Add New Trade
                         </Button>
@@ -258,7 +258,7 @@ export default function BusinessSetup() {
                           <h2 className="text-lg font-semibold text-gray-900">Company Projects</h2>
                           <p className="text-sm text-gray-500">Set up projects and assign locations.</p>
                         </div>
-                        <Button onClick={() => setShowAddProject(true)} className="bg-orange-500 hover:bg-orange-600">
+                        <Button onClick={() => setShowAddProject(true)} className="bg-orange-400 hover:bg-orange-500">
                           <Plus className="h-4 w-4 mr-2" />
                           Add New Project
                         </Button>
