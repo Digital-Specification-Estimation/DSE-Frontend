@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import DashboardHeader from "@/components/DashboardHeader"
 
 // Types
 interface Trade {
@@ -303,36 +304,7 @@ export default function BudgetPlanning() {
       <Sidebar user={user} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white border-b px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search" className="pl-10 h-9 w-full" />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <Button className="bg-blue-700 hover:bg-blue-800 text-white rounded-full flex items-center gap-2">
-                <span className="flex items-center">
-                  <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      d="M12 6V18M18 12H6"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  Total Payroll $25,000
-                </span>
-              </Button>
-            </div>
-          </div>
-        </header>
-
+        <DashboardHeader/>
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-6">
           <div className="flex justify-between items-center mb-6">
