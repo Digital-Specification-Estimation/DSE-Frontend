@@ -9,14 +9,14 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
-
+const TOAST_REMOVE_DELAY = 500
 type ToasterToast = ToastProps & {
-  id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: ToastActionElement
-}
+  id: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  action?: ToastActionElement;
+  variant?: "default" | "destructive" | "error"; // Match your alertVariants
+};
 
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
@@ -51,6 +51,8 @@ type Action =
       type: ActionType["REMOVE_TOAST"]
       toastId?: ToasterToast["id"]
     }
+  
+export type { ToasterToast }
 
 interface State {
   toasts: ToasterToast[]

@@ -546,10 +546,10 @@ export default function AttendancePayroll() {
                     ${index !== 0 ? "border border-gray-300" : ""}`}
                   onClick={() => {
                     setActiveTab(tab.id)
-                    toast({
-                      title: `${tab.label} Tab`,
-                      description: `Switched to ${tab.label} view`,
-                    })
+                    // toast({
+                    //   title: `${tab.label} Tab`,
+                    //   description: `Switched to ${tab.label} view`,
+                    // })
                   }}
                 >
                   {tab.label}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Search, RefreshCw, FileText, ChevronDown, Plus, ChevronUp, MoreHorizontal, Edit, Trash2 } from "lucide-react"
+import { Search, FileText, ChevronDown, Plus, ChevronUp, MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import DashboardHeader from "@/components/DashboardHeader"
+import { useToast } from "@/hooks/use-toast"
 
 // Types
 interface Trade {
@@ -31,81 +32,8 @@ interface Project {
   isExpanded?: boolean
 }
 
-// Sample data
-const initialProjects: Project[] = [
-  {
-    id: 1,
-    name: "Project A",
-    budget: 32000,
-    isExpanded: true,
-    trades: [
-      {
-        id: 1,
-        role: "Electricians",
-        icon: "⚡",
-        employeesNumber: 10,
-        workDays: 22,
-        plannedSalary: 5000,
-        actualCost: 5500,
-      },
-      {
-        id: 2,
-        role: "Technicians",
-        icon: "🔧",
-        employeesNumber: 8,
-        workDays: 22,
-        plannedSalary: 3200,
-        actualCost: 4100,
-      },
-      {
-        id: 3,
-        role: "HR & Admin",
-        icon: "👨‍💼",
-        employeesNumber: 4,
-        workDays: 22,
-        plannedSalary: 4000,
-        actualCost: 6500,
-      },
-      {
-        id: 4,
-        role: "Supervisors",
-        icon: "👷",
-        employeesNumber: 6,
-        workDays: 22,
-        plannedSalary: 6500,
-        actualCost: 3700,
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "Project B",
-    budget: 32000,
-    isExpanded: false,
-    trades: [
-      {
-        id: 5,
-        role: "Electricians",
-        icon: "⚡",
-        employeesNumber: 8,
-        workDays: 22,
-        plannedSalary: 5000,
-        actualCost: 4800,
-      },
-      {
-        id: 6,
-        role: "Technicians",
-        icon: "🔧",
-        employeesNumber: 6,
-        workDays: 22,
-        plannedSalary: 4200,
-        actualCost: 4100,
-      },
-    ],
-  },
-]
-
 export default function BudgetPlanning() {
+  const { toast } = useToast()
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
@@ -113,26 +41,18 @@ export default function BudgetPlanning() {
   })
 
   const [activeTab, setActiveTab] = useState("plan")
-  const [projects, setProjects] = useState<Project[]>(initialProjects)
+  const [projects, setProjects] = useState<Project[]>([])
   const [showAddTrade, setShowAddTrade] = useState(false)
   const [showEditTrade, setShowEditTrade] = useState(false)
   const [selectedProject, setSelectedProject] = useState<string>("")
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [timeFilter, setTimeFilter] = useState("This Month")
+  const [isLoading, setIsLoading] = useState(true)
+  const [isExporting, setIsExporting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const chartRef = useRef<HTMLDivElement>(null)
-
-  // Calculate totals for the cost trend view
-  const totalPlannedCost = projects.reduce(
-    (sum, project) => sum + project.trades.reduce((s, trade) => s + trade.plannedSalary, 0),
-    0,
-  )
-
-  const totalActualCost = projects.reduce(
-    (sum, project) => sum + project.trades.reduce((s, trade) => s + (trade.actualCost || 0), 0),
-    0,
-  )
 
   // New trade form state
   const [newTrade, setNewTrade] = useState({
@@ -152,67 +72,244 @@ export default function BudgetPlanning() {
     plannedSalary: "",
   })
 
-  const handleAddTrade = () => {
-    const projectId = Number.parseInt(newTrade.projectId)
-    const project = projects.find((p) => p.id === projectId)
+  // Fetch budget data
+  useEffect(() => {
+    const fetchBudgetData = async () => {
+      try {
+        setIsLoading(true)
+        // Simulate API call
+        await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    if (project) {
-      const updatedProjects = projects.map((p) => {
-        if (p.id === projectId) {
-          return {
-            ...p,
+        // In a real implementation, this would be:
+        // const response = await fetch('/api/budget/projects');
+        // const data = await response.json();
+        // setProjects(data);
+
+        // Sample data for now
+        setProjects([
+          {
+            id: 1,
+            name: "Project A",
+            budget: 32000,
+            isExpanded: true,
             trades: [
-              ...p.trades,
               {
-                id: Math.max(...projects.flatMap((p) => p.trades.map((t) => t.id))) + 1,
-                role: newTrade.role,
-                icon: getIconForRole(newTrade.role),
-                employeesNumber: Number.parseInt(newTrade.employeesNumber),
-                workDays: Number.parseInt(newTrade.workDays),
-                plannedSalary: Number.parseInt(newTrade.plannedSalary),
-                actualCost: 0,
+                id: 1,
+                role: "Electricians",
+                icon: "⚡",
+                employeesNumber: 10,
+                workDays: 22,
+                plannedSalary: 5000,
+                actualCost: 5500,
+              },
+              {
+                id: 2,
+                role: "Technicians",
+                icon: "🔧",
+                employeesNumber: 8,
+                workDays: 22,
+                plannedSalary: 3200,
+                actualCost: 4100,
+              },
+              {
+                id: 3,
+                role: "HR & Admin",
+                icon: "👨‍💼",
+                employeesNumber: 4,
+                workDays: 22,
+                plannedSalary: 4000,
+                actualCost: 6500,
+              },
+              {
+                id: 4,
+                role: "Supervisors",
+                icon: "👷",
+                employeesNumber: 6,
+                workDays: 22,
+                plannedSalary: 6500,
+                actualCost: 3700,
               },
             ],
-          }
-        }
-        return p
-      })
+          },
+          {
+            id: 2,
+            name: "Project B",
+            budget: 32000,
+            isExpanded: false,
+            trades: [
+              {
+                id: 5,
+                role: "Electricians",
+                icon: "⚡",
+                employeesNumber: 8,
+                workDays: 22,
+                plannedSalary: 5000,
+                actualCost: 4800,
+              },
+              {
+                id: 6,
+                role: "Technicians",
+                icon: "🔧",
+                employeesNumber: 6,
+                workDays: 22,
+                plannedSalary: 4200,
+                actualCost: 4100,
+              },
+            ],
+          },
+        ])
 
-      setProjects(updatedProjects)
-      setShowAddTrade(false)
-      setNewTrade({
-        role: "",
-        employeesNumber: "",
-        workDays: "22",
-        plannedSalary: "",
-        projectId: "",
+        setIsLoading(false)
+      } catch (error) {
+        console.error("Error fetching budget data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load budget data. Please try again.",
+          variant: "destructive",
+        })
+        setIsLoading(false)
+      }
+    }
+
+    fetchBudgetData()
+  }, [toast])
+
+  const handleAddTrade = async () => {
+    try {
+      if (!newTrade.role || !newTrade.employeesNumber || !newTrade.plannedSalary || !newTrade.projectId) {
+        toast({
+          title: "Validation Error",
+          description: "All fields are required.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      setIsSaving(true)
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // In a real implementation, this would be:
+      // const response = await fetch('/api/budget/trades', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(newTrade),
+      // });
+      // const data = await response.json();
+
+      const projectId = Number.parseInt(newTrade.projectId)
+      const project = projects.find((p) => p.id === projectId)
+
+      if (project) {
+        const updatedProjects = projects.map((p) => {
+          if (p.id === projectId) {
+            return {
+              ...p,
+              trades: [
+                ...p.trades,
+                {
+                  id: Math.max(...projects.flatMap((p) => p.trades.map((t) => t.id))) + 1,
+                  role: newTrade.role,
+                  icon: getIconForRole(newTrade.role),
+                  employeesNumber: Number.parseInt(newTrade.employeesNumber),
+                  workDays: Number.parseInt(newTrade.workDays),
+                  plannedSalary: Number.parseInt(newTrade.plannedSalary),
+                  actualCost: 0,
+                },
+              ],
+            }
+          }
+          return p
+        })
+
+        setProjects(updatedProjects)
+        setShowAddTrade(false)
+        setNewTrade({
+          role: "",
+          employeesNumber: "",
+          workDays: "22",
+          plannedSalary: "",
+          projectId: "",
+        })
+
+        toast({
+          title: "Trade Added",
+          description: `${newTrade.role} has been added to ${project.name}.`,
+        })
+      }
+
+      setIsSaving(false)
+    } catch (error) {
+      console.error("Error adding trade:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add trade. Please try again.",
+        variant: "destructive",
       })
+      setIsSaving(false)
     }
   }
 
-  const handleEditTrade = () => {
-    const updatedProjects = projects.map((project) => {
-      const updatedTrades = project.trades.map((trade) => {
-        if (trade.id === editTrade.id) {
-          return {
-            ...trade,
-            role: editTrade.role,
-            employeesNumber: Number.parseInt(editTrade.employeesNumber),
-            workDays: Number.parseInt(editTrade.workDays),
-            plannedSalary: Number.parseInt(editTrade.plannedSalary),
+  const handleEditTrade = async () => {
+    try {
+      if (!editTrade.role || !editTrade.employeesNumber || !editTrade.workDays || !editTrade.plannedSalary) {
+        toast({
+          title: "Validation Error",
+          description: "All fields are required.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      setIsSaving(true)
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // In a real implementation, this would be:
+      // const response = await fetch(`/api/budget/trades/${editTrade.id}`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(editTrade),
+      // });
+      // const data = await response.json();
+
+      const updatedProjects = projects.map((project) => {
+        const updatedTrades = project.trades.map((trade) => {
+          if (trade.id === editTrade.id) {
+            return {
+              ...trade,
+              role: editTrade.role,
+              employeesNumber: Number.parseInt(editTrade.employeesNumber),
+              workDays: Number.parseInt(editTrade.workDays),
+              plannedSalary: Number.parseInt(editTrade.plannedSalary),
+            }
           }
+          return trade
+        })
+
+        return {
+          ...project,
+          trades: updatedTrades,
         }
-        return trade
       })
 
-      return {
-        ...project,
-        trades: updatedTrades,
-      }
-    })
+      setProjects(updatedProjects)
+      setShowEditTrade(false)
+      setIsSaving(false)
 
-    setProjects(updatedProjects)
-    setShowEditTrade(false)
+      toast({
+        title: "Trade Updated",
+        description: `${editTrade.role} has been updated successfully.`,
+      })
+    } catch (error) {
+      console.error("Error updating trade:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update trade. Please try again.",
+        variant: "destructive",
+      })
+      setIsSaving(false)
+    }
   }
 
   const handleTradeAction = (action: string, trade: Trade, projectId: number) => {
@@ -226,21 +323,42 @@ export default function BudgetPlanning() {
       })
       setSelectedTrade(trade)
       setShowEditTrade(true)
-    } else if (action === "delete") {
-      const updatedProjects = projects.map((project) => {
-        if (project.id === projectId) {
-          return {
-            ...project,
-            trades: project.trades.filter((t) => t.id !== trade.id),
-          }
-        }
-        return project
+      toast({
+        title: "Edit Trade",
+        description: `Editing ${trade.role}.`,
       })
-      setProjects(updatedProjects)
+    } else if (action === "delete") {
+      // In a real implementation, you would show a confirmation dialog
+      const project = projects.find((p) => p.id === projectId)
+      if (project) {
+        toast({
+          title: "Confirm Deletion",
+          description: `Are you sure you want to delete ${trade.role} from ${project.name}?`,
+        })
+
+        // For demo purposes, we'll just delete it
+        const updatedProjects = projects.map((project) => {
+          if (project.id === projectId) {
+            return {
+              ...project,
+              trades: project.trades.filter((t) => t.id !== trade.id),
+            }
+          }
+          return project
+        })
+
+        setProjects(updatedProjects)
+
+        toast({
+          title: "Trade Deleted",
+          description: `${trade.role} has been deleted successfully.`,
+        })
+      }
     }
   }
 
   const toggleProjectExpansion = (projectId: number) => {
+    const project = projects.find((p) => p.id === projectId)
     setProjects(
       projects.map((project) => (project.id === projectId ? { ...project, isExpanded: !project.isExpanded } : project)),
     )
@@ -272,13 +390,16 @@ export default function BudgetPlanning() {
     return project.trades.some((trade) => trade.role.toLowerCase().includes(searchTerm.toLowerCase()))
   })
 
-  // Create interactive chart
-  useEffect(() => {
-    if (activeTab === "costs" && chartRef.current) {
-      // In a real implementation, you would use a charting library like Chart.js or Recharts
-      // This is a simplified version for demonstration purposes
-    }
-  }, [activeTab, projects])
+  // Calculate totals for the cost trend view
+  const totalPlannedCost = projects.reduce(
+    (sum, project) => sum + project.trades.reduce((s, trade) => s + trade.plannedSalary, 0),
+    0,
+  )
+
+  const totalActualCost = projects.reduce(
+    (sum, project) => sum + project.trades.reduce((s, trade) => s + (trade.actualCost || 0), 0),
+    0,
+  )
 
   // Get all unique trade roles across all projects
   const allTrades = Array.from(new Set(projects.flatMap((p) => p.trades.map((t) => t.role))))
@@ -299,23 +420,114 @@ export default function BudgetPlanning() {
     return { role, plannedCost, actualCost, difference: actualCost - plannedCost }
   })
 
+  const handleExportReport = async () => {
+    try {
+      setIsExporting(true)
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      // In a real implementation, this would be:
+      // const response = await fetch('/api/budget/export', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ timeFilter, projects: filteredProjects }),
+      // });
+      // const blob = await response.blob();
+      // const url = window.URL.createObjectURL(blob);
+      // const a = document.createElement('a');
+      // a.href = url;
+      // a.download = 'budget_report.pdf';
+      // document.body.appendChild(a);
+      // a.click();
+      // a.remove();
+
+      setIsExporting(false)
+      toast({
+        title: "Report Exported",
+        description: "Budget report has been exported successfully.",
+      })
+    } catch (error) {
+      console.error("Error exporting report:", error)
+      toast({
+        title: "Error",
+        description: "Failed to export report. Please try again.",
+        variant: "destructive",
+      })
+      setIsExporting(false)
+    }
+  }
+
+  const handleTimeFilterChange = (value: string) => {
+    setTimeFilter(value)
+    toast({
+      title: "Time Filter Changed",
+      description: `Viewing data for ${value}.`,
+    })
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value)
+    if (value) {
+      // toast({
+      //   title: "Search Applied",
+      //   description: `Searching for "${value}".`,
+      // })
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen bg-gray-50">
+        <Sidebar user={user} />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <DashboardHeader />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+              <p className="text-sm text-gray-500">Loading budget data...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader/>
+        <DashboardHeader />
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold">Budget Planning & Cost Comparison</h1>
 
             <div className="flex gap-2">
-              <Button variant="outline" className="gap-2 h-12 rounded-full">
-                <FileText className="h-4 w-4" />
-                Export Report
+              <Button
+                variant="outline"
+                className="gap-2 h-12 rounded-full"
+                onClick={handleExportReport}
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4" />
+                    Export Report
+                  </>
+                )}
               </Button>
-              <Button onClick={() => setShowAddTrade(true)} className="bg-orange-400 hover:bg-orange-500 gap-2  h-12 rounded-full">
+              <Button
+                onClick={() => {
+                  setShowAddTrade(true)
+                }}
+                className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full"
+              >
                 <Plus className="h-4 w-4" />
                 Add New Trade
               </Button>
@@ -328,12 +540,24 @@ export default function BudgetPlanning() {
                 <TabsTrigger
                   value="plan"
                   className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                  onClick={() => {
+                    toast({
+                      title: "Tab Changed",
+                      description: "Viewing Plan Budget tab.",
+                    })
+                  }}
                 >
                   Plan Budget
                 </TabsTrigger>
                 <TabsTrigger
                   value="costs"
                   className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                  onClick={() => {
+                    toast({
+                      title: "Tab Changed",
+                      description: "Viewing Costs Trend tab.",
+                    })
+                  }}
                 >
                   Costs Trend
                 </TabsTrigger>
@@ -344,7 +568,7 @@ export default function BudgetPlanning() {
             <TabsContent value="plan" className="p-0 mt-0">
               <div className="flex justify-between items-center mb-4">
                 <div className="relative">
-                  <Select value={timeFilter} onValueChange={setTimeFilter}>
+                  <Select value={timeFilter} onValueChange={handleTimeFilterChange}>
                     <SelectTrigger className="w-[180px] bg-white">
                       <SelectValue placeholder="This Month" />
                     </SelectTrigger>
@@ -364,98 +588,104 @@ export default function BudgetPlanning() {
                     placeholder="Search project..."
                     className="pl-10 h-9 w-full"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                   />
                 </div>
               </div>
 
-              {filteredProjects.map((project) => (
-                <div key={project.id} className="bg-white rounded-lg border mb-4">
-                  <div
-                    className="flex items-center p-4 cursor-pointer"
-                    onClick={() => toggleProjectExpansion(project.id)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 bg-gray-800 rounded-full flex items-center justify-center text-white">
-                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path
-                            d="M3 9L12 5L21 9M3 9V17L12 21M3 9L12 13M12 21L21 17V9M12 21V13M21 9L12 13"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
+              {filteredProjects.length > 0 ? (
+                filteredProjects.map((project) => (
+                  <div key={project.id} className="bg-white rounded-lg border mb-4">
+                    <div
+                      className="flex items-center p-4 cursor-pointer"
+                      onClick={() => toggleProjectExpansion(project.id)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 bg-gray-800 rounded-full flex items-center justify-center text-white">
+                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                              d="M3 9L12 5L21 9M3 9V17L12 21M3 9L12 13M12 21L21 17V9M12 21V13M21 9L12 13"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </div>
+                        <span className="font-medium">{project.name}</span>
+                        <span className="text-sm bg-gray-100 px-2 py-0.5 rounded-full">
+                          ${project.budget.toLocaleString()}
+                        </span>
                       </div>
-                      <span className="font-medium">{project.name}</span>
-                      <span className="text-sm bg-gray-100 px-2 py-0.5 rounded-full">
-                        ${project.budget.toLocaleString()}
-                      </span>
+                      <div className="ml-auto">
+                        {project.isExpanded ? (
+                          <ChevronUp className="h-5 w-5 text-gray-500" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5 text-gray-500" />
+                        )}
+                      </div>
                     </div>
-                    <div className="ml-auto">
-                      {project.isExpanded ? (
-                        <ChevronUp className="h-5 w-5 text-gray-500" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5 text-gray-500" />
-                      )}
-                    </div>
-                  </div>
 
-                  {project.isExpanded && (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-t border-b text-sm text-muted-foreground">
-                            <th className="px-4 py-3 text-left">SN</th>
-                            <th className="px-4 py-3 text-left">Role/Trade</th>
-                            <th className="px-4 py-3 text-left">Employees Number</th>
-                            <th className="px-4 py-3 text-left">Work Days</th>
-                            <th className="px-4 py-3 text-left">Planned Salary ($)</th>
-                            <th className="w-10 px-4 py-3 text-left"></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {project.trades.map((trade, index) => (
-                            <tr key={trade.id} className="border-b hover:bg-gray-50">
-                              <td className="px-4 py-3">{index + 1}</td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="h-6 w-6 bg-gray-100 rounded-full flex items-center justify-center text-xs">
-                                    {trade.icon}
-                                  </div>
-                                  <span className="font-medium">{trade.role}</span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">{trade.employeesNumber}</td>
-                              <td className="px-4 py-3">{trade.workDays}</td>
-                              <td className="px-4 py-3">${trade.plannedSalary.toLocaleString()}</td>
-                              <td className="px-4 py-3">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleTradeAction("edit", trade, project.id)}>
-                                      <Edit className="h-4 w-4 mr-2" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleTradeAction("delete", trade, project.id)}>
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </td>
+                    {project.isExpanded && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-t border-b text-sm text-muted-foreground">
+                              <th className="px-4 py-3 text-left">SN</th>
+                              <th className="px-4 py-3 text-left">Role/Trade</th>
+                              <th className="px-4 py-3 text-left">Employees Number</th>
+                              <th className="px-4 py-3 text-left">Work Days</th>
+                              <th className="px-4 py-3 text-left">Planned Salary ($)</th>
+                              <th className="w-10 px-4 py-3 text-left"></th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                          </thead>
+                          <tbody>
+                            {project.trades.map((trade, index) => (
+                              <tr key={trade.id} className="border-b hover:bg-gray-50">
+                                <td className="px-4 py-3">{index + 1}</td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="h-6 w-6 bg-gray-100 rounded-full flex items-center justify-center text-xs">
+                                      {trade.icon}
+                                    </div>
+                                    <span className="font-medium">{trade.role}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">{trade.employeesNumber}</td>
+                                <td className="px-4 py-3">{trade.workDays}</td>
+                                <td className="px-4 py-3">${trade.plannedSalary.toLocaleString()}</td>
+                                <td className="px-4 py-3">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleTradeAction("edit", trade, project.id)}>
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleTradeAction("delete", trade, project.id)}>
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
+                  No projects found matching your search criteria.
                 </div>
-              ))}
+              )}
             </TabsContent>
 
             {/* Costs Trend Tab */}
@@ -480,7 +710,15 @@ export default function BudgetPlanning() {
                   </div>
 
                   <div className="flex gap-4">
-                    <Select defaultValue="all">
+                    <Select
+                      defaultValue="all"
+                      onValueChange={(value) => {
+                        toast({
+                          title: "Project Filter Changed",
+                          description: value === "all" ? "Viewing all projects." : `Viewing ${value} project.`,
+                        })
+                      }}
+                    >
                       <SelectTrigger className="w-[180px] bg-white">
                         <SelectValue placeholder="All Projects" />
                       </SelectTrigger>
@@ -496,10 +734,30 @@ export default function BudgetPlanning() {
 
                     <div className="flex gap-2">
                       <div className="relative">
-                        <Input type="date" className="w-[150px]" placeholder="From Date" />
+                        <Input
+                          type="date"
+                          className="w-[150px]"
+                          placeholder="From Date"
+                          onChange={() => {
+                            toast({
+                              title: "Date Range Changed",
+                              description: "Date range filter applied.",
+                            })
+                          }}
+                        />
                       </div>
                       <div className="relative">
-                        <Input type="date" className="w-[150px]" placeholder="To Date" />
+                        <Input
+                          type="date"
+                          className="w-[150px]"
+                          placeholder="To Date"
+                          onChange={() => {
+                            toast({
+                              title: "Date Range Changed",
+                              description: "Date range filter applied.",
+                            })
+                          }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -559,6 +817,11 @@ export default function BudgetPlanning() {
                                   tooltip.classList.remove("opacity-0")
                                   tooltip.classList.add("opacity-100")
                                 }
+
+                                toast({
+                                  title: `${role} Planned Cost`,
+                                  description: `$${data.plannedCost.toLocaleString()}`,
+                                })
                               }}
                             ></div>
 
@@ -573,6 +836,11 @@ export default function BudgetPlanning() {
                                   tooltip.classList.remove("opacity-0")
                                   tooltip.classList.add("opacity-100")
                                 }
+
+                                toast({
+                                  title: `${role} Actual Cost`,
+                                  description: `$${data.actualCost.toLocaleString()}`,
+                                })
                               }}
                             ></div>
 
@@ -655,7 +923,16 @@ export default function BudgetPlanning() {
                             )}
                           </td>
                           <td className="px-4 py-3">
-                            <Button variant="ghost" size="icon">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                toast({
+                                  title: `${data.role} Details`,
+                                  description: "Viewing detailed breakdown.",
+                                })
+                              }}
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </td>
@@ -749,8 +1026,15 @@ export default function BudgetPlanning() {
               </div>
             </div>
           </div>
-          <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={handleAddTrade}>
-            Add Now
+          <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={handleAddTrade} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              "Add Now"
+            )}
           </Button>
         </SheetContent>
       </Sheet>
@@ -818,8 +1102,15 @@ export default function BudgetPlanning() {
               </div>
             </div>
           </div>
-          <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={handleEditTrade}>
-            Apply Edits
+          <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={handleEditTrade} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Apply Edits"
+            )}
           </Button>
         </SheetContent>
       </Sheet>

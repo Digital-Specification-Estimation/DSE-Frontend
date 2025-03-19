@@ -1,13 +1,16 @@
 "use client"
 
-import { useState } from "react"
-import { Search, Upload, Plus, User, Calendar, ChevronDown, DollarSign } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Search, Upload, Plus, User, DollarSign, Loader2 } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import DashboardHeader from "@/components/DashboardHeader"
+import { useToast } from "@/hooks/use-toast"
+import Link from "next/link"
 
 // Types
 interface Employee {
@@ -22,147 +25,8 @@ interface Employee {
   accountNumber: string
 }
 
-// Sample data
-const employees: Employee[] = [
-  {
-    id: 1,
-    name: "Courtney Henry",
-    avatar: "/johndoe.jpeg",
-    position: "Electrician",
-    assignedProject: "Metro Bridge",
-    contractStartDate: "Feb 28, 2018",
-    contractEndDate: "Feb 28, 2018",
-    dailyRate: 120,
-    accountNumber: "12345678",
-  },
-  {
-    id: 2,
-    name: "Annette Black",
-    avatar: "/johndoe.jpeg",
-    position: "Electrician",
-    assignedProject: "Mall Construction",
-    contractStartDate: "May 31, 2015",
-    contractEndDate: "May 20, 2015",
-    dailyRate: 120,
-    accountNumber: "87654321",
-  },
-  {
-    id: 3,
-    name: "Kathryn Murphy",
-    avatar: "/johndoe.jpeg",
-    position: "HR Manager",
-    assignedProject: "Metro Bridge",
-    contractStartDate: "May 12, 2019",
-    contractEndDate: "Nov 16, 2014",
-    dailyRate: 200,
-    accountNumber: "12345678",
-  },
-  {
-    id: 4,
-    name: "Courtney Henry",
-    avatar: "/johndoe.jpeg",
-    position: "Electrician",
-    assignedProject: "Mall Construction",
-    contractStartDate: "Sep 9, 2013",
-    contractEndDate: "May 29, 2017",
-    dailyRate: 120,
-    accountNumber: "87654321",
-  },
-  {
-    id: 5,
-    name: "Brooklyn Simmons",
-    avatar: "/johndoe.jpeg",
-    position: "HR Manager",
-    assignedProject: "Metro Bridge",
-    contractStartDate: "Jul 14, 2015",
-    contractEndDate: "May 12, 2019",
-    dailyRate: 200,
-    accountNumber: "12345678",
-  },
-  {
-    id: 6,
-    name: "Marvin McKinney",
-    avatar: "/johndoe.jpeg",
-    position: "Technician",
-    assignedProject: "Mall Construction",
-    contractStartDate: "Sep 24, 2017",
-    contractEndDate: "Dec 2, 2018",
-    dailyRate: 140,
-    accountNumber: "87654321",
-  },
-  {
-    id: 7,
-    name: "Jane Cooper",
-    avatar: "/johndoe.jpeg",
-    position: "Construction Worker",
-    assignedProject: "Metro Bridge",
-    contractStartDate: "Mar 6, 2018",
-    contractEndDate: "Apr 28, 2016",
-    dailyRate: 100,
-    accountNumber: "12345678",
-  },
-  {
-    id: 8,
-    name: "Kristin Watson",
-    avatar: "/johndoe.jpeg",
-    position: "Technician",
-    assignedProject: "Mall Construction",
-    contractStartDate: "Aug 2, 2013",
-    contractEndDate: "Feb 29, 2012",
-    dailyRate: 140,
-    accountNumber: "87654321",
-  },
-  {
-    id: 9,
-    name: "Jacob Jones",
-    avatar: "/johndoe.jpeg",
-    position: "Construction Worker",
-    assignedProject: "Metro Bridge",
-    contractStartDate: "Aug 7, 2017",
-    contractEndDate: "May 31, 2015",
-    dailyRate: 100,
-    accountNumber: "12345678",
-  },
-  {
-    id: 10,
-    name: "Esther Howard",
-    avatar: "/johndoe.jpeg",
-    position: "Technician",
-    assignedProject: "Mall Construction",
-    contractStartDate: "May 6, 2012",
-    contractEndDate: "Mar 13, 2014",
-    dailyRate: 140,
-    accountNumber: "87654321",
-  },
-  {
-    id: 11,
-    name: "Arlene McCoy",
-    avatar: "/johndoe.jpeg",
-    position: "Construction Worker",
-    assignedProject: "Metro Bridge",
-    contractStartDate: "Oct 30, 2017",
-    contractEndDate: "Mar 23, 2013",
-    dailyRate: 100,
-    accountNumber: "12345678",
-  },
-  {
-    id: 12,
-    name: "Darrell Steward",
-    avatar: "/johndoe.jpeg",
-    position: "Construction Worker",
-    assignedProject: "Mall Construction",
-    contractStartDate: "Nov 7, 2017",
-    contractEndDate: "Oct 31, 2017",
-    dailyRate: 100,
-    accountNumber: "87654321",
-  },
-]
-
-const trades = ["Electrician", "HR Manager", "Technician", "Construction Worker"]
-const projects = ["Metro Bridge", "Mall Construction"]
-const dailyRates = ["$100", "$120", "$140", "$200"]
-
 export default function EmployeeManagement() {
+  const { toast } = useToast()
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
@@ -177,6 +41,9 @@ export default function EmployeeManagement() {
     dailyRate: "",
     search: "",
   })
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [employees, setEmployees] = useState<Employee[]>([])
 
   const [newEmployee, setNewEmployee] = useState({
     name: "",
@@ -185,8 +52,172 @@ export default function EmployeeManagement() {
     startDate: "",
     endDate: "",
     accountNumber: "",
-    dailyRate: "", // Added dailyRate property
+    dailyRate: "",
   })
+
+  // Fetch employee data
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        setIsLoading(true)
+        // Simulate API call
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        // In a real implementation, this would be:
+        // const response = await fetch('/api/employees');
+        // const data = await response.json();
+        // setEmployees(data);
+
+        // Sample data for now
+        setEmployees([
+          {
+            id: 1,
+            name: "Courtney Henry",
+            avatar: "/placeholder.svg?height=40&width=40",
+            position: "Electrician",
+            assignedProject: "Metro Bridge",
+            contractStartDate: "Feb 28, 2018",
+            contractEndDate: "Feb 28, 2018",
+            dailyRate: 120,
+            accountNumber: "12345678",
+          },
+          {
+            id: 2,
+            name: "Annette Black",
+            avatar: "/placeholder.svg?height=40&width=40",
+            position: "Electrician",
+            assignedProject: "Mall Construction",
+            contractStartDate: "May 31, 2015",
+            contractEndDate: "May 20, 2015",
+            dailyRate: 120,
+            accountNumber: "87654321",
+          },
+          {
+            id: 3,
+            name: "Kathryn Murphy",
+            avatar: "/placeholder.svg?height=40&width=40",
+            position: "HR Manager",
+            assignedProject: "Metro Bridge",
+            contractStartDate: "May 12, 2019",
+            contractEndDate: "Nov 16, 2014",
+            dailyRate: 200,
+            accountNumber: "12345678",
+          },
+          {
+            id: 4,
+            name: "Courtney Henry",
+            avatar: "/placeholder.svg?height=40&width=40",
+            position: "Electrician",
+            assignedProject: "Mall Construction",
+            contractStartDate: "Sep 9, 2013",
+            contractEndDate: "May 29, 2017",
+            dailyRate: 120,
+            accountNumber: "87654321",
+          },
+          {
+            id: 5,
+            name: "Brooklyn Simmons",
+            avatar: "/placeholder.svg?height=40&width=40",
+            position: "HR Manager",
+            assignedProject: "Metro Bridge",
+            contractStartDate: "Jul 14, 2015",
+            contractEndDate: "May 12, 2019",
+            dailyRate: 200,
+            accountNumber: "12345678",
+          },
+          {
+            id: 6,
+            name: "Marvin McKinney",
+            avatar: "/placeholder.svg?height=40&width=40",
+            position: "Technician",
+            assignedProject: "Mall Construction",
+            contractStartDate: "Sep 24, 2017",
+            contractEndDate: "Dec 2, 2018",
+            dailyRate: 140,
+            accountNumber: "87654321",
+          },
+          {
+            id: 7,
+            name: "Jane Cooper",
+            avatar: "/placeholder.svg?height=40&width=40",
+            position: "Construction Worker",
+            assignedProject: "Metro Bridge",
+            contractStartDate: "Mar 6, 2018",
+            contractEndDate: "Apr 28, 2016",
+            dailyRate: 100,
+            accountNumber: "12345678",
+          },
+          {
+            id: 8,
+            name: "Kristin Watson",
+            avatar: "/placeholder.svg?height=40&width=40",
+            position: "Technician",
+            assignedProject: "Mall Construction",
+            contractStartDate: "Aug 2, 2013",
+            contractEndDate: "Feb 29, 2012",
+            dailyRate: 140,
+            accountNumber: "87654321",
+          },
+          {
+            id: 9,
+            name: "Jacob Jones",
+            avatar: "/placeholder.svg?height=40&width=40",
+            position: "Construction Worker",
+            assignedProject: "Metro Bridge",
+            contractStartDate: "Aug 7, 2017",
+            contractEndDate: "May 31, 2015",
+            dailyRate: 100,
+            accountNumber: "12345678",
+          },
+          {
+            id: 10,
+            name: "Esther Howard",
+            avatar: "/placeholder.svg?height=40&width=40",
+            position: "Technician",
+            assignedProject: "Mall Construction",
+            contractStartDate: "May 6, 2012",
+            contractEndDate: "Mar 13, 2014",
+            dailyRate: 140,
+            accountNumber: "87654321",
+          },
+          {
+            id: 11,
+            name: "Arlene McCoy",
+            avatar: "/placeholder.svg?height=40&width=40",
+            position: "Construction Worker",
+            assignedProject: "Metro Bridge",
+            contractStartDate: "Oct 30, 2017",
+            contractEndDate: "Mar 23, 2013",
+            dailyRate: 100,
+            accountNumber: "12345678",
+          },
+          {
+            id: 12,
+            name: "Darrell Steward",
+            avatar: "/placeholder.svg?height=40&width=40",
+            position: "Construction Worker",
+            assignedProject: "Mall Construction",
+            contractStartDate: "Nov 7, 2017",
+            contractEndDate: "Oct 31, 2017",
+            dailyRate: 100,
+            accountNumber: "87654321",
+          },
+        ])
+
+        setIsLoading(false)
+      } catch (error) {
+        console.error("Error fetching employees:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load employee data. Please try again.",
+          variant: "destructive",
+        })
+        setIsLoading(false)
+      }
+    }
+
+    fetchEmployees()
+  }, [toast])
 
   // Filter employees based on selected filters
   const filteredEmployees = employees.filter((employee) => {
@@ -200,25 +231,124 @@ export default function EmployeeManagement() {
   // Handle bulk selection
   const handleSelectAll = (checked: boolean) => {
     setSelectedEmployees(checked ? employees.map((e) => e.id) : [])
+    toast({
+      title: checked ? "All Selected" : "All Deselected",
+      description: checked ? "All employees have been selected." : "All employees have been deselected.",
+    })
   }
 
   const handleSelectEmployee = (id: number, checked: boolean) => {
     setSelectedEmployees((prev) => (checked ? [...prev, id] : prev.filter((employeeId) => employeeId !== id)))
+    const employee = employees.find((e) => e.id === id)
+    if (employee) {
+      toast({
+        title: checked ? "Employee Selected" : "Employee Deselected",
+        description: `${employee.name} has been ${checked ? "selected" : "deselected"}.`,
+      })
+    }
   }
 
-  const handleAddEmployee = () => {
-    // In a real app, you would add the employee to the database
-    setShowAddEmployee(false)
-    // Reset form
-    setNewEmployee({
-      name: "",
-      position: "",
-      assignedProject: "",
-      startDate: "",
-      endDate: "",
-      accountNumber: "",
-      dailyRate: "",
+  const handleAddEmployee = async () => {
+    try {
+      if (!newEmployee.name || !newEmployee.position || !newEmployee.dailyRate) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      setIsSaving(true)
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // In a real implementation, this would be:
+      // const response = await fetch('/api/employees', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(newEmployee),
+      // });
+      // const data = await response.json();
+
+      // Add new employee to state
+      const newId = Math.max(...employees.map((emp) => emp.id), 0) + 1
+      const newEmployeeData: Employee = {
+        id: newId,
+        name: newEmployee.name,
+        avatar: "/placeholder.svg?height=40&width=40",
+        position: newEmployee.position,
+        assignedProject: newEmployee.assignedProject || "Unassigned",
+        contractStartDate: newEmployee.startDate || "Not set",
+        contractEndDate: newEmployee.endDate || "Not set",
+        dailyRate: Number(newEmployee.dailyRate) || 0,
+        accountNumber: newEmployee.accountNumber || "Not set",
+      }
+
+      setEmployees([...employees, newEmployeeData])
+      setIsSaving(false)
+      setShowAddEmployee(false)
+
+      // Reset form
+      setNewEmployee({
+        name: "",
+        position: "",
+        assignedProject: "",
+        startDate: "",
+        endDate: "",
+        accountNumber: "",
+        dailyRate: "",
+      })
+
+      toast({
+        title: "Employee Added",
+        description: `${newEmployee.name} has been added successfully.`,
+      })
+    } catch (error) {
+      console.error("Error adding employee:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add employee. Please try again.",
+        variant: "destructive",
+      })
+      setIsSaving(false)
+    }
+  }
+
+  const handleFilterChange = (type: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [type]: value }))
+    toast({
+      title: "Filter Applied",
+      description: `Filtered by ${type}: ${value}`,
     })
+  }
+
+  const handleUploadCSV = () => {
+    toast({
+      title: "CSV Upload",
+      description: "CSV upload functionality will be implemented soon.",
+    })
+  }
+
+  const trades = ["Electrician", "HR Manager", "Technician", "Construction Worker"]
+  const projects = ["Metro Bridge", "Mall Construction"]
+  const dailyRates = ["$100", "$120", "$140", "$200"]
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen bg-gray-50">
+        <Sidebar user={user} />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <DashboardHeader />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+              <p className="text-sm text-gray-500">Loading employee data...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -233,11 +363,20 @@ export default function EmployeeManagement() {
             <h1 className="text-2xl font-bold">Employee Management</h1>
 
             <div className="flex gap-2">
-              <Button variant="outline" className="gap-2  h-12 rounded-full">
+              <Button variant="outline" className="gap-2 h-12 rounded-full" onClick={handleUploadCSV}>
                 <Upload className="h-4 w-4" />
                 Upload CSV
               </Button>
-              <Button onClick={() => setShowAddEmployee(true)} className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full">
+              <Button
+                onClick={() => {
+                  setShowAddEmployee(true)
+                  toast({
+                    title: "Add Employee",
+                    description: "Please fill in the employee details.",
+                  })
+                }}
+                className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full"
+              >
                 <Plus className="h-4 w-4" />
                 Add New Employee
               </Button>
@@ -247,7 +386,7 @@ export default function EmployeeManagement() {
           <div className="bg-white rounded-lg border">
             {/* Filters */}
             <div className="p-4 flex gap-4 rounded-lg">
-              <Select onValueChange={(value) => setFilters((prev) => ({ ...prev, trade: value }))}>
+              <Select onValueChange={(value) => handleFilterChange("trade", value)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Select by Trade" />
                 </SelectTrigger>
@@ -260,7 +399,7 @@ export default function EmployeeManagement() {
                 </SelectContent>
               </Select>
 
-              <Select onValueChange={(value) => setFilters((prev) => ({ ...prev, project: value }))}>
+              <Select onValueChange={(value) => handleFilterChange("project", value)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Select by Project" />
                 </SelectTrigger>
@@ -273,7 +412,7 @@ export default function EmployeeManagement() {
                 </SelectContent>
               </Select>
 
-              <Select onValueChange={(value) => setFilters((prev) => ({ ...prev, dailyRate: value }))}>
+              <Select onValueChange={(value) => handleFilterChange("dailyRate", value)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Select by Daily Rate" />
                 </SelectTrigger>
@@ -292,7 +431,7 @@ export default function EmployeeManagement() {
                   type="search"
                   placeholder="Search trade/position..."
                   className="pl-10 h-9 w-full rounded-full"
-                  onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+                  onChange={(e) => handleFilterChange("search", e.target.value)}
                 />
               </div>
             </div>
@@ -306,7 +445,7 @@ export default function EmployeeManagement() {
                       <input
                         type="checkbox"
                         className="h-4 w-4 rounded border-gray-300"
-                        checked={selectedEmployees.length === employees.length}
+                        checked={selectedEmployees.length === employees.length && employees.length > 0}
                         onChange={(e) => handleSelectAll(e.target.checked)}
                       />
                     </th>
@@ -321,34 +460,55 @@ export default function EmployeeManagement() {
                   </tr>
                 </thead>
                 <tbody className="text-[11px]">
-                  {filteredEmployees.map((employee) => (
-                    <tr key={employee.id} className="border-b hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300"
-                          checked={selectedEmployees.includes(employee.id)}
-                          onChange={(e) => handleSelectEmployee(employee.id, e.target.checked)}
-                        />
+                  {filteredEmployees.length > 0 ? (
+                    filteredEmployees.map((employee) => (
+                      <tr key={employee.id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-gray-300"
+                            checked={selectedEmployees.includes(employee.id)}
+                            onChange={(e) => handleSelectEmployee(employee.id, e.target.checked)}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={employee.avatar} alt={employee.name} />
+                              <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{employee.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">{employee.position}</td>
+                        <td className="px-4 py-3">{employee.assignedProject}</td>
+                        <td className="px-4 py-3">{employee.contractStartDate}</td>
+                        <td className="px-4 py-3">{employee.contractEndDate}</td>
+                        <td className="px-4 py-3">${employee.dailyRate}</td>
+                        <td className="px-4 py-3">{employee.accountNumber}</td>
+                        <td className="px-4 py-3 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              toast({
+                                title: "Employee Options",
+                                description: `Options for ${employee.name}`,
+                              })
+                            }}
+                          >
+                            ...
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                        No employees found matching the selected filters.
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={employee.avatar} alt={employee.name} />
-                            <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">{employee.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">{employee.position}</td>
-                      <td className="px-4 py-3">{employee.assignedProject}</td>
-                      <td className="px-4 py-3">{employee.contractStartDate}</td>
-                      <td className="px-4 py-3">{employee.contractEndDate}</td>
-                      <td className="px-4 py-3">${employee.dailyRate}</td>
-                      <td className="px-4 py-3">{employee.accountNumber}</td>
-                      <td className="px-4 py-3 text-right">...</td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -357,129 +517,141 @@ export default function EmployeeManagement() {
       </div>
 
       {/* Add Employee Sheet */}
-      {showAddEmployee && (
-        <div className="fixed inset-0 bg-black/50 flex justify-end z-50">
-          <div className="bg-white w-full max-w-md h-full overflow-y-auto">
-            <div className="p-6 border-b">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Add Employee</h2>
-                <Button variant="ghost" size="icon" onClick={() => setShowAddEmployee(false)}>
-                  &times;
-                </Button>
-              </div>
-
-              <div className="space-y-6">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-medium">Employee details</h3>
-                </div>
-
+      <Sheet open={showAddEmployee} onOpenChange={setShowAddEmployee}>
+        <SheetContent className="sm:max-w-md p-2">
+          <SheetHeader>
+            <SheetTitle>Adding Employee</SheetTitle>
+          </SheetHeader>
+          <div className="py-6 overflow-y-auto flex-1 p-2" style={{ maxHeight: "calc(100vh - 10rem)" }}>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-base font-medium mb-4">Employee details</h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="name" className="text-sm font-medium">
-                      Name
-                    </label>
+                    <label className="text-sm font-medium">Name</label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        <User className="h-4 w-4 text-gray-400" />
-                      </div>
-                      <input
-                        id="name"
-                        name="name"
-                        type="text"
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
                         placeholder="Johny William"
+                        className="pl-10"
                         value={newEmployee.name}
-                        onChange={(e) =>
-                          setNewEmployee({
-                            ...newEmployee,
-                            name: e.target.value,
-                          })
-                        }
-                        className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                        required
+                        onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="position" className="text-sm font-medium">
-                      Position/Trade
-                    </label>
-                    <div className="relative">
-                      <div className="flex items-center border rounded-md px-3 py-2">
-                        <span className="text-sm">Select</span>
-                        <ChevronDown className="h-4 w-4 ml-auto" />
-                      </div>
-                    </div>
+                    <label className="text-sm font-medium">Account Number</label>
+                    <Input
+                      placeholder="12345678"
+                      value={newEmployee.accountNumber}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, accountNumber: e.target.value })}
+                    />
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="dailyRate" className="text-sm font-medium">
-                      Daily Rate
-                    </label>
+                    <label className="text-sm font-medium">Position/Trade</label>
+                    <Select onValueChange={(value) => setNewEmployee({ ...newEmployee, position: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {trades.map((trade) => (
+                          <SelectItem key={trade} value={trade}>
+                            {trade}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Daily Rate</label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        <DollarSign className="h-4 w-4 text-gray-400" />
-                      </div>
-                      <input
-                        id="dailyRate"
-                        name="dailyRate"
-                        type="text"
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
                         placeholder="Enter rate"
+                        className="pl-10"
                         value={newEmployee.dailyRate}
-                        onChange={(e) =>
-                          setNewEmployee({
-                            ...newEmployee,
-                            dailyRate: e.target.value,
-                          })
-                        }
-                        className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                        required
+                        onChange={(e) => setNewEmployee({ ...newEmployee, dailyRate: e.target.value })}
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="startDate" className="text-sm font-medium">
-                      Start Date
-                    </label>
-                    <div className="relative">
-                      <div className="flex items-center border rounded-md px-3 py-2">
-                        <span className="text-sm">Pick Date</span>
-                        <Calendar className="h-4 w-4 ml-auto" />
-                      </div>
-                    </div>
+                    <label className="text-sm font-medium">Assign Project</label>
+                    <Select onValueChange={(value) => setNewEmployee({ ...newEmployee, assignedProject: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.map((project) => (
+                          <SelectItem key={project} value={project}>
+                            {project}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <label htmlFor="status" className="text-sm font-medium">
-                      Attendance Status
-                    </label>
-                    <div className="relative">
-                      <div className="flex items-center border rounded-md px-3 py-2">
-                        <span className="text-sm">Select</span>
-                        <ChevronDown className="h-4 w-4 ml-auto" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Start Date</label>
+                      <div className="relative">
+                        <Input
+                          type="date"
+                          className="pr-10"
+                          value={newEmployee.startDate}
+                          onChange={(e) => setNewEmployee({ ...newEmployee, startDate: e.target.value })}
+                        />
                       </div>
                     </div>
-                  </div>
-
-                  <div className="text-sm">
-                    Want to upload multiple employees? Use{" "}
-                    <a href="#" className="text-primary underline">
-                      CSV instead
-                    </a>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">End Date</label>
+                      <div className="relative">
+                        <Input
+                          type="date"
+                          className="pr-10"
+                          value={newEmployee.endDate}
+                          onChange={(e) => setNewEmployee({ ...newEmployee, endDate: e.target.value })}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-6 mt-auto">
-              <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={() => setShowAddEmployee(false)}>
-                Add Employee
-              </Button>
+              <div className="text-sm text-muted-foreground">
+                Want to upload multiple employees? Use{" "}
+                <Link
+                  href="#"
+                  className="text-primary font-medium"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setShowAddEmployee(false)
+                    toast({
+                      title: "CSV Upload",
+                      description: "CSV upload functionality will be implemented soon.",
+                    })
+                  }}
+                >
+                  CSV instead
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+          <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={handleAddEmployee} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              "Add Employee"
+            )}
+          </Button>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

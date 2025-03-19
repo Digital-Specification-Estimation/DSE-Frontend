@@ -1,37 +1,125 @@
-"use client";
+"use client"
 
-import type React from "react";
-
-import { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { Eye, EyeOff, User, Mail, Lock } from "lucide-react";
-import { Logo } from "@/components/logo";
+import type React from "react"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import Image from "next/image"
+import { Eye, EyeOff, User, Mail, Lock, Loader2 } from "lucide-react"
+import { Logo } from "@/components/logo"
+import { useToast } from "@/hooks/use-toast"
 
 export default function SignUp() {
-  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter()
+  const { toast } = useToast()
+  const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const [formData, setFormData] = useState({
     businessName: "",
     adminName: "",
     email: "",
     password: "",
     agreeToTerms: false,
-  });
+  })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type, checked } = e.target
     setFormData({
       ...formData,
       [name]: type === "checkbox" ? checked : value,
-    });
-  };
+    })
+  }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In a real app, you would handle form submission here
-    console.log("Form submitted:", formData);
-    window.location.href = "/dashboard";
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
+
+    // Validate form
+    if (!formData.businessName || !formData.adminName || !formData.email || !formData.password) {
+      setError("All fields are required")
+      toast({
+        title: "Validation Error",
+        description: "All fields are required",
+        variant: "destructive",
+      })
+      setIsLoading(false)
+      return
+    }
+
+    if (!formData.agreeToTerms) {
+      setError("You must agree to the terms and privacy policy")
+      toast({
+        title: "Validation Error",
+        description: "You must agree to the terms and privacy policy",
+        variant: "destructive",
+      })
+      setIsLoading(false)
+      return
+    }
+
+    // Password validation
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters long")
+      toast({
+        title: "Validation Error",
+        description: "Password must be at least 8 characters long",
+        variant: "destructive",
+      })
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      // In a real implementation, this would be:
+      // const response = await fetch('/api/auth/register', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(formData),
+      // });
+      // const data = await response.json();
+      // if (!response.ok) throw new Error(data.message || 'Registration failed');
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      // Simulate successful registration
+      toast({
+        title: "Registration Successful",
+        description: "Your account has been created successfully!",
+      })
+
+      // Redirect after successful registration
+      setTimeout(() => {
+        router.push("/dashboard")
+      }, 500)
+    } catch (err) {
+      console.error("Registration failed:", err)
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
+
+      toast({
+        title: "Registration Failed",
+        description: err instanceof Error ? err.message : "An error occurred. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSocialSignUp = (provider: string) => {
+    setIsLoading(true)
+
+    // Simulate API call
+    setTimeout(() => {
+      toast({
+        title: "Social Sign Up",
+        description: `${provider} sign up is not available yet. Please use email registration.`,
+      })
+      setIsLoading(false)
+    }, 1000)
+  }
 
   return (
     <div className="w-full min-h-screen lg:grid lg:grid-cols-2 bg-white">
@@ -42,10 +130,11 @@ export default function SignUp() {
         <div className="mx-auto w-full px-20 space-y-6">
           <div className="space-y-2 flex flex-col items-center justify-center">
             <h1 className="text-3xl font-bold">Sign up to LCM</h1>
-            <p className="text-muted-foreground">
-              Smart Attendance & Payroll Management
-            </p>
+            <p className="text-muted-foreground">Smart Attendance & Payroll Management</p>
           </div>
+
+          {/* Display error message if registration fails */}
+          {error && <div className="bg-red-100 text-red-700 p-2 rounded mb-4 text-center">{error}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -65,6 +154,7 @@ export default function SignUp() {
                   onChange={handleChange}
                   className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -86,6 +176,7 @@ export default function SignUp() {
                   onChange={handleChange}
                   className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -107,6 +198,7 @@ export default function SignUp() {
                   onChange={handleChange}
                   className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -128,11 +220,13 @@ export default function SignUp() {
                   onChange={handleChange}
                   className="w-full pl-10 pr-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   required
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   className="absolute inset-y-0 right-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4 text-gray-400" />
@@ -141,6 +235,7 @@ export default function SignUp() {
                   )}
                 </button>
               </div>
+              <p className="text-xs text-gray-500 mt-1">Password must be at least 8 characters long</p>
             </div>
 
             <div className="flex items-center">
@@ -152,20 +247,40 @@ export default function SignUp() {
                 onChange={handleChange}
                 className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                 required
+                disabled={isLoading}
               />
-              <label
-                htmlFor="agreeToTerms"
-                className="ml-2 block text-sm text-gray-600"
-              >
-                By signing up, you agree to our Terms & Privacy Policy.
+              <label htmlFor="agreeToTerms" className="ml-2 block text-sm text-gray-600">
+                By signing up, you agree to our{" "}
+                <Link
+                  href="#"
+                  className="text-primary hover:underline"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    toast({
+                      title: "Terms & Privacy",
+                      description: "Terms and Privacy Policy will be available soon.",
+                    })
+                  }}
+                >
+                  Terms & Privacy Policy
+                </Link>
+                .
               </label>
             </div>
 
             <button
               type="submit"
-              className="w-full py-2 px-4 bg-primary text-white font-medium rounded-full hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              className="w-full py-2 px-4 bg-primary text-white font-medium rounded-full hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 flex items-center justify-center"
+              disabled={isLoading}
             >
-              Sign Up
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                "Sign Up"
+              )}
             </button>
           </form>
 
@@ -179,14 +294,12 @@ export default function SignUp() {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <button className="flex items-center justify-center gap-2 py-2 px-4 border rounded-md hover:bg-gray-50">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 18 18"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
+            <button
+              className="flex items-center justify-center gap-2 py-2 px-4 border rounded-md hover:bg-gray-50"
+              onClick={() => handleSocialSignUp("Google")}
+              disabled={isLoading}
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
                   d="M17.64 9.20455C17.64 8.56636 17.5827 7.95273 17.4764 7.36364H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5614V15.8195H14.9564C16.6582 14.2527 17.64 11.9455 17.64 9.20455Z"
                   fill="#4285F4"
@@ -206,14 +319,12 @@ export default function SignUp() {
               </svg>
               <span className="text-sm font-medium">Sign in with Google</span>
             </button>
-            <button className="flex items-center justify-center gap-2 py-2 px-4 border rounded-md hover:bg-gray-50">
-              <svg
-                width="16"
-                height="20"
-                viewBox="0 0 16 20"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
+            <button
+              className="flex items-center justify-center gap-2 py-2 px-4 border rounded-md hover:bg-gray-50"
+              onClick={() => handleSocialSignUp("Apple")}
+              disabled={isLoading}
+            >
+              <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
                   d="M12.6442 10.4392C12.6362 8.83984 13.4022 7.6582 14.9522 6.82617C14.0922 5.5957 12.8282 4.92578 11.1842 4.81055C9.63223 4.69922 7.94023 5.74805 7.32423 5.74805C6.67223 5.74805 5.14823 4.85547 3.95623 4.85547C2.02023 4.88281 0 6.43555 0 9.60156C0 10.5762 0.16 11.582 0.48 12.6172C0.91 14.0137 2.53223 17.4219 4.22423 17.3633C5.05223 17.3398 5.63223 16.7051 6.72423 16.7051C7.77223 16.7051 8.30423 17.3633 9.23623 17.3633C10.9442 17.3398 12.4042 14.2344 12.8122 12.834C10.6122 11.8398 10.6442 10.5 10.6442 10.4392H12.6442Z"
                   fill="black"
@@ -246,16 +357,15 @@ export default function SignUp() {
               height={600}
               className=" h-2/3 rounded-lg shadow-lg mb-10 xx-10"
             />
-            <h2 className="text-3xl font-bold mb-4">
-              Welcome to Digital Specification Estimation
-            </h2>
+            <h2 className="text-3xl font-bold mb-4">Welcome to Digital Specification Estimation</h2>
             <p className="text-sm">
-              A Smart Attendance & Payroll Management to track attendance,
-              automate payroll, and optimize costs with ease!
+              A Smart Attendance & Payroll Management to track attendance, automate payroll, and optimize costs with
+              ease!
             </p>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }
+
