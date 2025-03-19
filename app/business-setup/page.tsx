@@ -314,10 +314,6 @@ export default function BusinessSetup() {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
-    toast({
-      title: "Tab Changed",
-      description: `Viewing ${tab} data`,
-    })
   }
 
   // Table Component

@@ -217,10 +217,6 @@ export default function Dashboard() {
 
   const handleFilterChange = (type: string, value: string) => {
     setFilters((prev) => ({ ...prev, [type]: value }))
-    toast({
-      title: "Filter Applied",
-      description: `Filtered dashboard by ${type}: ${value}`,
-    })
   }
 
   // Custom tooltip for payroll chart
@@ -533,10 +529,6 @@ export default function Dashboard() {
                     size="icon"
                     className="h-9 w-9"
                     onClick={() => {
-                      toast({
-                        title: "Filter Options",
-                        description: "Additional filter options are available",
-                      })
                     }}
                   >
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

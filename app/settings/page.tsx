@@ -152,10 +152,6 @@ export default function Settings() {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
-    toast({
-      title: "Tab Changed",
-      description: `Viewing ${tab} settings`,
-    })
   }
 
   if (isLoading) {
