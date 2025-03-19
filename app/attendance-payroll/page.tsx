@@ -1,37 +1,53 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from "react"
-import { Search, RefreshCw, ChevronDown, FileText, FileCheck } from "lucide-react"
-import { Sidebar } from "@/components/sidebar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import DashboardHeader from "@/components/DashboardHeader"
-import { useToast } from "@/hooks/use-toast"
-import { Loader2 } from "lucide-react"
+import React, { useState, useEffect } from "react";
+import {
+  Search,
+  RefreshCw,
+  ChevronDown,
+  FileText,
+  FileCheck,
+} from "lucide-react";
+import { Sidebar } from "@/components/sidebar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import DashboardHeader from "@/components/DashboardHeader";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 // Types
 interface Employee {
-  id: number
-  name: string
-  avatar: string
-  position: string
-  assignedProject: string
-  contractStartDate: string
-  contractEndDate: string
-  dailyRate: number
-  remainingDays: number
-  attendance: "Present" | "Absent" | "Late"
-  daysWorked: number
-  budgetBaseline: number
-  plannedVsActual?: string
-  sickDays: number
-  vacationDays: number
-  unpaidLeave: number
-  totalActual?: number
+  id: number;
+  name: string;
+  avatar: string;
+  position: string;
+  assignedProject: string;
+  contractStartDate: string;
+  contractEndDate: string;
+  dailyRate: number;
+  remainingDays: number;
+  attendance: "Present" | "Absent" | "Late";
+  daysWorked: number;
+  budgetBaseline: number;
+  plannedVsActual?: string;
+  sickDays: number;
+  vacationDays: number;
+  unpaidLeave: number;
+  totalActual?: number;
 }
 
 // API endpoints
@@ -42,7 +58,7 @@ const API_ENDPOINTS = {
   LEAVE: "/api/leave",
   GENERATE_PAYSLIPS: "/api/payroll/generate-payslips",
   PAYROLL_REPORT: "/api/payroll/report",
-}
+};
 
 // Sample data
 const initialEmployees: Employee[] = [
@@ -274,38 +290,45 @@ const initialEmployees: Employee[] = [
     unpaidLeave: 22,
     totalActual: 2520,
   },
-]
+];
 
-const trades = ["Electrician", "HR Manager", "Technician", "Construction Worker"]
-const projects = ["Metro Bridge", "Mall Construction"]
-const dailyRates = ["$100", "$120", "$140", "$200"]
+const trades = [
+  "Electrician",
+  "HR Manager",
+  "Technician",
+  "Construction Worker",
+];
+const projects = ["Metro Bridge", "Mall Construction"];
+const dailyRates = ["$100", "$120", "$140", "$200"];
 
 export default function AttendancePayroll() {
-  const { toast } = useToast()
+  const { toast } = useToast();
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
-  })
+  });
 
-  const [activeTab, setActiveTab] = useState("attendance")
-  const [expandedEmployee, setExpandedEmployee] = useState<number | null>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [currentMonth, setCurrentMonth] = useState("May 2025")
-  const [showFilters, setShowFilters] = useState(true)
-  const [openAttendanceDropdown, setOpenAttendanceDropdown] = useState<number | null>(null)
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isGeneratingPayslips, setIsGeneratingPayslips] = useState(false)
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
-  const [totalPayroll, setTotalPayroll] = useState("$25,000")
+  const [activeTab, setActiveTab] = useState("attendance");
+  const [expandedEmployee, setExpandedEmployee] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentMonth, setCurrentMonth] = useState("May 2025");
+  const [showFilters, setShowFilters] = useState(true);
+  const [openAttendanceDropdown, setOpenAttendanceDropdown] = useState<
+    number | null
+  >(null);
+  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingPayslips, setIsGeneratingPayslips] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [totalPayroll, setTotalPayroll] = useState("$25,000");
   const [summaryData, setSummaryData] = useState({
     totalEmployees: 45,
     totalDaysWorked: 365,
     totalBudgetBaseline: "$11,200.56",
     totalActualPayroll: "$6,765.12",
     dailyActualPayroll: "$500",
-  })
+  });
 
   const [filters, setFilters] = useState({
     trade: "Electrician",
@@ -313,13 +336,13 @@ export default function AttendancePayroll() {
     dailyRate: "",
     startDate: "",
     endDate: "",
-  })
+  });
 
   // Fetch employees data
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        setIsLoading(true)
+        setIsLoading(true);
         // Simulating API call
         // In a real implementation, this would be:
         // const response = await fetch(API_ENDPOINTS.EMPLOYEES);
@@ -327,25 +350,28 @@ export default function AttendancePayroll() {
         // setEmployees(data);
 
         // Simulate network delay
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        setEmployees(initialEmployees)
-        setIsLoading(false)
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setEmployees(initialEmployees);
+        setIsLoading(false);
       } catch (error) {
-        console.error("Error fetching employees:", error)
+        console.error("Error fetching employees:", error);
         toast({
           title: "Error",
           description: "Failed to fetch employees data. Please try again.",
           variant: "destructive",
-        })
-        setIsLoading(false)
+        });
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchEmployees()
-  }, [toast])
+    fetchEmployees();
+  }, [toast]);
 
   // Update employee attendance
-  const updateEmployeeAttendance = async (employeeId: number, status: "Present" | "Absent" | "Late") => {
+  const updateEmployeeAttendance = async (
+    employeeId: number,
+    status: "Present" | "Absent" | "Late"
+  ) => {
     try {
       // Simulating API call
       // In a real implementation, this would be:
@@ -357,29 +383,33 @@ export default function AttendancePayroll() {
 
       // Update local state
       setEmployees((prevEmployees) =>
-        prevEmployees.map((employee) => (employee.id === employeeId ? { ...employee, attendance: status } : employee)),
-      )
+        prevEmployees.map((employee) =>
+          employee.id === employeeId
+            ? { ...employee, attendance: status }
+            : employee
+        )
+      );
 
-      setOpenAttendanceDropdown(null)
+      setOpenAttendanceDropdown(null);
 
       toast({
         title: "Attendance Updated",
         description: `Employee attendance has been marked as ${status}.`,
-      })
+      });
     } catch (error) {
-      console.error("Error updating attendance:", error)
+      console.error("Error updating attendance:", error);
       toast({
         title: "Error",
         description: "Failed to update attendance. Please try again.",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   // Generate payslips
   const handleGeneratePayslips = async () => {
     try {
-      setIsGeneratingPayslips(true)
+      setIsGeneratingPayslips(true);
       // Simulating API call
       // In a real implementation, this would be:
       // await fetch(API_ENDPOINTS.GENERATE_PAYSLIPS, {
@@ -389,28 +419,29 @@ export default function AttendancePayroll() {
       // });
 
       // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      setIsGeneratingPayslips(false)
+      setIsGeneratingPayslips(false);
       toast({
         title: "Payslips Generated",
-        description: "Payslips have been generated successfully and are ready for download.",
-      })
+        description:
+          "Payslips have been generated successfully and are ready for download.",
+      });
     } catch (error) {
-      console.error("Error generating payslips:", error)
+      console.error("Error generating payslips:", error);
       toast({
         title: "Error",
         description: "Failed to generate payslips. Please try again.",
         variant: "destructive",
-      })
-      setIsGeneratingPayslips(false)
+      });
+      setIsGeneratingPayslips(false);
     }
-  }
+  };
 
   // Generate payroll report
   const handleGenerateReport = async () => {
     try {
-      setIsGeneratingReport(true)
+      setIsGeneratingReport(true);
       // Simulating API call
       // In a real implementation, this would be:
       // const response = await fetch(API_ENDPOINTS.PAYROLL_REPORT, {
@@ -428,61 +459,75 @@ export default function AttendancePayroll() {
       // a.remove();
 
       // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      setIsGeneratingReport(false)
+      setIsGeneratingReport(false);
       toast({
         title: "Report Generated",
         description: "Payroll report has been generated and downloaded.",
-      })
+      });
     } catch (error) {
-      console.error("Error generating report:", error)
+      console.error("Error generating report:", error);
       toast({
         title: "Error",
         description: "Failed to generate payroll report. Please try again.",
         variant: "destructive",
-      })
-      setIsGeneratingReport(false)
+      });
+      setIsGeneratingReport(false);
     }
-  }
+  };
 
   // Refresh data
   const handleRefreshData = async () => {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
       toast({
         title: "Refreshing Data",
         description: "Fetching the latest data...",
-      })
+      });
 
       // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       // In a real implementation, this would fetch fresh data from the API
-      setIsLoading(false)
+      setIsLoading(false);
       toast({
         title: "Data Refreshed",
         description: "The latest data has been loaded.",
-      })
+      });
     } catch (error) {
-      console.error("Error refreshing data:", error)
+      console.error("Error refreshing data:", error);
       toast({
         title: "Error",
         description: "Failed to refresh data. Please try again.",
         variant: "destructive",
-      })
-      setIsLoading(false)
+      });
+      setIsLoading(false);
     }
-  }
+  };
 
   const filteredEmployees = employees.filter((employee) => {
-    if (searchTerm && !employee.name.toLowerCase().includes(searchTerm.toLowerCase())) return false
-    if (filters.trade && filters.trade !== "Electrician" && employee.position !== filters.trade) return false
-    if (filters.project && filters.project !== "Metro Bridge" && employee.assignedProject !== filters.project)
-      return false
-    if (filters.dailyRate && `$${employee.dailyRate}` !== filters.dailyRate) return false
-    return true
-  })
+    if (
+      searchTerm &&
+      !employee.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+      return false;
+    if (
+      filters.trade &&
+      filters.trade !== "Electrician" &&
+      employee.position !== filters.trade
+    )
+      return false;
+    if (
+      filters.project &&
+      filters.project !== "Metro Bridge" &&
+      employee.assignedProject !== filters.project
+    )
+      return false;
+    if (filters.dailyRate && `$${employee.dailyRate}` !== filters.dailyRate)
+      return false;
+    return true;
+  });
 
   // Calendar days for the expanded employee view
   const calendarDays = [
@@ -493,7 +538,7 @@ export default function AttendancePayroll() {
     { day: 5, weekday: "Fri", status: "Present" },
     { day: 6, weekday: "Sun", status: "Present" },
     { day: 7, weekday: "Wed", status: "Present" },
-  ]
+  ];
 
   return (
     <div className="flex h-screen bg-white">
@@ -504,7 +549,9 @@ export default function AttendancePayroll() {
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-6">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Attendance & Payroll Management</h1>
+            <h1 className="text-2xl font-bold">
+              Attendance & Payroll Management
+            </h1>
 
             <div className="flex gap-2">
               <Button
@@ -513,7 +560,11 @@ export default function AttendancePayroll() {
                 onClick={handleGenerateReport}
                 disabled={isGeneratingReport}
               >
-                {isGeneratingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-5 w-5" />}
+                {isGeneratingReport ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="h-5 w-5" />
+                )}
                 {isGeneratingReport ? "Generating..." : "View Payroll Report"}
               </Button>
               <Button
@@ -541,11 +592,15 @@ export default function AttendancePayroll() {
               ].map((tab, index) => (
                 <button
                   key={tab.id}
-                  className={`px-6 py-2 text-sm font-medium transition-all duration-200 rounded-lg
-                    ${activeTab === tab.id ? " border bg-white text-black font-semibold" : "bg-gray-100 text-gray-700"} 
+                  className={`px-6 py-2 text-xs font-medium transition-all duration-200 rounded-lg
+                    ${
+                      activeTab === tab.id
+                        ? " border bg-white text-black font-semibold"
+                        : "bg-gray-100 text-gray-700"
+                    } 
                     ${index !== 0 ? "border border-gray-300" : ""}`}
                   onClick={() => {
-                    setActiveTab(tab.id)
+                    setActiveTab(tab.id);
                     // toast({
                     //   title: `${tab.label} Tab`,
                     //   description: `Switched to ${tab.label} view`,
@@ -558,19 +613,19 @@ export default function AttendancePayroll() {
             </div>
 
             {/* Search */}
-            <div className="p-4 flex items-center gap-2">
-              <div className="relative w-64 ">
+            <div className="p-4 flex items-center gap-1">
+              <div className="relative w-52">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Search employee..."
-                  className="pl-10 w-full h-14 rounded-full border "
+                  className="pl-10 w-full h-10 rounded-full border "
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <Button
                 variant="outline"
-                className="gap-2 flex items-center border-orange-500 text-orange-500 h-14 rounded-full"
+                className="gap-2 flex items-center border-orange-500 text-orange-500 h-10 rounded-full"
                 onClick={() => setShowFilters(!showFilters)}
               >
                 <svg
@@ -595,7 +650,9 @@ export default function AttendancePayroll() {
                 onClick={handleRefreshData}
                 disabled={isLoading}
               >
-                <RefreshCw className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
+                />
               </Button>
             </div>
           </div>
@@ -605,7 +662,9 @@ export default function AttendancePayroll() {
             <div className="px-4 pb-4 grid grid-cols-5 gap-4">
               <Select
                 value={filters.trade}
-                onValueChange={(value) => setFilters((prev) => ({ ...prev, trade: value }))}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, trade: value }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Electrician" />
@@ -621,7 +680,9 @@ export default function AttendancePayroll() {
 
               <Select
                 value={filters.project}
-                onValueChange={(value) => setFilters((prev) => ({ ...prev, project: value }))}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, project: value }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Metro Bridge" />
@@ -637,7 +698,9 @@ export default function AttendancePayroll() {
 
               <Select
                 value={filters.dailyRate}
-                onValueChange={(value) => setFilters((prev) => ({ ...prev, dailyRate: value }))}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, dailyRate: value }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select by Daily Rate" />
@@ -653,7 +716,9 @@ export default function AttendancePayroll() {
 
               <Select
                 value={filters.startDate}
-                onValueChange={(value) => setFilters((prev) => ({ ...prev, startDate: value }))}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, startDate: value }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Start Date" />
@@ -667,7 +732,9 @@ export default function AttendancePayroll() {
 
               <Select
                 value={filters.endDate}
-                onValueChange={(value) => setFilters((prev) => ({ ...prev, endDate: value }))}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, endDate: value }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Finish Date" />
@@ -697,12 +764,20 @@ export default function AttendancePayroll() {
                   <div className="px-4 pb-4">
                     <div className="flex gap-4 mb-4">
                       <div className="bg-white border rounded-lg p-4 flex-1">
-                        <div className="text-sm text-gray-500 mb-1">Total Budget Baseline</div>
-                        <div className="text-xl font-bold">{summaryData.totalBudgetBaseline}</div>
+                        <div className="text-sm text-gray-500 mb-1">
+                          Total Budget Baseline
+                        </div>
+                        <div className="text-xl font-bold">
+                          {summaryData.totalBudgetBaseline}
+                        </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4 flex-1">
-                        <div className="text-sm text-gray-500 mb-1">Total Actual Payroll</div>
-                        <div className="text-xl font-bold">{summaryData.totalActualPayroll}</div>
+                        <div className="text-sm text-gray-500 mb-1">
+                          Total Actual Payroll
+                        </div>
+                        <div className="text-xl font-bold">
+                          {summaryData.totalActualPayroll}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -713,15 +788,32 @@ export default function AttendancePayroll() {
                       <thead>
                         <tr className="border-t border-b text-[10px] text-gray-500">
                           <th className="w-10 px-4 py-3 text-left border-r">
-                            <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-gray-300"
+                            />
                           </th>
-                          <th className="px-4 py-3 text-left border-r">Employee Name</th>
-                          <th className="px-4 py-3 text-left border-r">Position/Trade</th>
-                          <th className="px-4 py-3 text-left border-r">Assigned Project</th>
-                          <th className="px-4 py-3 text-left border-r">Contract Start Date</th>
-                          <th className="px-4 py-3 text-left border-r">Contract Finish Date</th>
-                          <th className="px-4 py-3 text-left border-r">Remaining Days</th>
-                          <th className="px-4 py-3 text-left border-r">Attendance</th>
+                          <th className="px-4 py-3 text-left border-r">
+                            Employee Name
+                          </th>
+                          <th className="px-4 py-3 text-left border-r">
+                            Position/Trade
+                          </th>
+                          <th className="px-4 py-3 text-left border-r">
+                            Assigned Project
+                          </th>
+                          <th className="px-4 py-3 text-left border-r">
+                            Contract Start Date
+                          </th>
+                          <th className="px-4 py-3 text-left border-r">
+                            Contract Finish Date
+                          </th>
+                          <th className="px-4 py-3 text-left border-r">
+                            Remaining Days
+                          </th>
+                          <th className="px-4 py-3 text-left border-r">
+                            Attendance
+                          </th>
                           <th className="w-10 px-4 py-3 text-center"></th>
                         </tr>
                       </thead>
@@ -730,26 +822,46 @@ export default function AttendancePayroll() {
                           <React.Fragment key={employee.id}>
                             <tr className="border-b hover:bg-gray-50">
                               <td className="px-4 py-3 border-r">
-                                <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 rounded border-gray-300"
+                                />
                               </td>
                               <td className="px-4 py-3 border-r">
                                 <div className="flex items-center gap-2">
                                   <Avatar className="h-8 w-8">
-                                    <AvatarImage src={employee.avatar} alt={employee.name} />
-                                    <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+                                    <AvatarImage
+                                      src={employee.avatar}
+                                      alt={employee.name}
+                                    />
+                                    <AvatarFallback>
+                                      {employee.name.charAt(0)}
+                                    </AvatarFallback>
                                   </Avatar>
-                                  <span className="font-medium">{employee.name}</span>
+                                  <span className="font-medium">
+                                    {employee.name}
+                                  </span>
                                 </div>
                               </td>
-                              <td className="px-4 py-3 border-r">{employee.position}</td>
-                              <td className="px-4 py-3 border-r">{employee.assignedProject}</td>
-                              <td className="px-4 py-3 border-r">{employee.contractStartDate}</td>
-                              <td className="px-4 py-3 border-r">{employee.contractEndDate}</td>
+                              <td className="px-4 py-3 border-r">
+                                {employee.position}
+                              </td>
+                              <td className="px-4 py-3 border-r">
+                                {employee.assignedProject}
+                              </td>
+                              <td className="px-4 py-3 border-r">
+                                {employee.contractStartDate}
+                              </td>
+                              <td className="px-4 py-3 border-r">
+                                {employee.contractEndDate}
+                              </td>
                               <td className="px-4 py-3 border-r">
                                 <Badge
                                   className={`rounded-full px-2 py-0.5 text-xs font-medium bg-red-50 text-red-600 border-0`}
                                 >
-                                  {employee.remainingDays < 10 ? `0${employee.remainingDays}` : employee.remainingDays}
+                                  {employee.remainingDays < 10
+                                    ? `0${employee.remainingDays}`
+                                    : employee.remainingDays}
                                 </Badge>
                               </td>
                               <td className="px-4 py-3 border-r">
@@ -757,9 +869,9 @@ export default function AttendancePayroll() {
                                   open={openAttendanceDropdown === employee.id}
                                   onOpenChange={(open) => {
                                     if (open) {
-                                      setOpenAttendanceDropdown(employee.id)
+                                      setOpenAttendanceDropdown(employee.id);
                                     } else {
-                                      setOpenAttendanceDropdown(null)
+                                      setOpenAttendanceDropdown(null);
                                     }
                                   }}
                                 >
@@ -770,16 +882,21 @@ export default function AttendancePayroll() {
                                           employee.attendance === "Present"
                                             ? "bg-green-50 text-green-700 border-0"
                                             : employee.attendance === "Late"
-                                              ? "bg-orange-50 text-orange-500 border-0"
-                                              : "bg-red-50 text-red-700 border-0"
+                                            ? "bg-orange-50 text-orange-500 border-0"
+                                            : "bg-red-50 text-red-700 border-0"
                                         }
                                       >
-                                        {employee.attendance === "Late" ? "late" : employee.attendance}
+                                        {employee.attendance === "Late"
+                                          ? "late"
+                                          : employee.attendance}
                                       </Badge>
                                       <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                     </div>
                                   </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0" align="start">
+                                  <PopoverContent
+                                    className="w-auto p-0"
+                                    align="start"
+                                  >
                                     <div className="p-4 space-y-2">
                                       <div className="text-sm font-medium text-muted-foreground mb-2">
                                         Attendance Dropdown
@@ -787,21 +904,36 @@ export default function AttendancePayroll() {
                                       <Button
                                         variant="outline"
                                         className="w-full justify-center bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-100"
-                                        onClick={() => updateEmployeeAttendance(employee.id, "Present")}
+                                        onClick={() =>
+                                          updateEmployeeAttendance(
+                                            employee.id,
+                                            "Present"
+                                          )
+                                        }
                                       >
                                         Present
                                       </Button>
                                       <Button
                                         variant="outline"
                                         className="w-full justify-center bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 border-orange-100"
-                                        onClick={() => updateEmployeeAttendance(employee.id, "Late")}
+                                        onClick={() =>
+                                          updateEmployeeAttendance(
+                                            employee.id,
+                                            "Late"
+                                          )
+                                        }
                                       >
                                         late
                                       </Button>
                                       <Button
                                         variant="outline"
                                         className="w-full justify-center bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 border-red-100"
-                                        onClick={() => updateEmployeeAttendance(employee.id, "Absent")}
+                                        onClick={() =>
+                                          updateEmployeeAttendance(
+                                            employee.id,
+                                            "Absent"
+                                          )
+                                        }
                                       >
                                         Absent
                                       </Button>
@@ -814,7 +946,11 @@ export default function AttendancePayroll() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() =>
-                                    setExpandedEmployee(employee.id === expandedEmployee ? null : employee.id)
+                                    setExpandedEmployee(
+                                      employee.id === expandedEmployee
+                                        ? null
+                                        : employee.id
+                                    )
                                   }
                                 >
                                   <svg
@@ -842,7 +978,9 @@ export default function AttendancePayroll() {
                                   <div className="border rounded-md bg-white p-4">
                                     <div className="flex justify-between items-center mb-4">
                                       <div className="flex items-center gap-2">
-                                        <h3 className="font-medium">{currentMonth}</h3>
+                                        <h3 className="font-medium">
+                                          {currentMonth}
+                                        </h3>
                                         <div className="flex gap-1">
                                           <Button
                                             variant="ghost"
@@ -851,8 +989,9 @@ export default function AttendancePayroll() {
                                             onClick={() => {
                                               toast({
                                                 title: "Previous Month",
-                                                description: "Navigating to previous month",
-                                              })
+                                                description:
+                                                  "Navigating to previous month",
+                                              });
                                             }}
                                           >
                                             <svg
@@ -876,8 +1015,9 @@ export default function AttendancePayroll() {
                                             onClick={() => {
                                               toast({
                                                 title: "Next Month",
-                                                description: "Navigating to next month",
-                                              })
+                                                description:
+                                                  "Navigating to next month",
+                                              });
                                             }}
                                           >
                                             <svg
@@ -902,28 +1042,41 @@ export default function AttendancePayroll() {
                                             <SelectValue placeholder="Show" />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="1week">1 Week</SelectItem>
-                                            <SelectItem value="2weeks">2 Weeks</SelectItem>
-                                            <SelectItem value="month">Full Month</SelectItem>
+                                            <SelectItem value="1week">
+                                              1 Week
+                                            </SelectItem>
+                                            <SelectItem value="2weeks">
+                                              2 Weeks
+                                            </SelectItem>
+                                            <SelectItem value="month">
+                                              Full Month
+                                            </SelectItem>
                                           </SelectContent>
                                         </Select>
                                       </div>
                                     </div>
                                     <div className="grid grid-cols-7 gap-4">
                                       {calendarDays.map((day, index) => (
-                                        <div key={index} className="text-center">
+                                        <div
+                                          key={index}
+                                          className="text-center"
+                                        >
                                           <div className="text-sm font-medium mb-1">
-                                            {day.day < 10 ? `0${day.day}` : day.day}
+                                            {day.day < 10
+                                              ? `0${day.day}`
+                                              : day.day}
                                           </div>
-                                          <div className="text-xs text-muted-foreground mb-2">{day.weekday}</div>
+                                          <div className="text-xs text-muted-foreground mb-2">
+                                            {day.weekday}
+                                          </div>
                                           <div className="flex flex-col gap-1">
                                             <Badge
                                               className={
                                                 day.status === "Present"
                                                   ? "bg-green-50 text-green-700 border-0"
                                                   : day.status === "Late"
-                                                    ? "bg-yellow-50 text-yellow-700 border-0"
-                                                    : "bg-red-50 text-red-700 border-0"
+                                                  ? "bg-yellow-50 text-yellow-700 border-0"
+                                                  : "bg-red-50 text-red-700 border-0"
                                               }
                                             >
                                               {day.status}
@@ -935,7 +1088,7 @@ export default function AttendancePayroll() {
                                                 toast({
                                                   title: "Attendance Updated",
                                                   description: `Marked as Late for ${day.day} ${currentMonth}`,
-                                                })
+                                                });
                                               }}
                                             >
                                               late
@@ -947,7 +1100,7 @@ export default function AttendancePayroll() {
                                                 toast({
                                                   title: "Attendance Updated",
                                                   description: `Marked as Absent for ${day.day} ${currentMonth}`,
-                                                })
+                                                });
                                               }}
                                             >
                                               Absent
@@ -975,24 +1128,44 @@ export default function AttendancePayroll() {
                   <div className="px-4 pb-4">
                     <div className="grid grid-cols-5 gap-4 mb-4">
                       <div className="bg-white border rounded-lg p-4">
-                        <div className="text-sm text-gray-500 mb-1">Total Employees</div>
-                        <div className="text-xl font-bold">{summaryData.totalEmployees}</div>
+                        <div className="text-sm text-gray-500 mb-1">
+                          Total Employees
+                        </div>
+                        <div className="text-xl font-bold">
+                          {summaryData.totalEmployees}
+                        </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
-                        <div className="text-sm text-gray-500 mb-1">Total Days Worked</div>
-                        <div className="text-xl font-bold">{summaryData.totalDaysWorked}</div>
+                        <div className="text-sm text-gray-500 mb-1">
+                          Total Days Worked
+                        </div>
+                        <div className="text-xl font-bold">
+                          {summaryData.totalDaysWorked}
+                        </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
-                        <div className="text-sm text-gray-500 mb-1">Total Budget Baseline</div>
-                        <div className="text-xl font-bold">{summaryData.totalBudgetBaseline}</div>
+                        <div className="text-sm text-gray-500 mb-1">
+                          Total Budget Baseline
+                        </div>
+                        <div className="text-xl font-bold">
+                          {summaryData.totalBudgetBaseline}
+                        </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
-                        <div className="text-sm text-gray-500 mb-1">Total Actual Payroll</div>
-                        <div className="text-xl font-bold">{summaryData.totalActualPayroll}</div>
+                        <div className="text-sm text-gray-500 mb-1">
+                          Total Actual Payroll
+                        </div>
+                        <div className="text-xl font-bold">
+                          {summaryData.totalActualPayroll}
+                        </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
-                        <div className="text-sm text-gray-500 mb-1">Daily Actual Payroll</div>
-                        <div className="text-xl font-bold">{summaryData.dailyActualPayroll}</div>
+                        <div className="text-sm text-gray-500 mb-1">
+                          Daily Actual Payroll
+                        </div>
+                        <div className="text-xl font-bold">
+                          {summaryData.dailyActualPayroll}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1003,41 +1176,85 @@ export default function AttendancePayroll() {
                       <thead>
                         <tr className="border-t border-b text-[10px] text-gray-500">
                           <th className="w-10 px-4 py-3 text-left border-r">
-                            <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-gray-300"
+                            />
                           </th>
-                          <th className="px-4 py-3 text-left border-r">Employee Name</th>
-                          <th className="px-4 py-3 text-left border-r">Daily Rate</th>
-                          <th className="px-4 py-3 text-left border-r">Days Worked</th>
-                          <th className="px-4 py-3 text-left border-r">Budget Baseline</th>
-                          <th className="px-4 py-3 text-left border-r">Total Actual</th>
-                          <th className="px-4 py-3 text-left border-r">Planned vs Actual</th>
+                          <th className="px-4 py-3 text-left border-r">
+                            Employee Name
+                          </th>
+                          <th className="px-4 py-3 text-left border-r">
+                            Daily Rate
+                          </th>
+                          <th className="px-4 py-3 text-left border-r">
+                            Days Worked
+                          </th>
+                          <th className="px-4 py-3 text-left border-r">
+                            Budget Baseline
+                          </th>
+                          <th className="px-4 py-3 text-left border-r">
+                            Total Actual
+                          </th>
+                          <th className="px-4 py-3 text-left border-r">
+                            Planned vs Actual
+                          </th>
                           <th className="w-10 px-4 py-3 text-center"></th>
                         </tr>
                       </thead>
                       <tbody className="text-xs">
                         {filteredEmployees.map((employee) => (
-                          <tr key={employee.id} className="border-b hover:bg-gray-50">
+                          <tr
+                            key={employee.id}
+                            className="border-b hover:bg-gray-50"
+                          >
                             <td className="px-4 py-3 border-r">
-                              <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 rounded border-gray-300"
+                              />
                             </td>
                             <td className="px-4 py-3 border-r">
                               <div className="flex items-center gap-2">
                                 <Avatar className="h-8 w-8">
-                                  <AvatarImage src={employee.avatar} alt={employee.name} />
-                                  <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+                                  <AvatarImage
+                                    src={employee.avatar}
+                                    alt={employee.name}
+                                  />
+                                  <AvatarFallback>
+                                    {employee.name.charAt(0)}
+                                  </AvatarFallback>
                                 </Avatar>
-                                <span className="font-medium">{employee.name}</span>
+                                <span className="font-medium">
+                                  {employee.name}
+                                </span>
                               </div>
                             </td>
-                            <td className="px-4 py-3 border-r">${employee.dailyRate}</td>
-                            <td className="px-4 py-3 border-r">{employee.daysWorked}</td>
-                            <td className="px-4 py-3 border-r">${employee.budgetBaseline.toLocaleString()}</td>
-                            <td className="px-4 py-3 border-r">${employee.totalActual?.toLocaleString()}</td>
                             <td className="px-4 py-3 border-r">
-                              {employee.plannedVsActual?.includes("Over Budget") ? (
-                                <Badge className="bg-red-50 text-red-700 border-0">{employee.plannedVsActual}</Badge>
-                              ) : employee.plannedVsActual?.includes("Planned") ? (
-                                <span className="text-gray-700">{employee.plannedVsActual}</span>
+                              ${employee.dailyRate}
+                            </td>
+                            <td className="px-4 py-3 border-r">
+                              {employee.daysWorked}
+                            </td>
+                            <td className="px-4 py-3 border-r">
+                              ${employee.budgetBaseline.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 border-r">
+                              ${employee.totalActual?.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 border-r">
+                              {employee.plannedVsActual?.includes(
+                                "Over Budget"
+                              ) ? (
+                                <Badge className="bg-red-50 text-red-700 border-0">
+                                  {employee.plannedVsActual}
+                                </Badge>
+                              ) : employee.plannedVsActual?.includes(
+                                  "Planned"
+                                ) ? (
+                                <span className="text-gray-700">
+                                  {employee.plannedVsActual}
+                                </span>
                               ) : (
                                 <Badge className="bg-green-50 text-green-700 border-0">
                                   {employee.plannedVsActual}
@@ -1052,7 +1269,7 @@ export default function AttendancePayroll() {
                                   toast({
                                     title: "Employee Details",
                                     description: `Viewing details for ${employee.name}`,
-                                  })
+                                  });
                                 }}
                               >
                                 <svg
@@ -1088,33 +1305,63 @@ export default function AttendancePayroll() {
                     <thead>
                       <tr className="border-t border-b text-[10px] text-gray-500">
                         <th className="w-10 px-4 py-3 text-left border-r">
-                          <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
                         </th>
-                        <th className="px-4 py-3 text-left border-r">Employee Name</th>
-                        <th className="px-4 py-3 text-left border-r">Sick Days</th>
-                        <th className="px-4 py-3 text-left border-r">Vacation Days</th>
-                        <th className="px-4 py-3 text-left border-r">Unpaid Leave</th>
+                        <th className="px-4 py-3 text-left border-r">
+                          Employee Name
+                        </th>
+                        <th className="px-4 py-3 text-left border-r">
+                          Sick Days
+                        </th>
+                        <th className="px-4 py-3 text-left border-r">
+                          Vacation Days
+                        </th>
+                        <th className="px-4 py-3 text-left border-r">
+                          Unpaid Leave
+                        </th>
                         <th className="w-10 px-4 py-3 text-center"></th>
                       </tr>
                     </thead>
                     <tbody className="text-xs">
                       {filteredEmployees.map((employee) => (
-                        <tr key={employee.id} className="border-b hover:bg-gray-50">
+                        <tr
+                          key={employee.id}
+                          className="border-b hover:bg-gray-50"
+                        >
                           <td className="px-4 py-3 border-r">
-                            <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-gray-300"
+                            />
                           </td>
                           <td className="px-4 py-3 border-r">
                             <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8">
-                                <AvatarImage src={employee.avatar} alt={employee.name} />
-                                <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+                                <AvatarImage
+                                  src={employee.avatar}
+                                  alt={employee.name}
+                                />
+                                <AvatarFallback>
+                                  {employee.name.charAt(0)}
+                                </AvatarFallback>
                               </Avatar>
-                              <span className="font-medium">{employee.name}</span>
+                              <span className="font-medium">
+                                {employee.name}
+                              </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 border-r">{employee.sickDays}</td>
-                          <td className="px-4 py-3 border-r">{employee.vacationDays}</td>
-                          <td className="px-4 py-3 border-r">{employee.unpaidLeave}</td>
+                          <td className="px-4 py-3 border-r">
+                            {employee.sickDays}
+                          </td>
+                          <td className="px-4 py-3 border-r">
+                            {employee.vacationDays}
+                          </td>
+                          <td className="px-4 py-3 border-r">
+                            {employee.unpaidLeave}
+                          </td>
                           <td className="px-4 py-3 text-center">
                             <Button
                               variant="ghost"
@@ -1123,7 +1370,7 @@ export default function AttendancePayroll() {
                                 toast({
                                   title: "Leave Management",
                                   description: `Managing leave for ${employee.name}`,
-                                })
+                                });
                               }}
                             >
                               <svg
@@ -1155,6 +1402,5 @@ export default function AttendancePayroll() {
         </main>
       </div>
     </div>
-  )
+  );
 }
-

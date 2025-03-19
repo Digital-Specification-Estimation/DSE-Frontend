@@ -1,77 +1,92 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { Building2, Plus, MapPin, DollarSign, Loader2 } from "lucide-react"
-import { Sidebar } from "@/components/sidebar"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import DashboardHeader from "@/components/DashboardHeader"
-import { useToast } from "@/hooks/use-toast"
+import { useState, useEffect } from "react";
+import { Building2, Plus, MapPin, DollarSign, Loader2 } from "lucide-react";
+import { Sidebar } from "@/components/sidebar";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import DashboardHeader from "@/components/DashboardHeader";
+import { useToast } from "@/hooks/use-toast";
 
 // Types
 interface Location {
-  id: number
-  name: string
+  id: number;
+  name: string;
 }
 
 interface Trade {
-  id: number
-  name: string
-  location: string
-  dailyRate: number
-  icon: string
+  id: number;
+  name: string;
+  location: string;
+  dailyRate: number;
+  icon: string;
 }
 
 interface Project {
-  id: number
-  name: string
-  location: string
-  currency: string
-  startDate: string
-  endDate: string
+  id: number;
+  name: string;
+  location: string;
+  currency: string;
+  startDate: string;
+  endDate: string;
 }
 
 export default function BusinessSetup() {
-  const { toast } = useToast()
+  const { toast } = useToast();
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
-  })
+  });
 
-  const [activeTab, setActiveTab] = useState("locations")
-  const [showAddLocation, setShowAddLocation] = useState(false)
-  const [showAddTrade, setShowAddTrade] = useState(false)
-  const [showAddProject, setShowAddProject] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("locations");
+  const [showAddLocation, setShowAddLocation] = useState(false);
+  const [showAddTrade, setShowAddTrade] = useState(false);
+  const [showAddProject, setShowAddProject] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Form states
-  const [newLocation, setNewLocation] = useState({ name: "" })
-  const [newTrade, setNewTrade] = useState({ name: "", location: "", dailyRate: "" })
+  const [newLocation, setNewLocation] = useState({ name: "" });
+  const [newTrade, setNewTrade] = useState({
+    name: "",
+    location: "",
+    dailyRate: "",
+  });
   const [newProject, setNewProject] = useState({
     name: "",
     location: "",
     currency: "USD",
     startDate: "",
     endDate: "",
-  })
+  });
 
   // Data states
-  const [locations, setLocations] = useState<Location[]>([])
-  const [trades, setTrades] = useState<Trade[]>([])
-  const [projects, setProjects] = useState<Project[]>([])
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   // Fetch business setup data
   useEffect(() => {
     const fetchBusinessData = async () => {
       try {
-        setIsLoading(true)
+        setIsLoading(true);
         // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // In a real implementation, this would be:
         // const locationsResponse = await fetch('/api/business/locations');
@@ -87,14 +102,38 @@ export default function BusinessSetup() {
           { id: 2, name: "Site A" },
           { id: 3, name: "Site B" },
           { id: 4, name: "Site C" },
-        ])
+        ]);
 
         setTrades([
-          { id: 1, name: "Electricians", location: "Main Office", dailyRate: 120, icon: "⚡" },
-          { id: 2, name: "Technicians", location: "Site A", dailyRate: 100, icon: "🔧" },
-          { id: 3, name: "HR & Admin", location: "Site B", dailyRate: 90, icon: "👨‍💼" },
-          { id: 4, name: "Supervisors", location: "Site C", dailyRate: 120, icon: "👷" },
-        ])
+          {
+            id: 1,
+            name: "Electricians",
+            location: "Main Office",
+            dailyRate: 120,
+            icon: "⚡",
+          },
+          {
+            id: 2,
+            name: "Technicians",
+            location: "Site A",
+            dailyRate: 100,
+            icon: "🔧",
+          },
+          {
+            id: 3,
+            name: "HR & Admin",
+            location: "Site B",
+            dailyRate: 90,
+            icon: "👨‍💼",
+          },
+          {
+            id: 4,
+            name: "Supervisors",
+            location: "Site C",
+            dailyRate: 120,
+            icon: "👷",
+          },
+        ]);
 
         setProjects([
           {
@@ -129,22 +168,22 @@ export default function BusinessSetup() {
             startDate: "15-Apr-2025",
             endDate: "15-Oct-2025",
           },
-        ])
+        ]);
 
-        setIsLoading(false)
+        setIsLoading(false);
       } catch (error) {
-        console.error("Error fetching business data:", error)
+        console.error("Error fetching business data:", error);
         toast({
           title: "Error",
           description: "Failed to load business data. Please try again.",
           variant: "destructive",
-        })
-        setIsLoading(false)
+        });
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchBusinessData()
-  }, [toast])
+    fetchBusinessData();
+  }, [toast]);
 
   const handleAddLocation = async () => {
     try {
@@ -153,12 +192,12 @@ export default function BusinessSetup() {
           title: "Validation Error",
           description: "Location name is required.",
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
 
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // In a real implementation, this would be:
       // const response = await fetch('/api/business/locations', {
@@ -169,39 +208,43 @@ export default function BusinessSetup() {
       // const data = await response.json();
 
       // Add new location to state
-      const newId = Math.max(...locations.map((loc) => loc.id), 0) + 1
-      setLocations([...locations, { id: newId, name: newLocation.name }])
+      const newId = Math.max(...locations.map((loc) => loc.id), 0) + 1;
+      setLocations([...locations, { id: newId, name: newLocation.name }]);
 
-      setShowAddLocation(false)
-      setNewLocation({ name: "" })
+      setShowAddLocation(false);
+      setNewLocation({ name: "" });
 
       toast({
         title: "Location Added",
         description: `Location ${newLocation.name} has been added successfully.`,
-      })
+      });
     } catch (error) {
-      console.error("Error adding location:", error)
+      console.error("Error adding location:", error);
       toast({
         title: "Error",
         description: "Failed to add location. Please try again.",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const handleAddTrade = async () => {
     try {
-      if (!newTrade.name.trim() || !newTrade.location.trim() || !newTrade.dailyRate.trim()) {
+      if (
+        !newTrade.name.trim() ||
+        !newTrade.location.trim() ||
+        !newTrade.dailyRate.trim()
+      ) {
         toast({
           title: "Validation Error",
           description: "All trade fields are required.",
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
 
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // In a real implementation, this would be:
       // const response = await fetch('/api/business/trades', {
@@ -212,8 +255,8 @@ export default function BusinessSetup() {
       // const data = await response.json();
 
       // Add new trade to state
-      const newId = Math.max(...trades.map((trade) => trade.id), 0) + 1
-      const icon = getIconForTrade(newTrade.name)
+      const newId = Math.max(...trades.map((trade) => trade.id), 0) + 1;
+      const icon = getIconForTrade(newTrade.name);
       setTrades([
         ...trades,
         {
@@ -223,38 +266,43 @@ export default function BusinessSetup() {
           dailyRate: Number(newTrade.dailyRate),
           icon,
         },
-      ])
+      ]);
 
-      setShowAddTrade(false)
-      setNewTrade({ name: "", location: "", dailyRate: "" })
+      setShowAddTrade(false);
+      setNewTrade({ name: "", location: "", dailyRate: "" });
 
       toast({
         title: "Trade Added",
         description: `${newTrade.name} has been added successfully.`,
-      })
+      });
     } catch (error) {
-      console.error("Error adding trade:", error)
+      console.error("Error adding trade:", error);
       toast({
         title: "Error",
         description: "Failed to add trade. Please try again.",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const handleAddProject = async () => {
     try {
-      if (!newProject.name.trim() || !newProject.location.trim() || !newProject.startDate || !newProject.endDate) {
+      if (
+        !newProject.name.trim() ||
+        !newProject.location.trim() ||
+        !newProject.startDate ||
+        !newProject.endDate
+      ) {
         toast({
           title: "Validation Error",
           description: "All project fields are required.",
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
 
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // In a real implementation, this would be:
       // const response = await fetch('/api/business/projects', {
@@ -265,7 +313,7 @@ export default function BusinessSetup() {
       // const data = await response.json();
 
       // Add new project to state
-      const newId = Math.max(...projects.map((project) => project.id), 0) + 1
+      const newId = Math.max(...projects.map((project) => project.id), 0) + 1;
       setProjects([
         ...projects,
         {
@@ -276,30 +324,30 @@ export default function BusinessSetup() {
           startDate: newProject.startDate,
           endDate: newProject.endDate,
         },
-      ])
+      ]);
 
-      setShowAddProject(false)
+      setShowAddProject(false);
       setNewProject({
         name: "",
         location: "",
         currency: "USD",
         startDate: "",
         endDate: "",
-      })
+      });
 
       toast({
         title: "Project Added",
         description: `${newProject.name} has been added successfully.`,
-      })
+      });
     } catch (error) {
-      console.error("Error adding project:", error)
+      console.error("Error adding project:", error);
       toast({
         title: "Error",
         description: "Failed to add project. Please try again.",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const getIconForTrade = (tradeName: string): string => {
     const tradeIcons: Record<string, string> = {
@@ -307,14 +355,14 @@ export default function BusinessSetup() {
       Technicians: "🔧",
       "HR & Admin": "👨‍💼",
       Supervisors: "👷",
-    }
+    };
 
-    return tradeIcons[tradeName] || "👤"
-  }
+    return tradeIcons[tradeName] || "👤";
+  };
 
   const handleTabChange = (tab: string) => {
-    setActiveTab(tab)
-  }
+    setActiveTab(tab);
+  };
 
   // Table Component
   function DataTable({
@@ -322,13 +370,13 @@ export default function BusinessSetup() {
     data,
     renderRow,
   }: {
-    headers: string[]
-    data: any[]
-    renderRow: (item: any) => React.ReactNode
+    headers: string[];
+    data: any[];
+    renderRow: (item: any) => React.ReactNode;
   }) {
     return (
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full text-sm">
           <thead>
             <tr className="border-t border-b text-sm text-gray-500">
               <th className="w-10 px-4 py-3 text-left">
@@ -339,7 +387,7 @@ export default function BusinessSetup() {
                     toast({
                       title: "Select All",
                       description: "All items selected",
-                    })
+                    });
                   }}
                 />
               </th>
@@ -363,7 +411,7 @@ export default function BusinessSetup() {
                       toast({
                         title: "Item Selected",
                         description: `Selected item ${index + 1}`,
-                      })
+                      });
                     }}
                   />
                 </td>
@@ -377,7 +425,7 @@ export default function BusinessSetup() {
                       toast({
                         title: "Options",
                         description: "Item options menu opened",
-                      })
+                      });
                     }}
                   >
                     ...
@@ -388,7 +436,7 @@ export default function BusinessSetup() {
           </tbody>
         </table>
       </div>
-    )
+    );
   }
 
   if (isLoading) {
@@ -405,7 +453,7 @@ export default function BusinessSetup() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -418,7 +466,9 @@ export default function BusinessSetup() {
         <main className="flex-1 overflow-auto">
           <div className="max-w-[1200px] mx-auto py-8 px-6">
             <div className="flex items-center justify-between mb-8">
-              <h1 className="text-[22px] font-semibold text-gray-900">Business Setup</h1>
+              <h1 className="text-[22px] font-semibold text-gray-900">
+                Business Setup
+              </h1>
             </div>
 
             <div className="flex gap-6">
@@ -463,10 +513,17 @@ export default function BusinessSetup() {
                     <>
                       <div className="flex justify-between items-center mb-6">
                         <div>
-                          <h2 className="text-lg font-semibold text-gray-900">Work Locations</h2>
-                          <p className="text-sm text-gray-500">Define different locations where employees work.</p>
+                          <h2 className="text-lg font-semibold text-gray-900">
+                            Work Locations
+                          </h2>
+                          <p className="text-sm text-gray-500">
+                            Define different locations where employees work.
+                          </p>
                         </div>
-                        <Button onClick={() => setShowAddLocation(true)} className="bg-orange-400 hover:bg-orange-500">
+                        <Button
+                          onClick={() => setShowAddLocation(true)}
+                          className="bg-orange-400 hover:bg-orange-500"
+                        >
                           <Plus className="h-4 w-4 mr-2" />
                           Add New Location
                         </Button>
@@ -490,16 +547,27 @@ export default function BusinessSetup() {
                     <>
                       <div className="flex justify-between items-center mb-6">
                         <div>
-                          <h2 className="text-lg font-semibold text-gray-900">Trade/Job Role & Daily Rates</h2>
-                          <p className="text-sm text-gray-500">Define different roles and set daily rates for each.</p>
+                          <h2 className="text-lg font-semibold text-gray-900">
+                            Trade/Job Role & Daily Rates
+                          </h2>
+                          <p className="text-sm text-gray-500">
+                            Define different roles and set daily rates for each.
+                          </p>
                         </div>
-                        <Button onClick={() => setShowAddTrade(true)} className="bg-orange-400 hover:bg-orange-500">
+                        <Button
+                          onClick={() => setShowAddTrade(true)}
+                          className="bg-orange-400 hover:bg-orange-500"
+                        >
                           <Plus className="h-4 w-4 mr-2" />
                           Add New Trade
                         </Button>
                       </div>
                       <DataTable
-                        headers={["Role/Trade", "Location Name", "Daily Rate ($)"]}
+                        headers={[
+                          "Role/Trade",
+                          "Location Name",
+                          "Daily Rate ($)",
+                        ]}
                         data={trades}
                         renderRow={(trade) => (
                           <>
@@ -521,18 +589,31 @@ export default function BusinessSetup() {
 
                   {activeTab === "projects" && (
                     <>
-                      <div className="flex justify-between items-center mb-6">
+                      <div className="flex justify-between items-center mb-6 text-sm">
                         <div>
-                          <h2 className="text-lg font-semibold text-gray-900">Company Projects</h2>
-                          <p className="text-sm text-gray-500">Set up projects and assign locations.</p>
+                          <h2 className="text-lg font-semibold text-gray-900">
+                            Company Projects
+                          </h2>
+                          <p className="text-sm text-gray-500">
+                            Set up projects and assign locations.
+                          </p>
                         </div>
-                        <Button onClick={() => setShowAddProject(true)} className="bg-orange-400 hover:bg-orange-500">
+                        <Button
+                          onClick={() => setShowAddProject(true)}
+                          className="bg-orange-400 hover:bg-orange-500"
+                        >
                           <Plus className="h-4 w-4 mr-2" />
                           Add New Project
                         </Button>
                       </div>
                       <DataTable
-                        headers={["Project Name", "Location Name", "Currency", "Start Date", "End Date"]}
+                        headers={[
+                          "Project Name",
+                          "Location Name",
+                          "Currency",
+                          "Start Date",
+                          "End Date",
+                        ]}
                         data={projects}
                         renderRow={(project) => (
                           <>
@@ -581,7 +662,10 @@ export default function BusinessSetup() {
                 />
               </div>
             </div>
-            <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={handleAddLocation}>
+            <Button
+              className="w-full bg-orange-500 hover:bg-orange-600"
+              onClick={handleAddLocation}
+            >
               Add Location
             </Button>
           </div>
@@ -603,7 +687,9 @@ export default function BusinessSetup() {
                   placeholder="Electricians"
                   className="pl-10"
                   value={newTrade.name}
-                  onChange={(e) => setNewTrade({ ...newTrade, name: e.target.value })}
+                  onChange={(e) =>
+                    setNewTrade({ ...newTrade, name: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -615,7 +701,9 @@ export default function BusinessSetup() {
                   placeholder="Main Office"
                   className="pl-10"
                   value={newTrade.location}
-                  onChange={(e) => setNewTrade({ ...newTrade, location: e.target.value })}
+                  onChange={(e) =>
+                    setNewTrade({ ...newTrade, location: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -627,11 +715,16 @@ export default function BusinessSetup() {
                   placeholder="Enter rate"
                   className="pl-10"
                   value={newTrade.dailyRate}
-                  onChange={(e) => setNewTrade({ ...newTrade, dailyRate: e.target.value })}
+                  onChange={(e) =>
+                    setNewTrade({ ...newTrade, dailyRate: e.target.value })
+                  }
                 />
               </div>
             </div>
-            <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={handleAddTrade}>
+            <Button
+              className="w-full bg-orange-500 hover:bg-orange-600"
+              onClick={handleAddTrade}
+            >
               Add Trade
             </Button>
           </div>
@@ -650,14 +743,18 @@ export default function BusinessSetup() {
               <Input
                 placeholder="Construction A"
                 value={newProject.name}
-                onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                onChange={(e) =>
+                  setNewProject({ ...newProject, name: e.target.value })
+                }
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Select Location</label>
               <Select
                 value={newProject.location}
-                onValueChange={(value) => setNewProject({ ...newProject, location: value })}
+                onValueChange={(value) =>
+                  setNewProject({ ...newProject, location: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select" />
@@ -675,7 +772,9 @@ export default function BusinessSetup() {
               <label className="text-sm font-medium">Select Currency</label>
               <Select
                 value={newProject.currency}
-                onValueChange={(value) => setNewProject({ ...newProject, currency: value })}
+                onValueChange={(value) =>
+                  setNewProject({ ...newProject, currency: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select" />
@@ -693,7 +792,9 @@ export default function BusinessSetup() {
                 <Input
                   type="date"
                   value={newProject.startDate}
-                  onChange={(e) => setNewProject({ ...newProject, startDate: e.target.value })}
+                  onChange={(e) =>
+                    setNewProject({ ...newProject, startDate: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -701,17 +802,21 @@ export default function BusinessSetup() {
                 <Input
                   type="date"
                   value={newProject.endDate}
-                  onChange={(e) => setNewProject({ ...newProject, endDate: e.target.value })}
+                  onChange={(e) =>
+                    setNewProject({ ...newProject, endDate: e.target.value })
+                  }
                 />
               </div>
             </div>
-            <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={handleAddProject}>
+            <Button
+              className="w-full bg-orange-500 hover:bg-orange-600"
+              onClick={handleAddProject}
+            >
               Add Project
             </Button>
           </div>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
-
