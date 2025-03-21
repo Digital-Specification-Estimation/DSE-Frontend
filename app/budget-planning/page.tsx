@@ -817,11 +817,6 @@ export default function BudgetPlanning() {
                                   tooltip.classList.remove("opacity-0")
                                   tooltip.classList.add("opacity-100")
                                 }
-
-                                toast({
-                                  title: `${role} Planned Cost`,
-                                  description: `$${data.plannedCost.toLocaleString()}`,
-                                })
                               }}
                             ></div>
 
@@ -836,11 +831,6 @@ export default function BudgetPlanning() {
                                   tooltip.classList.remove("opacity-0")
                                   tooltip.classList.add("opacity-100")
                                 }
-
-                                toast({
-                                  title: `${role} Actual Cost`,
-                                  description: `$${data.actualCost.toLocaleString()}`,
-                                })
                               }}
                             ></div>
 
@@ -927,10 +917,6 @@ export default function BudgetPlanning() {
                               variant="ghost"
                               size="icon"
                               onClick={() => {
-                                toast({
-                                  title: `${data.role} Details`,
-                                  description: "Viewing detailed breakdown.",
-                                })
                               }}
                             >
                               <MoreHorizontal className="h-4 w-4" />
