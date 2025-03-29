@@ -16,8 +16,8 @@ export default function SignUp() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [formData, setFormData] = useState({
-    businessName: "",
-    adminName: "",
+    business_name: "",
+    username: "",
     email: "",
     password: "",
     agreeToTerms: false,
@@ -31,82 +31,71 @@ export default function SignUp() {
     })
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setIsLoading(true)
-
-    // Validate form
-    if (!formData.businessName || !formData.adminName || !formData.email || !formData.password) {
-      setError("All fields are required")
-      toast({
-        title: "Validation Error",
-        description: "All fields are required",
-        variant: "destructive",
-      })
-      setIsLoading(false)
-      return
-    }
-
-    if (!formData.agreeToTerms) {
-      setError("You must agree to the terms and privacy policy")
-      toast({
-        title: "Validation Error",
-        description: "You must agree to the terms and privacy policy",
-        variant: "destructive",
-      })
-      setIsLoading(false)
-      return
-    }
-
-    // Password validation
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long")
-      toast({
-        title: "Validation Error",
-        description: "Password must be at least 8 characters long",
-        variant: "destructive",
-      })
-      setIsLoading(false)
-      return
-    }
-
+  const handleSubmit = async (event: { preventDefault: () => void }) => {
+    event.preventDefault();
+    setError('');
+  
     try {
-      // In a real implementation, this would be:
-      // const response = await fetch('/api/auth/register', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData),
-      // });
-      // const data = await response.json();
-      // if (!response.ok) throw new Error(data.message || 'Registration failed');
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // Simulate successful registration
-      toast({
-        title: "Registration Successful",
-        description: "Your account has been created successfully!",
-      })
-
-      // Redirect after successful registration
-      setTimeout(() => {
-        router.push("/dashboard")
-      }, 500)
+      // Send signup request to backend
+      const response = await fetch('http://localhost:4001/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          business_name: formData.business_name,
+          notification_sending: true,
+          send_email_alerts: true,
+          deadline_notify: true
+        }),
+      });
+  
+      // Check if the signup request was successful
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed");
+      }
+  
+      // Verify the user existence after signup
+      const verifyResponse = await fetch(
+        `http://localhost:4001/auth/verify-user?email=${encodeURIComponent(formData.email)}`
+      );
+      const verification = await verifyResponse.json();
+  
+      // Check if the user was created and exists in the database
+      if (!verification.exists) {
+        throw new Error("User account was not created in the database");
+      }
+  
+      // Log the user in
+      const loginResponse = await fetch('http://localhost:4001/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+  
+      const loginData = await loginResponse.json();
+  
+      if (!loginResponse.ok) {
+        throw new Error(loginData.message || "Login failed");
+      }
+  
+      // Successfully logged in, redirect user to dashboard or another page
+      setRedirect(true); // or use history.push() if using React Router
     } catch (err) {
-      console.error("Registration failed:", err)
-      setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
-
-      toast({
-        title: "Registration Failed",
-        description: err instanceof Error ? err.message : "An error occurred. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+      // Handle errors during the signup/login process
+      if (err instanceof Error) {
+        console.log("Error during signup or login:", err.message);
+        setError(err.message); // Set error message to show to the user
+      }
     }
-  }
+  };
+  
 
   const handleSocialSignUp = (provider: string) => {
     setIsLoading(true)
@@ -138,7 +127,7 @@ export default function SignUp() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="businessName" className="text-sm font-medium">
+              <label htmlFor="business_name" className="text-sm font-medium">
                 Business Name
               </label>
               <div className="relative">
@@ -146,11 +135,11 @@ export default function SignUp() {
                   <User className="h-4 w-4 text-gray-400" />
                 </div>
                 <input
-                  id="businessName"
-                  name="businessName"
+                  id="business_name"
+                  name="business_name"
                   type="text"
                   placeholder="Johny Business"
-                  value={formData.businessName}
+                  value={formData.business_name}
                   onChange={handleChange}
                   className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   required
@@ -160,7 +149,7 @@ export default function SignUp() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="adminName" className="text-sm font-medium">
+              <label htmlFor="username" className="text-sm font-medium">
                 Admin Name
               </label>
               <div className="relative">
@@ -168,11 +157,11 @@ export default function SignUp() {
                   <User className="h-4 w-4 text-gray-400" />
                 </div>
                 <input
-                  id="adminName"
-                  name="adminName"
+                  id="username"
+                  name="username"
                   type="text"
                   placeholder="Johny English"
-                  value={formData.adminName}
+                  value={formData.username}
                   onChange={handleChange}
                   className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   required
@@ -367,5 +356,9 @@ export default function SignUp() {
       </div>
     </div>
   )
+}
+
+function setRedirect(arg0: boolean) {
+  throw new Error("Function not implemented.")
 }
 
