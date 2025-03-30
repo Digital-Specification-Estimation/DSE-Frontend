@@ -32,59 +32,106 @@ export default function SignIn() {
 
   // Handle form submission and simulate the backend response
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setIsLoading(true)
-
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+  
     try {
-      // In a real implementation, this would be:
-      // const response = await fetch('/api/auth/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData),
-      // });
-      // const data = await response.json();
-      // if (!response.ok) throw new Error(data.message || 'Login failed');
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // Simulate successful login
+      // Validate inputs
+      if (!formData.email || !formData.password) {
+        throw new Error("Email and password are required");
+      }
+  
+      // Make API call to your backend
+      const response = await fetch('http://localhost:4001/auth/login', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+  
+      // Store the access token
+      localStorage.setItem('authToken', data.access_token);
+  
+      // Show success message
       toast({
         title: "Login Successful",
         description: "Welcome back! You've been logged in successfully.",
-      })
-
-      // Redirect after successful login
-      setTimeout(() => {
-        router.push("/dashboard")
-      }, 500)
+      });
+  
+      // Redirect to dashboard
+      router.push("/dashboard");
     } catch (err) {
-      console.error("Login failed:", err)
-      setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
-
+      const errorMessage = err instanceof Error ? err.message : "Login failed. Please try again.";
+      setError(errorMessage);
       toast({
         title: "Login Failed",
-        description: err instanceof Error ? err.message : "An error occurred. Please try again.",
+        description: errorMessage,
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
-
-  const handleSocialLogin = (provider: string) => {
-    setIsLoading(true)
-
-    // Simulate API call
-    setTimeout(() => {
+  };
+  const handleSocialLogin = (provider: 'google' | 'apple') => {
+    setIsLoading(true);
+    
+    if (provider === 'google') {
+      // Open Google OAuth in a popup
+      const width = 500;
+      const height = 600;
+      const left = (window.innerWidth - width) / 2;
+      const top = (window.innerHeight - height) / 2;
+      
+      const popup = window.open(
+        'http://localhost:4001/auth/google',
+        'GoogleAuth',
+        `width=${width},height=${height},top=${top},left=${left}`
+      );
+      
+      // Listen for message from callback page
+      const handleMessage = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return;
+        
+        if (event.data.type === 'google-auth-success') {
+          localStorage.setItem('authToken', event.data.token);
+          toast({
+            title: "Success!",
+            description: "Logged in with Google",
+          });
+          router.push("/dashboard");
+        } else if (event.data.type === 'google-auth-error') {
+          toast({
+            title: "Error",
+            description: "Google authentication failed",
+            variant: "destructive",
+          });
+        }
+        
+        window.removeEventListener('message', handleMessage);
+        setIsLoading(false);
+      };
+      
+      window.addEventListener('message', handleMessage);
+    } else {
+      // Apple login would go here
       toast({
         title: "Social Login",
-        description: `${provider} login is not available yet. Please use email login.`,
-      })
-      setIsLoading(false)
-    }, 1000)
-  }
+        description: "Apple login is not available yet. Please use email login.",
+      });
+      setIsLoading(false);
+    }
+  };
 
   const handleForgotPassword = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -212,7 +259,7 @@ export default function SignIn() {
           <div className="grid grid-cols-2 gap-3">
             <button
               className="flex items-center justify-center gap-2 py-2 px-4 border rounded-md hover:bg-gray-50"
-              onClick={() => handleSocialLogin("Google")}
+              onClick={() => handleSocialLogin("google")}
               disabled={isLoading}
             >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -237,7 +284,7 @@ export default function SignIn() {
             </button>
             <button
               className="flex items-center justify-center gap-2 py-2 px-4 border rounded-md hover:bg-gray-50"
-              onClick={() => handleSocialLogin("Apple")}
+              onClick={() => handleSocialLogin("apple")}
               disabled={isLoading}
             >
               <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">

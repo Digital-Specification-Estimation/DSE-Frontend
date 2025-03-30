@@ -31,84 +31,109 @@ export default function SignUp() {
     })
   }
 
-  const handleSubmit = async (event: { preventDefault: () => void }) => {
-    event.preventDefault();
-    setError('');
-  
-    try {
-      // Send signup request to backend
-      const response = await fetch('http://localhost:4001/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-          business_name: formData.business_name,
-          notification_sending: true,
-          send_email_alerts: true,
-          deadline_notify: true
-        }),
-      });
-  
-      // Check if the signup request was successful
-      const data = await response.json();
-  
-      if (!response.ok) {
-        throw new Error(data.message || "Registration failed");
-      }
-  
-      // Verify the user existence after signup
-      const verifyResponse = await fetch(
-        `http://localhost:4001/auth/verify-user?email=${encodeURIComponent(formData.email)}`
-      );
-      const verification = await verifyResponse.json();
-  
-      // Check if the user was created and exists in the database
-      if (!verification.exists) {
-        throw new Error("User account was not created in the database");
-      }
-  
-      // Log the user in
-      const loginResponse = await fetch('http://localhost:4001/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
-  
-      const loginData = await loginResponse.json();
-  
-      if (!loginResponse.ok) {
-        throw new Error(loginData.message || "Login failed");
-      }
-  
-      // Successfully logged in, redirect user to dashboard or another page
-      setRedirect(true); // or use history.push() if using React Router
-    } catch (err) {
-      // Handle errors during the signup/login process
-      if (err instanceof Error) {
-        console.log("Error during signup or login:", err.message);
-        setError(err.message); // Set error message to show to the user
-      }
+// Update the handleSubmit function in your frontend:
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError("");
+  setIsLoading(true);
+
+  try {
+    // Validate all required fields
+    if (!formData.business_name || !formData.username || !formData.email || !formData.password) {
+      throw new Error("All fields are required");
     }
-  };
+
+    if (!formData.agreeToTerms) {
+      throw new Error("You must agree to the terms");
+    }
+
+    // Sign up
+    const signupResponse = await fetch('http://localhost:4001/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        business_name: formData.business_name,
+      }),
+    });
+
+    if (!signupResponse.ok) {
+      // Handle specific error messages
+      const responseData = await signupResponse.json();
+      if (responseData.message === 'Email already exists') {
+        throw new Error('This email is already registered');
+      }
+      throw new Error(responseData.message || "Registration failed");
+    }
+
+    // Verify user
+    const verifyResponse = await fetch(
+      `http://localhost:4001/auth/verify-user?email=${encodeURIComponent(formData.email)}`
+    );
+    
+    if (!verifyResponse.ok) {
+      throw new Error("Verification failed");
+    }
+
+    const { exists } = await verifyResponse.json();
+    if (!exists) {
+      throw new Error("User account was not created");
+    }
+
+    // Login
+    const loginResponse = await fetch('http://localhost:4001/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password,
+      }),
+    });
+
+    if (!loginResponse.ok) {
+      throw new Error("Login failed after registration");
+    }
+
+    const { access_token } = await loginResponse.json();
+    localStorage.setItem('authToken', access_token);
+
+    toast({
+      title: "Success!",
+      description: "Account created and logged in!",
+    });
+    router.push("/dashboard");
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Registration failed";
+    setError(errorMessage);
+    toast({
+      title: "Error",
+      description: errorMessage,
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
   
-
-  const handleSocialSignUp = (provider: string) => {
-    setIsLoading(true)
-
-    // Simulate API call
+const handleSocialSignUp = (provider: 'google' | 'apple') => {
+  setIsLoading(true);
+  
+  // Redirect to backend OAuth endpoint
+  if (provider === 'google') {
+    window.location.href = 'http://localhost:4001/auth/google';
+  } else {
+    // Apple signup would go here
     setTimeout(() => {
       toast({
         title: "Social Sign Up",
-        description: `${provider} sign up is not available yet. Please use email registration.`,
-      })
-      setIsLoading(false)
-    }, 1000)
+        description: "Apple sign up is not available yet. Please use email registration.",
+      });
+      setIsLoading(false);
+    }, 1000);
   }
+};
 
   return (
     <div className="w-full min-h-screen lg:grid lg:grid-cols-2 bg-white">
@@ -147,7 +172,7 @@ export default function SignUp() {
                 />
               </div>
             </div>
-
+            
             <div className="space-y-2">
               <label htmlFor="username" className="text-sm font-medium">
                 Admin Name
@@ -285,7 +310,7 @@ export default function SignUp() {
           <div className="grid grid-cols-2 gap-3">
             <button
               className="flex items-center justify-center gap-2 py-2 px-4 border rounded-md hover:bg-gray-50"
-              onClick={() => handleSocialSignUp("Google")}
+              onClick={() => handleSocialSignUp("google")}
               disabled={isLoading}
             >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -310,7 +335,7 @@ export default function SignUp() {
             </button>
             <button
               className="flex items-center justify-center gap-2 py-2 px-4 border rounded-md hover:bg-gray-50"
-              onClick={() => handleSocialSignUp("Apple")}
+              onClick={() => handleSocialSignUp("apple")}
               disabled={isLoading}
             >
               <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
