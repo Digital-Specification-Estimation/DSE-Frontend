@@ -9,8 +9,8 @@ export interface LoginBodyDto {
 }
 
 export interface LoginResponseDto {
-  access_token: string;
   user: SignupResponseDto;
+  access_token?: string;
 }
 
 export interface SignupBodyDto {
@@ -18,7 +18,6 @@ export interface SignupBodyDto {
   password: string;
   email: string;
   business_name: string;
-  roles: any;
 }
 
 export interface SignupResponseDto {
@@ -43,32 +42,25 @@ export enum RoleEnum {
 }
 
 interface AuthState {
-  token: string | null;
-  user: {
-    id: string;
-    username: string;
-    email: string;
-    roles: any;
-  } | null;
+  user: SignupResponseDto | null;
 }
 
 const loadAuthState = (): AuthState => {
   return {
-    token: null,
     user: null,
   };
 };
 
 const initialState: AuthState = loadAuthState();
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
     setCredentials: (state, action: PayloadAction<LoginResponseDto>) => {
-      state.token = action.payload.access_token;
+      state.user = action.payload.user;
     },
     clearCredentials: (state) => {
-      state.token = null;
       state.user = null;
     },
   },
@@ -80,18 +72,30 @@ export const authApi = createApi({
     baseUrl: "http://localhost:4000/auth",
   }),
   endpoints: (builder) => ({
-    login: builder.mutation<any, LoginBodyDto>({
+    login: builder.mutation<LoginResponseDto, LoginBodyDto>({
       query: (credentials) => ({
         url: "/login",
         method: "POST",
         body: credentials,
       }),
     }),
-    signup: builder.mutation<any, SignupBodyDto>({
+    signup: builder.mutation<SignupResponseDto, SignupBodyDto>({
       query: (userData) => ({
         url: "/signup",
         method: "POST",
         body: userData,
+      }),
+    }),
+    googleLogin: builder.mutation<any, void>({
+      query: () => ({
+        url: "/google",
+        method: "GET",
+      }),
+    }),
+    logout: builder.mutation<any, void>({
+      query: () => ({
+        url: "/logout",
+        method: "GET",
       }),
     }),
   }),
@@ -99,4 +103,9 @@ export const authApi = createApi({
 
 export const { setCredentials, clearCredentials } = authSlice.actions;
 export default authSlice.reducer;
-export const { useLoginMutation, useSignupMutation } = authApi;
+export const {
+  useLoginMutation,
+  useSignupMutation,
+  useGoogleLoginMutation,
+  useLogoutMutation,
+} = authApi;
