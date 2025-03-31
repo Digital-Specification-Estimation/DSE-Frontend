@@ -54,7 +54,6 @@ export default function SignUp() {
         throw new Error("You must agree to the terms");
       }
 
-      // try {
       const signupResponse = await signup({
         username: formData.username,
         password: formData.password,

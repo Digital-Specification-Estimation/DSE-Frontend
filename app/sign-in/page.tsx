@@ -1,78 +1,92 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import Image from "next/image"
-import { Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react"
-import { Logo } from "@/components/logo"
-import { useToast } from "@/hooks/use-toast"
+import type React from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react";
+import { Logo } from "@/components/logo";
+import { useToast } from "@/hooks/use-toast";
+import { useLoginMutation } from "@/lib/redux/authSlice";
+interface ResponseError {
+  error: any;
+}
+
+interface ResponseData {
+  data: any;
+}
 
 export default function SignIn() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [login] = useLoginMutation();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: "johnyenglish@gmail.com",
-    password: "••••••••",
+    email: "",
+    password: "",
     rememberMe: false,
-  })
-  const [error, setError] = useState("") // Error state for handling failed login
+  });
+  const [error, setError] = useState(""); // Error state for handling failed login
 
   // Handle input change for form fields
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target
+    const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
       [name]: type === "checkbox" ? checked : value,
-    })
-  }
+    });
+  };
 
   // Handle form submission and simulate the backend response
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-  
+
     try {
       // Validate inputs
       if (!formData.email || !formData.password) {
         throw new Error("Email and password are required");
       }
-  
-      // Make API call to your backend
-      const response = await fetch('http://localhost:4001/auth/login', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
+
+      const response: ResponseError | ResponseData = await login({
+        email: formData.email,
+        password: formData.password,
       });
-  
-      const data = await response.json();
-  
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+
+      // Check for error response structure
+      if ("error" in response) {
+        if (response.error.status === 401) {
+          console.log("Login failed:", response.error.data.message);
+          setError(response.error.data.message);
+          toast({
+            title: "Login Failed",
+            description: response.error.data.message,
+            variant: "destructive",
+          });
+        } else {
+          setError("Unexpected error occurred");
+          toast({
+            title: "Login Failed",
+            description: "Something went wrong. Please try again later.",
+            variant: "destructive",
+          });
+        }
+      } else if ("data" in response) {
+        console.log("Login Success:", response.data); // Log successful response data
+        // Optional: Navigate on successful login
+        toast({
+          title: "Login Successful",
+          description: "Welcome back! You've been logged in successfully.",
+        });
+        router.push("/dashboard");
       }
-  
-      // Store the access token
-      localStorage.setItem('authToken', data.access_token);
-  
-      // Show success message
-      toast({
-        title: "Login Successful",
-        description: "Welcome back! You've been logged in successfully.",
-      });
-  
-      // Redirect to dashboard
-      router.push("/dashboard");
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Login failed. Please try again.";
+    } catch (err: any) {
+      console.error("Caught Error:", err); // Log the caught error for debugging
+      const errorMessage =
+        err?.data?.message || "Login failed. Please try again.";
       setError(errorMessage);
       toast({
         title: "Login Failed",
@@ -83,63 +97,64 @@ export default function SignIn() {
       setIsLoading(false);
     }
   };
-  const handleSocialLogin = (provider: 'google' | 'apple') => {
+  const handleSocialLogin = (provider: "google" | "apple") => {
     setIsLoading(true);
-    
-    if (provider === 'google') {
+
+    if (provider === "google") {
       // Open Google OAuth in a popup
       const width = 500;
       const height = 600;
       const left = (window.innerWidth - width) / 2;
       const top = (window.innerHeight - height) / 2;
-      
+
       const popup = window.open(
-        'http://localhost:4001/auth/google',
-        'GoogleAuth',
+        "http://localhost:4001/auth/google",
+        "GoogleAuth",
         `width=${width},height=${height},top=${top},left=${left}`
       );
-      
+
       // Listen for message from callback page
       const handleMessage = (event: MessageEvent) => {
         if (event.origin !== window.location.origin) return;
-        
-        if (event.data.type === 'google-auth-success') {
-          localStorage.setItem('authToken', event.data.token);
+
+        if (event.data.type === "google-auth-success") {
+          localStorage.setItem("authToken", event.data.token);
           toast({
             title: "Success!",
             description: "Logged in with Google",
           });
           router.push("/dashboard");
-        } else if (event.data.type === 'google-auth-error') {
+        } else if (event.data.type === "google-auth-error") {
           toast({
             title: "Error",
             description: "Google authentication failed",
             variant: "destructive",
           });
         }
-        
-        window.removeEventListener('message', handleMessage);
+
+        window.removeEventListener("message", handleMessage);
         setIsLoading(false);
       };
-      
-      window.addEventListener('message', handleMessage);
+
+      window.addEventListener("message", handleMessage);
     } else {
       // Apple login would go here
       toast({
         title: "Social Login",
-        description: "Apple login is not available yet. Please use email login.",
+        description:
+          "Apple login is not available yet. Please use email login.",
       });
       setIsLoading(false);
     }
   };
 
   const handleForgotPassword = (e: React.MouseEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     toast({
       title: "Password Reset",
       description: "Password reset functionality will be available soon.",
-    })
-  }
+    });
+  };
 
   return (
     <div className="w-full h-full lg:grid lg:grid-cols-2 bg-white">
@@ -150,11 +165,17 @@ export default function SignIn() {
         <div className="mx-auto w-full px-24 space-y-6 ">
           <div className="space-y-2 flex flex-col items-center justify-center">
             <h1 className="text-3xl font-bold">Sign in to LCM</h1>
-            <p className="text-muted-foreground">Smart Attendance & Payroll Management</p>
+            <p className="text-muted-foreground">
+              Smart Attendance & Payroll Management
+            </p>
           </div>
 
           {/* Display error message if login fails */}
-          {error && <div className="bg-red-100 text-red-700 p-2 rounded mb-4 text-center">{error}</div>}
+          {error && (
+            <div className="bg-red-100 text-red-700 p-2 rounded mb-4 text-center">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -222,11 +243,18 @@ export default function SignIn() {
                   className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                   disabled={isLoading}
                 />
-                <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-600">
+                <label
+                  htmlFor="rememberMe"
+                  className="ml-2 block text-sm text-gray-600"
+                >
                   Remember me
                 </label>
               </div>
-              <Link href="#" onClick={handleForgotPassword} className="text-sm text-primary hover:underline">
+              <Link
+                href="#"
+                onClick={handleForgotPassword}
+                className="text-sm text-primary hover:underline"
+              >
                 Forgot Password?
               </Link>
             </div>
@@ -262,7 +290,13 @@ export default function SignIn() {
               onClick={() => handleSocialLogin("google")}
               disabled={isLoading}
             >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 18 18"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
                 <path
                   d="M17.64 9.20455C17.64 8.56636 17.5827 7.95273 17.4764 7.36364H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5614V15.8195H14.9564C16.6582 14.2527 17.64 11.9455 17.64 9.20455Z"
                   fill="#4285F4"
@@ -287,7 +321,13 @@ export default function SignIn() {
               onClick={() => handleSocialLogin("apple")}
               disabled={isLoading}
             >
-              <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg
+                width="16"
+                height="20"
+                viewBox="0 0 16 20"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
                 <path
                   d="M12.6442 10.4392C12.6362 8.83984 13.4022 7.6582 14.9522 6.82617C14.0922 5.5957 12.8282 4.92578 11.1842 4.81055C9.63223 4.69922 7.94023 5.74805 7.32423 5.74805C6.67223 5.74805 5.14823 4.85547 3.95623 4.85547C2.02023 4.88281 0 6.43555 0 9.60156C0 10.5762 0.16 11.582 0.48 12.6172C0.91 14.0137 2.53223 17.4219 4.22423 17.3633C5.05223 17.3398 5.63223 16.7051 6.72423 16.7051C7.77223 16.7051 8.30423 17.3633 9.23623 17.3633C10.9442 17.3398 12.4042 14.2344 12.8122 12.834C10.6122 11.8398 10.6442 10.5 10.6442 10.4392H12.6442Z"
                   fill="black"
@@ -324,13 +364,12 @@ export default function SignIn() {
               Welcome to Digital Specification Estimation
             </h2>
             <p className="text-sm">
-              A Smart Attendance & Payroll Management to track attendance, automate payroll, and optimize costs with
-              ease!
+              A Smart Attendance & Payroll Management to track attendance,
+              automate payroll, and optimize costs with ease!
             </p>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
-
