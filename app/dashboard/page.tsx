@@ -1,13 +1,23 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Search, Users, Clock, Calendar, DollarSign, ChevronDown, MoreVertical, Loader2, RefreshCw } from "lucide-react"
-import { Sidebar } from "@/components/sidebar"
-import { StatCard } from "@/components/dashboard/stat-card"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import DashboardHeader from "@/components/DashboardHeader"
-import { useToast } from "@/hooks/use-toast"
+import { useState, useEffect } from "react";
+import {
+  Search,
+  Users,
+  Clock,
+  Calendar,
+  DollarSign,
+  ChevronDown,
+  MoreVertical,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
+import { Sidebar } from "@/components/sidebar";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import DashboardHeader from "@/components/DashboardHeader";
+import { useToast } from "@/hooks/use-toast";
 import {
   Bar,
   BarChart,
@@ -19,21 +29,30 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-} from "recharts"
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
-import { SelectValue } from "@radix-ui/react-select"
+} from "recharts";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
+import { SelectValue } from "@radix-ui/react-select";
+import { useSessionQuery } from "@/lib/redux/authSlice";
 
 export default function Dashboard() {
-  const { toast } = useToast()
+  const { data, error } = useSessionQuery();
+  console.log(data);
+  console.log(error);
+  const { toast } = useToast();
 
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
-  })
+  });
 
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [dashboardData, setDashboardData] = useState({
     totalEmployees: 120,
     attendanceToday: "92%",
@@ -43,7 +62,7 @@ export default function Dashboard() {
     attendanceChange: "3.2%",
     lateArrivalsChange: "1",
     payrollChange: "2.5%",
-  })
+  });
 
   // Payroll data for the bar chart
   const [payrollData, setPayrollData] = useState([
@@ -59,7 +78,7 @@ export default function Dashboard() {
     { month: "Oct", cost: 13000, planned: 13000 },
     { month: "Nov", cost: 14000, planned: 14000 },
     { month: "Dec", cost: 15000, planned: 15000 },
-  ])
+  ]);
 
   // Attendance data for the line chart - matching the exact pattern in the image
   const [attendanceData, setAttendanceData] = useState([
@@ -93,7 +112,7 @@ export default function Dashboard() {
     { day: 28, attendance: 75 },
     { day: 29, attendance: 35 },
     { day: 30, attendance: 35 },
-  ])
+  ]);
 
   const [employeeData, setEmployeeData] = useState([
     {
@@ -128,37 +147,61 @@ export default function Dashboard() {
       difference: "-$100",
       icon: "👨‍💼",
     },
-  ])
+  ]);
 
   type Trade = {
-    id: number
-    name: string
-    location: string
-    dailyRate: number
-    icon: string
-  }
+    id: number;
+    name: string;
+    location: string;
+    dailyRate: number;
+    icon: string;
+  };
 
   const trades: Trade[] = [
-    { id: 1, name: "Electricians", location: "Main Office", dailyRate: 120, icon: "⚡" },
-    { id: 2, name: "Technicians", location: "Site A", dailyRate: 100, icon: "🔧" },
-    { id: 3, name: "HR & Admin", location: "Site B", dailyRate: 90, icon: "👨‍💼" },
-    { id: 4, name: "Supervisors", location: "Site C", dailyRate: 120, icon: "👷" },
-  ]
+    {
+      id: 1,
+      name: "Electricians",
+      location: "Main Office",
+      dailyRate: 120,
+      icon: "⚡",
+    },
+    {
+      id: 2,
+      name: "Technicians",
+      location: "Site A",
+      dailyRate: 100,
+      icon: "🔧",
+    },
+    {
+      id: 3,
+      name: "HR & Admin",
+      location: "Site B",
+      dailyRate: 90,
+      icon: "👨‍💼",
+    },
+    {
+      id: 4,
+      name: "Supervisors",
+      location: "Site C",
+      dailyRate: 120,
+      icon: "👷",
+    },
+  ];
 
   const [filters, setFilters] = useState({
     trade: "",
     location: "",
     dailyRate: "",
     search: "",
-  })
+  });
 
   // Fetch dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        setIsLoading(true)
+        setIsLoading(true);
         // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // In a real implementation, this would be:
         // const response = await fetch('/api/dashboard');
@@ -168,56 +211,56 @@ export default function Dashboard() {
         // setAttendanceData(data.attendanceData);
         // setEmployeeData(data.employeeData);
 
-        setIsLoading(false)
+        setIsLoading(false);
         toast({
           title: "Dashboard Loaded",
           description: "Dashboard data has been loaded successfully.",
-        })
+        });
       } catch (error) {
-        console.error("Error fetching dashboard data:", error)
+        console.error("Error fetching dashboard data:", error);
         toast({
           title: "Error",
           description: "Failed to load dashboard data. Please try again.",
           variant: "destructive",
-        })
-        setIsLoading(false)
+        });
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchDashboardData()
-  }, [toast])
+    fetchDashboardData();
+  }, [toast]);
 
   const handleRefreshData = async () => {
     try {
-      setIsRefreshing(true)
+      setIsRefreshing(true);
       toast({
         title: "Refreshing Data",
         description: "Fetching the latest dashboard data...",
-      })
+      });
 
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       // In a real implementation, this would fetch fresh data from the API
-      setIsRefreshing(false)
+      setIsRefreshing(false);
       toast({
         title: "Data Refreshed",
         description: "Dashboard has been updated with the latest data.",
-      })
+      });
     } catch (error) {
-      console.error("Error refreshing data:", error)
+      console.error("Error refreshing data:", error);
       toast({
         title: "Error",
         description: "Failed to refresh dashboard data. Please try again.",
         variant: "destructive",
-      })
-      setIsRefreshing(false)
+      });
+      setIsRefreshing(false);
     }
-  }
+  };
 
   const handleFilterChange = (type: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [type]: value }))
-  }
+    setFilters((prev) => ({ ...prev, [type]: value }));
+  };
 
   // Custom tooltip for payroll chart
   const PayrollTooltip = ({
@@ -225,9 +268,9 @@ export default function Dashboard() {
     payload,
     label,
   }: {
-    active?: boolean
-    payload?: any
-    label?: string
+    active?: boolean;
+    payload?: any;
+    label?: string;
   }) => {
     if (active && payload && payload.length) {
       return (
@@ -235,13 +278,15 @@ export default function Dashboard() {
           <p className="text-sm font-medium mb-1">May, 2025</p>
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm">Planned Cost</span>
-            <span className="text-sm font-medium">${payload[0].value.toLocaleString()}</span>
+            <span className="text-sm font-medium">
+              ${payload[0].value.toLocaleString()}
+            </span>
           </div>
         </div>
-      )
+      );
     }
-    return null
-  }
+    return null;
+  };
 
   // Custom tooltip for attendance chart
   const AttendanceTooltip = ({
@@ -249,9 +294,9 @@ export default function Dashboard() {
     payload,
     label,
   }: {
-    active?: boolean
-    payload?: any
-    label?: string
+    active?: boolean;
+    payload?: any;
+    label?: string;
   }) => {
     if (active && payload && payload.length) {
       return (
@@ -262,10 +307,10 @@ export default function Dashboard() {
             <span className="text-sm font-medium">95%</span>
           </div>
         </div>
-      )
+      );
     }
-    return null
-  }
+    return null;
+  };
 
   if (isLoading) {
     return (
@@ -281,7 +326,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -297,7 +342,9 @@ export default function Dashboard() {
               <h1 className="text-2xl font-bold">Dashboard</h1>
 
               <div className="flex gap-2">
-                <Select onValueChange={(value) => handleFilterChange("trade", value)}>
+                <Select
+                  onValueChange={(value) => handleFilterChange("trade", value)}
+                >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select by Trade" />
                   </SelectTrigger>
@@ -309,7 +356,11 @@ export default function Dashboard() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select onValueChange={(value) => handleFilterChange("location", value)}>
+                <Select
+                  onValueChange={(value) =>
+                    handleFilterChange("location", value)
+                  }
+                >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select by location" />
                   </SelectTrigger>
@@ -327,7 +378,9 @@ export default function Dashboard() {
                   onClick={handleRefreshData}
                   disabled={isRefreshing}
                 >
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                  />
                   {isRefreshing ? "Refreshing..." : "Refresh"}
                 </Button>
               </div>
@@ -371,7 +424,11 @@ export default function Dashboard() {
                 value={dashboardData.totalPayroll}
                 icon={DollarSign}
                 iconBackground="bg-green-600"
-                change={{ value: dashboardData.payrollChange, type: "increase", text: "planned" }}
+                change={{
+                  value: dashboardData.payrollChange,
+                  type: "increase",
+                  text: "planned",
+                }}
               />
             </div>
 
@@ -392,8 +449,17 @@ export default function Dashboard() {
                 <div className="px-5 pb-5">
                   <div className="h-[220px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={payrollData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }} barGap={0}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEEEEE" strokeWidth={1} />
+                      <BarChart
+                        data={payrollData}
+                        margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                        barGap={0}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          stroke="#EEEEEE"
+                          strokeWidth={1}
+                        />
                         <XAxis
                           dataKey="month"
                           axisLine={false}
@@ -417,11 +483,19 @@ export default function Dashboard() {
                           label={false}
                         />
                         <Tooltip
-                          content={<PayrollTooltip active={undefined} payload={undefined} label={undefined} />}
+                          content={
+                            <PayrollTooltip
+                              active={undefined}
+                              payload={undefined}
+                              label={undefined}
+                            />
+                          }
                           cursor={false}
                         />
                         <Bar
-                          dataKey={(entry) => (entry.highlight ? 0 : entry.planned)}
+                          dataKey={(entry) =>
+                            entry.highlight ? 0 : entry.planned
+                          }
                           fill="#EEEEEE"
                           barSize={20}
                           radius={[0, 0, 0, 0]}
@@ -429,7 +503,9 @@ export default function Dashboard() {
                           isAnimationActive={false}
                         />
                         <Bar
-                          dataKey={(entry) => (entry.highlight ? entry.planned : 0)}
+                          dataKey={(entry) =>
+                            entry.highlight ? entry.planned : 0
+                          }
                           fill="#FFA500"
                           barSize={20}
                           radius={[0, 0, 0, 0]}
@@ -437,7 +513,9 @@ export default function Dashboard() {
                           isAnimationActive={false}
                         />
                         <Bar
-                          dataKey={(entry) => (entry.highlight ? entry.cost : 0)}
+                          dataKey={(entry) =>
+                            entry.highlight ? entry.cost : 0
+                          }
                           fill="#1D4ED8"
                           barSize={20}
                           radius={[0, 0, 0, 0]}
@@ -466,7 +544,10 @@ export default function Dashboard() {
                 <div className="px-5 pb-5">
                   <div className="h-[220px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={attendanceData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                      <LineChart
+                        data={attendanceData}
+                        margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                      >
                         <CartesianGrid
                           strokeDasharray="3 3"
                           vertical={true}
@@ -491,7 +572,13 @@ export default function Dashboard() {
                           domain={[0, 100]}
                         />
                         <Tooltip
-                          content={<AttendanceTooltip active={undefined} payload={undefined} label={undefined} />}
+                          content={
+                            <AttendanceTooltip
+                              active={undefined}
+                              payload={undefined}
+                              label={undefined}
+                            />
+                          }
                           cursor={false}
                         />
                         <Line
@@ -521,17 +608,24 @@ export default function Dashboard() {
                       type="text"
                       placeholder="Search trade/position..."
                       className="pl-9 pr-4 py-2 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary"
-                      onChange={(e) => handleFilterChange("search", e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("search", e.target.value)
+                      }
                     />
                   </div>
                   <Button
                     variant="outline"
                     size="icon"
                     className="h-9 w-9"
-                    onClick={() => {
-                    }}
+                    onClick={() => {}}
                   >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
                       <path
                         d="M2 4H14M2 8H14M2 12H14"
                         stroke="currentColor"
@@ -554,14 +648,22 @@ export default function Dashboard() {
                             toast({
                               title: "Select All",
                               description: "All items have been selected",
-                            })
+                            });
                           }}
                         />
                       </th>
-                      <th className="text-left p-4 font-medium text-sm text-gray-500">Trade/Position</th>
-                      <th className="text-left p-4 font-medium text-sm text-gray-500">Planned Budget</th>
-                      <th className="text-left p-4 font-medium text-sm text-gray-500">Actual Cost</th>
-                      <th className="text-left p-4 font-medium text-sm text-gray-500">Difference</th>
+                      <th className="text-left p-4 font-medium text-sm text-gray-500">
+                        Trade/Position
+                      </th>
+                      <th className="text-left p-4 font-medium text-sm text-gray-500">
+                        Planned Budget
+                      </th>
+                      <th className="text-left p-4 font-medium text-sm text-gray-500">
+                        Actual Cost
+                      </th>
+                      <th className="text-left p-4 font-medium text-sm text-gray-500">
+                        Difference
+                      </th>
                       <th className="w-12 p-4"></th>
                     </tr>
                   </thead>
@@ -574,7 +676,7 @@ export default function Dashboard() {
                               toast({
                                 title: "Item Selected",
                                 description: `${employee.position} has been selected`,
-                              })
+                              });
                             }}
                           />
                         </td>
@@ -583,7 +685,9 @@ export default function Dashboard() {
                             <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
                               <span className="text-sm">{employee.icon}</span>
                             </div>
-                            <span className="font-medium">{employee.position}</span>
+                            <span className="font-medium">
+                              {employee.position}
+                            </span>
                           </div>
                         </td>
                         <td className="p-4">{employee.plannedBudget}</td>
@@ -592,24 +696,37 @@ export default function Dashboard() {
                           <div className="flex items-center gap-1">
                             <div
                               className={`h-5 w-5 rounded-full flex items-center justify-center ${
-                                Number.parseFloat(employee.difference.replace(/[^0-9.-]+/g, "")) > 0
+                                Number.parseFloat(
+                                  employee.difference.replace(/[^0-9.-]+/g, "")
+                                ) > 0
                                   ? "bg-green-100"
                                   : "bg-red-100"
                               }`}
                             >
                               <span
                                 className={`text-xs ${
-                                  Number.parseFloat(employee.difference.replace(/[^0-9.-]+/g, "")) > 0
+                                  Number.parseFloat(
+                                    employee.difference.replace(
+                                      /[^0-9.-]+/g,
+                                      ""
+                                    )
+                                  ) > 0
                                     ? "text-green-600"
                                     : "text-red-600"
                                 }`}
                               >
-                                {Number.parseFloat(employee.difference.replace(/[^0-9.-]+/g, "")) > 0 ? "+" : ""}
+                                {Number.parseFloat(
+                                  employee.difference.replace(/[^0-9.-]+/g, "")
+                                ) > 0
+                                  ? "+"
+                                  : ""}
                               </span>
                             </div>
                             <span
                               className={`${
-                                Number.parseFloat(employee.difference.replace(/[^0-9.-]+/g, "")) > 0
+                                Number.parseFloat(
+                                  employee.difference.replace(/[^0-9.-]+/g, "")
+                                ) > 0
                                   ? "text-green-600"
                                   : "text-red-600"
                               }`}
@@ -627,7 +744,7 @@ export default function Dashboard() {
                               toast({
                                 title: "View Details",
                                 description: `Viewing details for ${employee.position}`,
-                              })
+                              });
                             }}
                           >
                             <MoreVertical className="h-4 w-4" />
@@ -643,6 +760,5 @@ export default function Dashboard() {
         </main>
       </div>
     </div>
-  )
+  );
 }
-

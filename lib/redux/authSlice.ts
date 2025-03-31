@@ -98,14 +98,22 @@ export const authApi = createApi({
         method: "GET",
       }),
     }),
+    session: builder.query<any, void>({
+      query: () => ({
+        url: "/session",
+        method: "GET",
+      }),
+    }),
   }),
 });
 
 export const { setCredentials, clearCredentials } = authSlice.actions;
 export default authSlice.reducer;
+
 export const {
   useLoginMutation,
   useSignupMutation,
   useGoogleLoginMutation,
   useLogoutMutation,
+  useSessionQuery,
 } = authApi;
