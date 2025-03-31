@@ -1,139 +1,98 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import Image from "next/image"
-import { Eye, EyeOff, User, Mail, Lock, Loader2 } from "lucide-react"
-import { Logo } from "@/components/logo"
-import { useToast } from "@/hooks/use-toast"
+import type React from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { Eye, EyeOff, User, Mail, Lock, Loader2 } from "lucide-react";
+import { Logo } from "@/components/logo";
+import { useToast } from "@/hooks/use-toast";
+import { useSignupMutation } from "@/lib/redux/authSlice";
 
 export default function SignUp() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+  const [signup] = useSignupMutation();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     business_name: "",
     username: "",
     email: "",
     password: "",
     agreeToTerms: false,
-  })
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target
+    const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
       [name]: type === "checkbox" ? checked : value,
-    })
-  }
-
-// Update the handleSubmit function in your frontend:
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError("");
-  setIsLoading(true);
-
-  try {
-    // Validate all required fields
-    if (!formData.business_name || !formData.username || !formData.email || !formData.password) {
-      throw new Error("All fields are required");
-    }
-
-    if (!formData.agreeToTerms) {
-      throw new Error("You must agree to the terms");
-    }
-
-    // Sign up
-    const signupResponse = await fetch('http://localhost:4001/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        business_name: formData.business_name,
-      }),
     });
+  };
 
-    if (!signupResponse.ok) {
-      // Handle specific error messages
-      const responseData = await signupResponse.json();
-      if (responseData.message === 'Email already exists') {
-        throw new Error('This email is already registered');
+  // Update the handleSubmit function in your frontend:
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      // Validate all required fields
+      if (
+        !formData.business_name ||
+        !formData.username ||
+        !formData.email ||
+        !formData.password
+      ) {
+        throw new Error("All fields are required");
       }
-      throw new Error(responseData.message || "Registration failed");
-    }
 
-    // Verify user
-    const verifyResponse = await fetch(
-      `http://localhost:4001/auth/verify-user?email=${encodeURIComponent(formData.email)}`
-    );
-    
-    if (!verifyResponse.ok) {
-      throw new Error("Verification failed");
-    }
+      if (!formData.agreeToTerms) {
+        throw new Error("You must agree to the terms");
+      }
 
-    const { exists } = await verifyResponse.json();
-    if (!exists) {
-      throw new Error("User account was not created");
-    }
-
-    // Login
-    const loginResponse = await fetch('http://localhost:4001/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: formData.email,
+      // try {
+      const signupResponse = await signup({
+        username: formData.username,
         password: formData.password,
-      }),
-    });
-
-    if (!loginResponse.ok) {
-      throw new Error("Login failed after registration");
-    }
-
-    const { access_token } = await loginResponse.json();
-    localStorage.setItem('authToken', access_token);
-
-    toast({
-      title: "Success!",
-      description: "Account created and logged in!",
-    });
-    router.push("/dashboard");
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : "Registration failed";
-    setError(errorMessage);
-    toast({
-      title: "Error",
-      description: errorMessage,
-      variant: "destructive",
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
-  
-const handleSocialSignUp = (provider: 'google' | 'apple') => {
-  setIsLoading(true);
-  
-  // Redirect to backend OAuth endpoint
-  if (provider === 'google') {
-    window.location.href = 'http://localhost:4001/auth/google';
-  } else {
-    // Apple signup would go here
-    setTimeout(() => {
+        email: formData.email,
+        business_name: formData.business_name,
+      }).unwrap();
+      router.push("/sign-in");
+    } catch (err: any) {
+      const errorMessage = err ? err.data.message : "Registration failed";
+      setError(errorMessage);
       toast({
-        title: "Social Sign Up",
-        description: "Apple sign up is not available yet. Please use email registration.",
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
-    }, 1000);
-  }
-};
+    }
+  };
+
+  const handleSocialSignUp = (provider: "google" | "apple") => {
+    setIsLoading(true);
+
+    // Redirect to backend OAuth endpoint
+    if (provider === "google") {
+      window.location.href = "http://localhost:4001/auth/google";
+    } else {
+      // Apple signup would go here
+      setTimeout(() => {
+        toast({
+          title: "Social Sign Up",
+          description:
+            "Apple sign up is not available yet. Please use email registration.",
+        });
+        setIsLoading(false);
+      }, 1000);
+    }
+  };
 
   return (
     <div className="w-full min-h-screen lg:grid lg:grid-cols-2 bg-white">
@@ -144,11 +103,17 @@ const handleSocialSignUp = (provider: 'google' | 'apple') => {
         <div className="mx-auto w-full px-20 space-y-6">
           <div className="space-y-2 flex flex-col items-center justify-center">
             <h1 className="text-3xl font-bold">Sign up to LCM</h1>
-            <p className="text-muted-foreground">Smart Attendance & Payroll Management</p>
+            <p className="text-muted-foreground">
+              Smart Attendance & Payroll Management
+            </p>
           </div>
 
           {/* Display error message if registration fails */}
-          {error && <div className="bg-red-100 text-red-700 p-2 rounded mb-4 text-center">{error}</div>}
+          {error && (
+            <div className="bg-red-100 text-red-700 p-2 rounded mb-4 text-center">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -172,7 +137,7 @@ const handleSocialSignUp = (provider: 'google' | 'apple') => {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <label htmlFor="username" className="text-sm font-medium">
                 Admin Name
@@ -249,7 +214,9 @@ const handleSocialSignUp = (provider: 'google' | 'apple') => {
                   )}
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Password must be at least 8 characters long</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Password must be at least 8 characters long
+              </p>
             </div>
 
             <div className="flex items-center">
@@ -263,17 +230,21 @@ const handleSocialSignUp = (provider: 'google' | 'apple') => {
                 required
                 disabled={isLoading}
               />
-              <label htmlFor="agreeToTerms" className="ml-2 block text-sm text-gray-600">
+              <label
+                htmlFor="agreeToTerms"
+                className="ml-2 block text-sm text-gray-600"
+              >
                 By signing up, you agree to our{" "}
                 <Link
                   href="#"
                   className="text-primary hover:underline"
                   onClick={(e) => {
-                    e.preventDefault()
+                    e.preventDefault();
                     toast({
                       title: "Terms & Privacy",
-                      description: "Terms and Privacy Policy will be available soon.",
-                    })
+                      description:
+                        "Terms and Privacy Policy will be available soon.",
+                    });
                   }}
                 >
                   Terms & Privacy Policy
@@ -313,7 +284,13 @@ const handleSocialSignUp = (provider: 'google' | 'apple') => {
               onClick={() => handleSocialSignUp("google")}
               disabled={isLoading}
             >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 18 18"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
                 <path
                   d="M17.64 9.20455C17.64 8.56636 17.5827 7.95273 17.4764 7.36364H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5614V15.8195H14.9564C16.6582 14.2527 17.64 11.9455 17.64 9.20455Z"
                   fill="#4285F4"
@@ -338,7 +315,13 @@ const handleSocialSignUp = (provider: 'google' | 'apple') => {
               onClick={() => handleSocialSignUp("apple")}
               disabled={isLoading}
             >
-              <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg
+                width="16"
+                height="20"
+                viewBox="0 0 16 20"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
                 <path
                   d="M12.6442 10.4392C12.6362 8.83984 13.4022 7.6582 14.9522 6.82617C14.0922 5.5957 12.8282 4.92578 11.1842 4.81055C9.63223 4.69922 7.94023 5.74805 7.32423 5.74805C6.67223 5.74805 5.14823 4.85547 3.95623 4.85547C2.02023 4.88281 0 6.43555 0 9.60156C0 10.5762 0.16 11.582 0.48 12.6172C0.91 14.0137 2.53223 17.4219 4.22423 17.3633C5.05223 17.3398 5.63223 16.7051 6.72423 16.7051C7.77223 16.7051 8.30423 17.3633 9.23623 17.3633C10.9442 17.3398 12.4042 14.2344 12.8122 12.834C10.6122 11.8398 10.6442 10.5 10.6442 10.4392H12.6442Z"
                   fill="black"
@@ -371,19 +354,20 @@ const handleSocialSignUp = (provider: 'google' | 'apple') => {
               height={600}
               className=" h-2/3 rounded-lg shadow-lg mb-10 xx-10"
             />
-            <h2 className="text-3xl font-bold mb-4">Welcome to Digital Specification Estimation</h2>
+            <h2 className="text-3xl font-bold mb-4">
+              Welcome to Digital Specification Estimation
+            </h2>
             <p className="text-sm">
-              A Smart Attendance & Payroll Management to track attendance, automate payroll, and optimize costs with
-              ease!
+              A Smart Attendance & Payroll Management to track attendance,
+              automate payroll, and optimize costs with ease!
             </p>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function setRedirect(arg0: boolean) {
-  throw new Error("Function not implemented.")
+  throw new Error("Function not implemented.");
 }
-
