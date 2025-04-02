@@ -80,7 +80,6 @@ export default function Dashboard() {
     { month: "Dec", cost: 15000, planned: 15000 },
   ]);
 
-  // Attendance data for the line chart - matching the exact pattern in the image
   const [attendanceData, setAttendanceData] = useState([
     { day: 1, attendance: 10 },
     { day: 2, attendance: 35 },

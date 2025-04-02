@@ -1,11 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Home, Users2, Wallet, Settings, List, UserCheck, ChevronDown } from "lucide-react";
+import {
+  Home,
+  Users2,
+  Wallet,
+  Settings,
+  LogOut,
+  ChevronDown,
+} from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
+import { useSessionQuery, useLogoutMutation } from "@/lib/redux/authSlice";
+import { useDispatch } from "react-redux";
+import { clearCredentials } from "@/lib/redux/authSlice";
 
 interface SidebarProps {
   user: {
@@ -16,49 +26,36 @@ interface SidebarProps {
 }
 
 export function Sidebar({ user }: SidebarProps) {
-  const pathname = usePathname();
+  const [data, setData] = useState({ user: { username: "Guest" } });
+  const { data: sessionData } = useSessionQuery();
+  const [logout] = useLogoutMutation();
+  const dispatch = useDispatch();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (pathname === "/settings") {
-      router.push("/settings"); // Redirect to settings instead of dashboard after login
+    if (sessionData) {
+      setData(sessionData);
     }
-  }, [pathname, router]);
+  }, [sessionData]);
 
-  const isActive = (path: string) => pathname === path;
+  const handleLogout = async () => {
+    try {
+      await logout().unwrap();
+      dispatch(clearCredentials());
+      router.push("/sign-in");
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+  };
 
   const menuItems = [
-    {
-      name: "Settings",
-      href: "/settings",
-      icon: Settings,
-    },
-    {
-      name: "Dashboard",
-      href: "/dashboard",
-      icon: Home,
-    },
-    {
-      name: "Business Setup",
-      href: "/business-setup",
-      icon: Home,
-    },
-    {
-      name: "Budget Planning",
-      href: "/budget-planning",
-      icon: Wallet,
-    },
-
-    {
-      name: "Employee Management",
-      href: "/employee-management",
-      icon: Users2,
-    },
-    {
-      name: "Attendance & Payroll",
-      href: "/attendance-payroll",
-      icon: Users2,
-    },
+    { name: "Settings", href: "/settings", icon: Settings },
+    { name: "Dashboard", href: "/dashboard", icon: Home },
+    { name: "Business Setup", href: "/business-setup", icon: Home },
+    { name: "Budget Planning", href: "/budget-planning", icon: Wallet },
+    { name: "Employee Management", href: "/employee-management", icon: Users2 },
+    { name: "Logout", href: "/", icon: LogOut, onClick: handleLogout },
   ];
 
   return (
@@ -72,10 +69,16 @@ export function Sidebar({ user }: SidebarProps) {
       <div className="px-4">
         <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-md">
           <Avatar className="h-10 w-10">
-            <img src="johndoe.jpeg" alt={user.name} className="h-10 w-10 rounded-full" />
+            <img
+              src="johndoe.jpeg"
+              alt={data.user.username}
+              className="h-10 w-10 rounded-full"
+            />
           </Avatar>
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium text-gray-900 truncate">{user.name}</span>
+            <span className="text-sm font-medium text-gray-900 truncate">
+              {data.user.username}
+            </span>
             <span className="text-xs text-gray-500 truncate">{user.role}</span>
           </div>
           <button>
@@ -85,17 +88,19 @@ export function Sidebar({ user }: SidebarProps) {
       </div>
 
       {/* Menu */}
-      <div className="px-4 mt-6">
-        <p className="px-3 text-xs font-medium text-gray-500">MAIN MENU</p>
-      </div>
-
-      <nav className="space-y-1 px-4">
+      <nav className="space-y-1 px-4 mt-6">
         {menuItems.map((item) => (
           <Link
             key={item.name}
             href={item.href}
+            onClick={(e) => {
+              if (item.onClick) {
+                e.preventDefault();
+                item.onClick();
+              }
+            }}
             className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition ${
-              isActive(item.href)
+              pathname === item.href
                 ? "bg-white text-black shadow-md border border-gray-200"
                 : "text-gray-600 hover:bg-gray-100"
             }`}
@@ -107,8 +112,8 @@ export function Sidebar({ user }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 mt-auto">
-        <p className="text-xs text-gray-500 text-center">©Copyright 2025</p>
+      <div className="p-4 mt-auto text-center text-xs text-gray-500">
+        ©Copyright 2025
       </div>
     </div>
   );
