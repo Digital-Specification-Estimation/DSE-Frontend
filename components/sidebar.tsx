@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Cookie from "js-cookie";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -41,8 +42,10 @@ export function Sidebar({ user }: SidebarProps) {
 
   const handleLogout = async () => {
     try {
-      logout().unwrap();
-      router.push("/sign-in");
+      if (Cookie.get("connect.sid")) {
+        Cookie.remove("connect.sid");
+        router.push("/sign-in");
+      }
     } catch (error) {
       console.error("Logout failed", error);
     }
