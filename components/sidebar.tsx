@@ -54,6 +54,7 @@ export function Sidebar({ user }: SidebarProps) {
     { name: "Business Setup", href: "/business-setup", icon: Home },
     { name: "Budget Planning", href: "/budget-planning", icon: Wallet },
     { name: "Employee Management", href: "/employee-management", icon: Users2 },
+    { name: "Attendance & Payroll", href: "/attendance-payroll", icon: Users2 },
     { name: "Logout", href: "/", icon: LogOut, onClick: handleLogout },
   ];
 
