@@ -41,8 +41,7 @@ export function Sidebar({ user }: SidebarProps) {
 
   const handleLogout = async () => {
     try {
-      await logout().unwrap();
-      dispatch(clearCredentials());
+      logout().unwrap();
       router.push("/sign-in");
     } catch (error) {
       console.error("Logout failed", error);

@@ -40,9 +40,6 @@ import { SelectValue } from "@radix-ui/react-select";
 import { useSessionQuery } from "@/lib/redux/authSlice";
 
 export default function Dashboard() {
-  const { data, error } = useSessionQuery();
-  console.log(data);
-  console.log(error);
   const { toast } = useToast();
 
   const [user] = useState({
