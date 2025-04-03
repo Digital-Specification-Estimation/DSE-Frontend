@@ -108,7 +108,8 @@ export default function SignIn() {
       const top = (window.innerHeight - height) / 2;
 
       const popup = window.open(
-        "http://localhost:4001/auth/google",
+        // "https://dse-backend-production.up.railway.app/auth/google",
+        "http://localhost:4000/auth/google",
         "GoogleAuth",
         `width=${width},height=${height},top=${top},left=${left}`
       );

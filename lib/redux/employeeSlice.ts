@@ -2,7 +2,10 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 export const employeeApi = createApi({
   reducerPath: "employeeApi",
-  baseQuery: fetchBaseQuery({ baseUrl: "/employee" }),
+  baseQuery: fetchBaseQuery({
+    baseUrl: "https://dse-backend-production.up.railway.app/employee",
+    // baseUrl: "http://localhost:4000/employee"
+  }),
   endpoints: (builder) => ({
     addEmployee: builder.mutation({
       query: (data) => ({
@@ -30,8 +33,11 @@ export const employeeApi = createApi({
         method: "DELETE",
       }),
     }),
-    getEmployees: builder.query({
-      query: () => "get/employees",
+    getEmployees: builder.query<any, void>({
+      query: () => ({
+        url: "get/employees",
+        method: "GET",
+      }),
     }),
     getEmployeeNumber: builder.query({
       query: () => "get/number",
