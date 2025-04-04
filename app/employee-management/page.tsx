@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Upload, Plus, User, DollarSign } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   useAddEmployeeMutation,
   useGetEmployeesQuery,
 } from "@/lib/redux/employeeSlice";
+import { employeeSlice } from "@/lib/redux/employeeSlice";
 export interface NewEmployee {
   username: string;
   trade_position_id?: string;
@@ -29,16 +30,79 @@ export interface NewEmployee {
   company_id?: string;
 }
 // Sample data for trades, projects, and daily rates
-const trades = [
-  "Electrician",
-  "HR Manager",
-  "Technician",
-  "Construction Worker",
-];
+// const trades = [
+//   "Electrician",
+//   "HR Manager",
+//   "Technician",
+//   "Construction Worker",
+// ];
 const projects = ["Metro Bridge", "Mall Construction"];
 const dailyRates = ["$100", "$120", "$140", "$200"];
 
 export default function EmployeeManagement() {
+  const [trades, setTrades] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  // const { data: trades, error: tradeError } = useGetTradesQuery();
+  // console.log(trades);
+  // console.log(tradeError);
+  const [tradesError, setTradesError] = useState<string | null>(null);
+  const [companiesError, setCompaniesError] = useState<string | null>(null);
+  const [isLoadingTrades, setIsLoadingTrades] = useState(true);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
+
+  useEffect(() => {
+    // Define the async function inside useEffect
+    const getTrades = async () => {
+      setIsLoadingTrades(true);
+      try {
+        const response = await fetch(
+          "http://localhost:4000/trade-position/trades"
+        );
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        setTrades(data);
+        setTradesError(null);
+      } catch (error) {
+        console.error("Failed to fetch trades:", error);
+        setTradesError("Failed to load trades. Please refresh the page.");
+      } finally {
+        setIsLoadingTrades(false);
+      }
+    };
+
+    const getCompanies = async () => {
+      setIsLoadingCompanies(true);
+      try {
+        const response = await fetch("http://localhost:4000/company/companies");
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        setCompanies(data);
+        setCompaniesError(null);
+      } catch (error) {
+        console.error("Failed to fetch companies:", error);
+        setCompaniesError("Failed to load companies. Please refresh the page.");
+      } finally {
+        setIsLoadingCompanies(false);
+      }
+    };
+
+    getTrades();
+    getCompanies();
+
+    // Set up an interval to refresh data every 5 minutes
+    const intervalId = setInterval(() => {
+      getTrades();
+      getCompanies();
+    }, 5 * 60 * 1000);
+
+    // Clean up the interval on component unmount
+    return () => clearInterval(intervalId);
+  }, []);
+  console.log(trades, companies);
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
@@ -46,8 +110,51 @@ export default function EmployeeManagement() {
   });
 
   // RTK Query hooks
-  const { data: employees = [], isLoading, error } = useGetEmployeesQuery();
-  const [addEmployee, { isLoading: isAdding }] = useAddEmployeeMutation();
+  const {
+    data: employees = [],
+    isLoading,
+    error,
+    refetch,
+    isFetching,
+  } = useGetEmployeesQuery(undefined, {
+    pollingInterval: 60000, // Auto-refresh every 60 seconds
+    refetchOnFocus: true, // Refetch when the browser window regains focus
+    refetchOnReconnect: true, // Refetch when internet connection is restored
+  });
+  console.log(employees);
+  const [addEmployee, { isLoading: isAdding }] = useAddEmployeeMutation({
+    // Optimistic update to immediately show the new employee
+    onQueryStarted: async (newEmployeeData, { dispatch, queryFulfilled }) => {
+      // Optimistic update - add temporary employee to the list
+      const patchResult = dispatch(
+        employeeSlice.util.updateQueryData(
+          "getEmployees",
+          undefined,
+          (draft) => {
+            draft.push({
+              id: "temp-" + Date.now(),
+              username: newEmployeeData.username,
+              trade_position: { trade_name: "Loading..." },
+              daily_rate: newEmployeeData.daily_rate || "0",
+              contract_finish_date: newEmployeeData.contract_finish_date || "",
+              days_projection: newEmployeeData.days_projection || 0,
+              budget_baseline: newEmployeeData.budget_baseline || "0",
+              company: { company_name: "Loading..." },
+              // Add other required fields with placeholder values
+            });
+          }
+        )
+      );
+
+      try {
+        // Wait for the actual API response
+        await queryFulfilled;
+      } catch {
+        // If the mutation fails, undo the optimistic update
+        patchResult.undo();
+      }
+    },
+  });
 
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
@@ -115,6 +222,7 @@ export default function EmployeeManagement() {
 
     // Validate form data
     if (!newEmployee.username) {
+      // Add toast notification for error
       alert("Please enter a username");
       return;
     }
@@ -150,6 +258,9 @@ export default function EmployeeManagement() {
       });
 
       setShowAddEmployee(false);
+
+      // Show success notification
+      alert("Employee added successfully!");
     } catch (error) {
       console.error("Failed to add employee:", error);
       alert("Failed to add employee. Please try again.");
@@ -179,6 +290,35 @@ export default function EmployeeManagement() {
                 <Plus className="h-4 w-4" />
                 Add New Employee
               </Button>
+              <Button
+                onClick={() => refetch()}
+                variant="outline"
+                className="gap-2 h-12 rounded-full"
+                disabled={isFetching}
+              >
+                {isFetching ? (
+                  <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4"
+                  >
+                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                    <path d="M21 3v5h-5" />
+                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                    <path d="M3 21v-5h5" />
+                  </svg>
+                )}
+                Refresh
+              </Button>
             </div>
           </div>
 
@@ -193,10 +333,18 @@ export default function EmployeeManagement() {
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Select by Trade" />
                 </SelectTrigger>
+                {isLoadingTrades && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Loading trades...
+                  </div>
+                )}
+                {tradesError && (
+                  <div className="text-xs text-red-500 mt-1">{tradesError}</div>
+                )}
                 <SelectContent>
-                  {trades.map((trade) => (
-                    <SelectItem key={trade} value={trade}>
-                      {trade}
+                  {trades.map((trade: any) => (
+                    <SelectItem key={trade.id} value={trade.trade_name}>
+                      {trade.trade_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -252,10 +400,38 @@ export default function EmployeeManagement() {
             {/* Table */}
             <div className="overflow-x-auto">
               {isLoading ? (
-                <div className="p-8 text-center">Loading employees...</div>
+                <div className="p-8 text-center">
+                  <div className="inline-block animate-spin h-8 w-8 border-4 border-current border-t-transparent rounded-full mb-4"></div>
+                  <p>Loading employees...</p>
+                </div>
               ) : error ? (
                 <div className="p-8 text-center text-red-500">
-                  Error loading employees. Please try again.
+                  <p className="mb-2">Error loading employees.</p>
+                  <Button variant="outline" size="sm" onClick={() => refetch()}>
+                    Try Again
+                  </Button>
+                </div>
+              ) : filteredEmployees.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  <p>No employees found matching your filters.</p>
+                  {filters.trade ||
+                  filters.project ||
+                  filters.dailyRate ||
+                  filters.search ? (
+                    <Button
+                      variant="link"
+                      onClick={() =>
+                        setFilters({
+                          trade: "",
+                          project: "",
+                          dailyRate: "",
+                          search: "",
+                        })
+                      }
+                    >
+                      Clear filters
+                    </Button>
+                  ) : null}
                 </div>
               ) : (
                 <table className="w-full text-[12px]">
@@ -290,7 +466,7 @@ export default function EmployeeManagement() {
                         Budget Baseline
                       </th>
                       <th className="px-4 py-3 text-left text-[10px]">
-                        Company ID
+                        Company
                       </th>
                       <th className="w-10 px-4 py-3 text-left"></th>
                     </tr>
@@ -327,7 +503,7 @@ export default function EmployeeManagement() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          {employee.trade_position_id || "N/A"}
+                          {employee.trade_position.trade_name || "N/A"}
                         </td>
                         <td className="px-4 py-3">
                           {formatCurrency(employee.daily_rate)}
@@ -342,7 +518,7 @@ export default function EmployeeManagement() {
                           {formatCurrency(employee.budget_baseline || "0")}
                         </td>
                         <td className="px-4 py-3">
-                          {employee.company_id || "N/A"}
+                          {employee.company.company_name || "N/A"}
                         </td>
                         <td className="px-4 py-3 text-right">...</td>
                       </tr>
@@ -352,6 +528,12 @@ export default function EmployeeManagement() {
               )}
             </div>
           </div>
+          {isFetching && !isLoading && (
+            <div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg p-3 flex items-center gap-2 border z-10">
+              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+              <span className="text-sm">Refreshing data...</span>
+            </div>
+          )}
         </main>
       </div>
 
@@ -424,10 +606,20 @@ export default function EmployeeManagement() {
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select Trade Position" />
                       </SelectTrigger>
+                      {isLoadingTrades && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Loading trades...
+                        </div>
+                      )}
+                      {tradesError && (
+                        <div className="text-xs text-red-500 mt-1">
+                          {tradesError}
+                        </div>
+                      )}
                       <SelectContent>
-                        {trades.map((trade) => (
-                          <SelectItem key={trade} value={trade}>
-                            {trade}
+                        {trades.map((trade: any) => (
+                          <SelectItem key={trade.id} value={trade.id}>
+                            {trade.trade_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -538,24 +730,37 @@ export default function EmployeeManagement() {
 
                   <div className="space-y-2">
                     <label htmlFor="company_id" className="text-sm font-medium">
-                      Company ID
+                      Company
                     </label>
-                    <div className="relative">
-                      <input
-                        id="company_id"
-                        name="company_id"
-                        type="text"
-                        placeholder="company-123"
-                        value={newEmployee.company_id}
-                        onChange={(e) =>
-                          setNewEmployee({
-                            ...newEmployee,
-                            company_id: e.target.value,
-                          })
-                        }
-                        className="w-full py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
+                    <Select
+                      onValueChange={(value) =>
+                        setNewEmployee({
+                          ...newEmployee,
+                          company_id: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select company" />
+                      </SelectTrigger>
+                      {isLoadingCompanies && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Loading companies...
+                        </div>
+                      )}
+                      {companiesError && (
+                        <div className="text-xs text-red-500 mt-1">
+                          {companiesError}
+                        </div>
+                      )}
+                      <SelectContent>
+                        {companies.map((company: any) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.company_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="text-sm">
