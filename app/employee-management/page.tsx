@@ -183,7 +183,7 @@ export default function EmployeeManagement() {
   };
 
   // Format currency for display
-  const formatCurrency = (amount: string) => {
+  const formatCurrency = (amount: any) => {
     if (!amount) return "$0";
     return `$${Number.parseFloat(amount).toFixed(2)}`;
   };

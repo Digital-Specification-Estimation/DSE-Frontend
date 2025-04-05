@@ -2,6 +2,8 @@ import { configureStore } from "@reduxjs/toolkit";
 import { authApi } from "./redux/authSlice";
 import { employeeApi } from "./redux/employeeSlice";
 import { tradePositionApi } from "./redux/tradePositionSlice";
+import { locationApi } from "./redux/locationSlice";
+import { projectApi } from "./redux/projectSlice";
 
 export const makeStore = () => {
   return configureStore({
@@ -9,12 +11,16 @@ export const makeStore = () => {
       [authApi.reducerPath]: authApi.reducer,
       [employeeApi.reducerPath]: employeeApi.reducer,
       [tradePositionApi.reducerPath]: tradePositionApi.reducer,
+      [locationApi.reducerPath]: locationApi.reducer,
+      [projectApi.reducerPath]: projectApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware()
         .concat(authApi.middleware)
         .concat(employeeApi.middleware)
-        .concat(tradePositionApi.middleware),
+        .concat(tradePositionApi.middleware)
+        .concat(locationApi.middleware)
+        .concat(projectApi.middleware),
   });
 };
 

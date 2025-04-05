@@ -11,12 +11,16 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
 import { useSessionQuery, useLogoutMutation } from "@/lib/redux/authSlice";
 import { useDispatch } from "react-redux";
 import { clearCredentials } from "@/lib/redux/authSlice";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SidebarProps {
   user: {
@@ -27,28 +31,90 @@ interface SidebarProps {
 }
 
 export function Sidebar({ user }: SidebarProps) {
-  const [data, setData] = useState({ user: { username: "Guest" } });
-  const { data: sessionData } = useSessionQuery();
+  const [userData, setUserData] = useState({ username: "Guest" });
+  const {
+    data: sessionData,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useSessionQuery(undefined, {
+    // Refetch on component mount
+    refetchOnMountOrArgChange: true,
+    // Refetch when window regains focus
+    refetchOnFocus: true,
+    // Refetch when reconnected
+    refetchOnReconnect: true,
+    // Skip caching to always get fresh data
+    skip: false,
+  });
+
   const [logout] = useLogoutMutation();
   const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
 
+  // Effect to update user data when session data changes
   useEffect(() => {
-    if (sessionData) {
-      setData(sessionData);
+    if (sessionData && sessionData.user) {
+      setUserData(sessionData.user);
     }
   }, [sessionData]);
 
-  const handleLogout = async () => {
-    try {
-      if (Cookie.get("connect.sid")) {
-        Cookie.remove("connect.sid");
+  // Effect to check authentication on mount and reload
+  useEffect(() => {
+    // Force refetch on mount
+    refetch();
+
+    // Check if user is authenticated
+    const checkAuth = () => {
+      if (!Cookie.get("connect.sid")) {
         router.push("/sign-in");
       }
+    };
+
+    // Check auth on mount
+    checkAuth();
+
+    // Add event listener for page visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refetch();
+        checkAuth();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Clean up
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refetch, router]);
+
+  const handleLogout = async () => {
+    try {
+      // Call the logout mutation first
+      await logout().unwrap();
+
+      // Then clear the cookie and local state
+      if (Cookie.get("connect.sid")) {
+        Cookie.remove("connect.sid");
+      }
+
+      // Clear Redux state
+      dispatch(clearCredentials());
+
+      // Redirect to sign-in
+      router.push("/sign-in");
     } catch (error) {
       console.error("Logout failed", error);
     }
+  };
+
+  const handleRetry = () => {
+    refetch();
   };
 
   const menuItems = [
@@ -70,24 +136,60 @@ export function Sidebar({ user }: SidebarProps) {
 
       {/* User Info */}
       <div className="px-4">
-        <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-md">
-          <Avatar className="h-10 w-10">
-            <img
-              src="johndoe.jpeg"
-              alt={data.user.username}
-              className="h-10 w-10 rounded-full"
-            />
-          </Avatar>
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium text-gray-900 truncate">
-              {data.user.username}
-            </span>
-            <span className="text-xs text-gray-500 truncate">{user.role}</span>
+        {isLoading ? (
+          <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-md">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="flex flex-col min-w-0 flex-1">
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-3 w-16" />
+            </div>
           </div>
-          <button>
-            <ChevronDown className="h-4 w-4 text-gray-400" />
-          </button>
-        </div>
+        ) : isError ? (
+          <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-md border border-red-200">
+            <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-sm font-medium text-gray-900">
+                Error loading user
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-red-500 p-0 h-auto"
+                onClick={handleRetry}
+              >
+                <RefreshCw className="h-3 w-3 mr-1" /> Retry
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-md relative">
+            {isFetching && (
+              <div className="absolute top-1 right-1">
+                <RefreshCw className="h-3 w-3 text-gray-400 animate-spin" />
+              </div>
+            )}
+            <Avatar className="h-10 w-10">
+              <img
+                src="johndoe.jpeg"
+                alt={userData.username}
+                className="h-10 w-10 rounded-full"
+              />
+            </Avatar>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-medium text-gray-900 truncate">
+                {userData.username}
+              </span>
+              <span className="text-xs text-gray-500 truncate">
+                {user.role}
+              </span>
+            </div>
+            <button>
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Menu */}
