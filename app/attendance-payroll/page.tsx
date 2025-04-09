@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Search,
   RefreshCw,
@@ -28,27 +28,7 @@ import {
 import DashboardHeader from "@/components/DashboardHeader";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-
-// Types
-interface Employee {
-  id: number;
-  name: string;
-  avatar: string;
-  position: string;
-  assignedProject: string;
-  contractStartDate: string;
-  contractEndDate: string;
-  dailyRate: number;
-  remainingDays: number;
-  attendance: "Present" | "Absent" | "Late";
-  daysWorked: number;
-  budgetBaseline: number;
-  plannedVsActual?: string;
-  sickDays: number;
-  vacationDays: number;
-  unpaidLeave: number;
-  totalActual?: number;
-}
+import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
 
 // API endpoints
 const API_ENDPOINTS = {
@@ -59,238 +39,6 @@ const API_ENDPOINTS = {
   GENERATE_PAYSLIPS: "/api/payroll/generate-payslips",
   PAYROLL_REPORT: "/api/payroll/report",
 };
-
-// Sample data
-const initialEmployees: Employee[] = [
-  {
-    id: 1,
-    name: "Courtney Henry",
-    avatar: "/johndoe.jpeg",
-    position: "Electrician",
-    assignedProject: "Metro Bridge",
-    contractStartDate: "Feb 28, 2018",
-    contractEndDate: "Feb 28, 2018",
-    dailyRate: 120,
-    remainingDays: 1,
-    attendance: "Present",
-    daysWorked: 22,
-    budgetBaseline: 137760,
-    plannedVsActual: "Planned: $2,500",
-    sickDays: 22,
-    vacationDays: 20,
-    unpaidLeave: 20,
-    totalActual: 2200,
-  },
-  {
-    id: 2,
-    name: "Annette Black",
-    avatar: "/johndoe.jpeg",
-    position: "Electrician",
-    assignedProject: "Mall Construction",
-    contractStartDate: "May 31, 2015",
-    contractEndDate: "May 20, 2015",
-    dailyRate: 200,
-    remainingDays: 2,
-    attendance: "Present",
-    daysWorked: 20,
-    budgetBaseline: 4000,
-    plannedVsActual: "Within Budget",
-    sickDays: 20,
-    vacationDays: 22,
-    unpaidLeave: 18,
-    totalActual: 4000,
-  },
-  {
-    id: 3,
-    name: "Kathryn Murphy",
-    avatar: "/johndoe.jpeg",
-    position: "HR Manager",
-    assignedProject: "Metro Bridge",
-    contractStartDate: "May 12, 2019",
-    contractEndDate: "Nov 16, 2014",
-    dailyRate: 140,
-    remainingDays: 3,
-    attendance: "Present",
-    daysWorked: 18,
-    budgetBaseline: 2520,
-    plannedVsActual: "+$300 Over Budget",
-    sickDays: 18,
-    vacationDays: 18,
-    unpaidLeave: 22,
-    totalActual: 2520,
-  },
-  {
-    id: 4,
-    name: "Courtney Henry",
-    avatar: "/johndoe.jpeg",
-    position: "Electrician",
-    assignedProject: "Mall Construction",
-    contractStartDate: "Sep 9, 2013",
-    contractEndDate: "May 29, 2017",
-    dailyRate: 100,
-    remainingDays: 4,
-    attendance: "Present",
-    daysWorked: 22,
-    budgetBaseline: 2200,
-    plannedVsActual: "Within Budget",
-    sickDays: 22,
-    vacationDays: 22,
-    unpaidLeave: 22,
-    totalActual: 2200,
-  },
-  {
-    id: 5,
-    name: "Brooklyn Simmons",
-    avatar: "/johndoe.jpeg",
-    position: "HR Manager",
-    assignedProject: "Metro Bridge",
-    contractStartDate: "Jul 14, 2015",
-    contractEndDate: "May 12, 2019",
-    dailyRate: 100,
-    remainingDays: 5,
-    attendance: "Present",
-    daysWorked: 22,
-    budgetBaseline: 2640,
-    plannedVsActual: "Planned: $2,500",
-    sickDays: 22,
-    vacationDays: 22,
-    unpaidLeave: 22,
-    totalActual: 4000,
-  },
-  {
-    id: 6,
-    name: "Marvin McKinney",
-    avatar: "/johndoe.jpeg",
-    position: "Technician",
-    assignedProject: "Mall Construction",
-    contractStartDate: "Sep 24, 2017",
-    contractEndDate: "Dec 2, 2018",
-    dailyRate: 140,
-    remainingDays: 6,
-    attendance: "Present",
-    daysWorked: 18,
-    budgetBaseline: 4000,
-    plannedVsActual: "Within Budget",
-    sickDays: 18,
-    vacationDays: 18,
-    unpaidLeave: 18,
-    totalActual: 2520,
-  },
-  {
-    id: 7,
-    name: "Jane Cooper",
-    avatar: "/johndoe.jpeg",
-    position: "Construction Worker",
-    assignedProject: "Metro Bridge",
-    contractStartDate: "Mar 6, 2018",
-    contractEndDate: "Apr 28, 2016",
-    dailyRate: 100,
-    remainingDays: 7,
-    attendance: "Present",
-    daysWorked: 22,
-    budgetBaseline: 2520,
-    plannedVsActual: "+$300 Over Budget",
-    sickDays: 22,
-    vacationDays: 22,
-    unpaidLeave: 22,
-    totalActual: 2200,
-  },
-  {
-    id: 8,
-    name: "Kristin Watson",
-    avatar: "/johndoe.jpeg",
-    position: "Technician",
-    assignedProject: "Mall Construction",
-    contractStartDate: "Aug 2, 2013",
-    contractEndDate: "Feb 29, 2012",
-    dailyRate: 140,
-    remainingDays: 8,
-    attendance: "Present",
-    daysWorked: 18,
-    budgetBaseline: 2200,
-    plannedVsActual: "Within Budget",
-    sickDays: 18,
-    vacationDays: 18,
-    unpaidLeave: 18,
-    totalActual: 2640,
-  },
-  {
-    id: 9,
-    name: "Jacob Jones",
-    avatar: "/johndoe.jpeg",
-    position: "Construction Worker",
-    assignedProject: "Metro Bridge",
-    contractStartDate: "Aug 7, 2017",
-    contractEndDate: "May 31, 2015",
-    dailyRate: 100,
-    remainingDays: 9,
-    attendance: "Present",
-    daysWorked: 18,
-    budgetBaseline: 2640,
-    plannedVsActual: "Planned: $2,500",
-    sickDays: 18,
-    vacationDays: 18,
-    unpaidLeave: 22,
-    totalActual: 4000,
-  },
-  {
-    id: 10,
-    name: "Esther Howard",
-    avatar: "/johndoe.jpeg",
-    position: "Technician",
-    assignedProject: "Mall Construction",
-    contractStartDate: "May 6, 2012",
-    contractEndDate: "Mar 13, 2014",
-    dailyRate: 140,
-    remainingDays: 10,
-    attendance: "Present",
-    daysWorked: 22,
-    budgetBaseline: 4000,
-    plannedVsActual: "Within Budget",
-    sickDays: 22,
-    vacationDays: 22,
-    unpaidLeave: 18,
-    totalActual: 2520,
-  },
-  {
-    id: 11,
-    name: "Arlene McCoy",
-    avatar: "/johndoe.jpeg",
-    position: "Construction Worker",
-    assignedProject: "Metro Bridge",
-    contractStartDate: "Oct 30, 2017",
-    contractEndDate: "Mar 23, 2013",
-    dailyRate: 100,
-    remainingDays: 11,
-    attendance: "Present",
-    daysWorked: 18,
-    budgetBaseline: 2520,
-    plannedVsActual: "+$300 Over Budget",
-    sickDays: 18,
-    vacationDays: 18,
-    unpaidLeave: 18,
-    totalActual: 2640,
-  },
-  {
-    id: 12,
-    name: "Darrell Steward",
-    avatar: "/johndoe.jpeg",
-    position: "Construction Worker",
-    assignedProject: "Mall Construction",
-    contractStartDate: "Nov 7, 2017",
-    contractEndDate: "Oct 31, 2017",
-    dailyRate: 100,
-    remainingDays: 12,
-    attendance: "Present",
-    daysWorked: 22,
-    budgetBaseline: 2520,
-    plannedVsActual: "Within Budget",
-    sickDays: 22,
-    vacationDays: 22,
-    unpaidLeave: 22,
-    totalActual: 2520,
-  },
-];
 
 const trades = [
   "Electrician",
@@ -317,10 +65,12 @@ export default function AttendancePayroll() {
   const [openAttendanceDropdown, setOpenAttendanceDropdown] = useState<
     number | null
   >(null);
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
-  const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPayslips, setIsGeneratingPayslips] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+  // RTK Query hook for fetching employees
+  const { data: employees = [], isLoading, refetch } = useGetEmployeesQuery();
+
   const [totalPayroll, setTotalPayroll] = useState("$25,000");
   const [summaryData, setSummaryData] = useState({
     totalEmployees: 45,
@@ -338,57 +88,21 @@ export default function AttendancePayroll() {
     endDate: "",
   });
 
-  // Fetch employees data
-  useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        setIsLoading(true);
-        // Simulating API call
-        // In a real implementation, this would be:
-        // const response = await fetch(API_ENDPOINTS.EMPLOYEES);
-        // const data = await response.json();
-        // setEmployees(data);
-
-        // Simulate network delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setEmployees(initialEmployees);
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error fetching employees:", error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch employees data. Please try again.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-      }
-    };
-
-    fetchEmployees();
-  }, [toast]);
-
-  // Update employee attendance
+  // Update employee attendance using fetch
   const updateEmployeeAttendance = async (
     employeeId: number,
     status: "Present" | "Absent" | "Late"
   ) => {
     try {
-      // Simulating API call
-      // In a real implementation, this would be:
-      // await fetch(`${API_ENDPOINTS.ATTENDANCE}/${employeeId}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ status }),
-      // });
+      // API call
+      await fetch(`${API_ENDPOINTS.ATTENDANCE}/${employeeId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
 
-      // Update local state
-      setEmployees((prevEmployees) =>
-        prevEmployees.map((employee) =>
-          employee.id === employeeId
-            ? { ...employee, attendance: status }
-            : employee
-        )
-      );
+      // Update local state by refetching
+      await refetch();
 
       setOpenAttendanceDropdown(null);
 
@@ -406,20 +120,17 @@ export default function AttendancePayroll() {
     }
   };
 
-  // Generate payslips
+  // Generate payslips using fetch
   const handleGeneratePayslips = async () => {
     try {
       setIsGeneratingPayslips(true);
-      // Simulating API call
-      // In a real implementation, this would be:
-      // await fetch(API_ENDPOINTS.GENERATE_PAYSLIPS, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ employeeIds: employees.map(e => e.id) }),
-      // });
 
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // API call
+      await fetch(API_ENDPOINTS.GENERATE_PAYSLIPS, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeIds: employees.map((e: any) => e.id) }),
+      });
 
       setIsGeneratingPayslips(false);
       toast({
@@ -437,29 +148,27 @@ export default function AttendancePayroll() {
       setIsGeneratingPayslips(false);
     }
   };
-
-  // Generate payroll report
+  console.log(employees);
+  // Generate payroll report using fetch
   const handleGenerateReport = async () => {
     try {
       setIsGeneratingReport(true);
-      // Simulating API call
-      // In a real implementation, this would be:
-      // const response = await fetch(API_ENDPOINTS.PAYROLL_REPORT, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ filters }),
-      // });
-      // const blob = await response.blob();
-      // const url = window.URL.createObjectURL(blob);
-      // const a = document.createElement('a');
-      // a.href = url;
-      // a.download = 'payroll-report.pdf';
-      // document.body.appendChild(a);
-      // a.click();
-      // a.remove();
 
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // API call
+      const response = await fetch(API_ENDPOINTS.PAYROLL_REPORT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filters }),
+      });
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "payroll-report.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
 
       setIsGeneratingReport(false);
       toast({
@@ -477,20 +186,38 @@ export default function AttendancePayroll() {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
+  const getCurrentDate = () => {
+    const today = new Date();
+    const day = today.getDate();
+    const month = today.getMonth() + 1;
+    const year = today.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
+  let totalBaseline = 0;
+  let totalActualPayroll = 0;
+  let totalDaysWorked = 0;
+  let totalDailyActuallPayroll = 0;
+  employees.map((employee: any) => {
+    totalBaseline += Number(employee.budget_baseline);
+    totalDaysWorked += Number(employee.days_worked);
+    totalActualPayroll += Number(employee.totalActualPayroll);
+    totalDailyActuallPayroll += Number(employee.daily_rate);
+  });
   // Refresh data
   const handleRefreshData = async () => {
     try {
-      setIsLoading(true);
       toast({
         title: "Refreshing Data",
         description: "Fetching the latest data...",
       });
 
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await refetch();
 
-      // In a real implementation, this would fetch fresh data from the API
-      setIsLoading(false);
       toast({
         title: "Data Refreshed",
         description: "The latest data has been loaded.",
@@ -502,20 +229,19 @@ export default function AttendancePayroll() {
         description: "Failed to refresh data. Please try again.",
         variant: "destructive",
       });
-      setIsLoading(false);
     }
   };
 
-  const filteredEmployees = employees.filter((employee) => {
+  const filteredEmployees = employees.filter((employee: any) => {
     if (
       searchTerm &&
-      !employee.name.toLowerCase().includes(searchTerm.toLowerCase())
+      !employee.username.toLowerCase().includes(searchTerm.toLowerCase())
     )
       return false;
     if (
       filters.trade &&
       filters.trade !== "Electrician" &&
-      employee.position !== filters.trade
+      employee.trade_position.trade_name !== filters.trade
     )
       return false;
     if (
@@ -601,10 +327,6 @@ export default function AttendancePayroll() {
                     ${index !== 0 ? "border border-gray-300" : ""}`}
                   onClick={() => {
                     setActiveTab(tab.id);
-                    // toast({
-                    //   title: `${tab.label} Tab`,
-                    //   description: `Switched to ${tab.label} view`,
-                    // })
                   }}
                 >
                   {tab.label}
@@ -768,7 +490,7 @@ export default function AttendancePayroll() {
                           Total Budget Baseline
                         </div>
                         <div className="text-xl font-bold">
-                          {summaryData.totalBudgetBaseline}
+                          ${totalBaseline}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4 flex-1">
@@ -776,7 +498,7 @@ export default function AttendancePayroll() {
                           Total Actual Payroll
                         </div>
                         <div className="text-xl font-bold">
-                          {summaryData.totalActualPayroll}
+                          ${totalActualPayroll}
                         </div>
                       </div>
                     </div>
@@ -812,13 +534,13 @@ export default function AttendancePayroll() {
                             Remaining Days
                           </th>
                           <th className="px-4 py-3 text-left border-r">
-                            Attendance
+                            Attendance Today
                           </th>
                           <th className="w-10 px-4 py-3 text-center"></th>
                         </tr>
                       </thead>
                       <tbody className="text-[10px]">
-                        {filteredEmployees.map((employee) => (
+                        {filteredEmployees.map((employee: any) => (
                           <React.Fragment key={employee.id}>
                             <tr className="border-b hover:bg-gray-50">
                               <td className="px-4 py-3 border-r">
@@ -832,36 +554,36 @@ export default function AttendancePayroll() {
                                   <Avatar className="h-8 w-8">
                                     <AvatarImage
                                       src={employee.avatar}
-                                      alt={employee.name}
+                                      alt={employee.username}
                                     />
                                     <AvatarFallback>
-                                      {employee.name.charAt(0)}
+                                      {employee.username.charAt(0)}
                                     </AvatarFallback>
                                   </Avatar>
                                   <span className="font-medium">
-                                    {employee.name}
+                                    {employee.username}
                                   </span>
                                 </div>
                               </td>
                               <td className="px-4 py-3 border-r">
-                                {employee.position}
+                                {employee.trade_position.trade_name}
                               </td>
                               <td className="px-4 py-3 border-r">
                                 {employee.assignedProject}
                               </td>
                               <td className="px-4 py-3 border-r">
-                                {employee.contractStartDate}
+                                {formatDate(employee.created_date)}
                               </td>
                               <td className="px-4 py-3 border-r">
-                                {employee.contractEndDate}
+                                {formatDate(employee.contract_finish_date)}
                               </td>
                               <td className="px-4 py-3 border-r">
                                 <Badge
                                   className={`rounded-full px-2 py-0.5 text-xs font-medium bg-red-50 text-red-600 border-0`}
                                 >
-                                  {employee.remainingDays < 10
-                                    ? `0${employee.remainingDays}`
-                                    : employee.remainingDays}
+                                  {employee.remaining_days < 10
+                                    ? `${employee.remaining_days}`
+                                    : employee.remaining_days}
                                 </Badge>
                               </td>
                               <td className="px-4 py-3 border-r">
@@ -877,19 +599,37 @@ export default function AttendancePayroll() {
                                 >
                                   <PopoverTrigger asChild>
                                     <div className="flex items-center gap-2 cursor-pointer">
-                                      <Badge
-                                        className={
-                                          employee.attendance === "Present"
-                                            ? "bg-green-50 text-green-700 border-0"
-                                            : employee.attendance === "Late"
-                                            ? "bg-orange-50 text-orange-500 border-0"
-                                            : "bg-red-50 text-red-700 border-0"
+                                      {employee.attendance.map(
+                                        (attendance: any) => {
+                                          console.log(
+                                            `${formatDate(attendance.date)}` ===
+                                              getCurrentDate()
+                                          );
+                                          if (
+                                            formatDate(attendance.date) ===
+                                            getCurrentDate()
+                                          ) {
+                                            return (
+                                              <Badge
+                                                key={attendance.id}
+                                                className={
+                                                  attendance.status ===
+                                                  "present"
+                                                    ? "bg-green-50 text-green-700 border-0"
+                                                    : attendance.status ===
+                                                      "late"
+                                                    ? "bg-orange-50 text-orange-500 border-0"
+                                                    : "bg-red-50 text-red-700 border-0"
+                                                }
+                                              >
+                                                {attendance.status}
+                                              </Badge>
+                                            );
+                                          }
+                                          return null; // avoids unnecessary empty fragments
                                         }
-                                      >
-                                        {employee.attendance === "Late"
-                                          ? "late"
-                                          : employee.attendance}
-                                      </Badge>
+                                      )}
+
                                       <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                     </div>
                                   </PopoverTrigger>
@@ -1132,7 +872,7 @@ export default function AttendancePayroll() {
                           Total Employees
                         </div>
                         <div className="text-xl font-bold">
-                          {summaryData.totalEmployees}
+                          {employees.length}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
@@ -1140,7 +880,7 @@ export default function AttendancePayroll() {
                           Total Days Worked
                         </div>
                         <div className="text-xl font-bold">
-                          {summaryData.totalDaysWorked}
+                          {totalDaysWorked}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
@@ -1148,7 +888,7 @@ export default function AttendancePayroll() {
                           Total Budget Baseline
                         </div>
                         <div className="text-xl font-bold">
-                          {summaryData.totalBudgetBaseline}
+                          ${totalBaseline}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
@@ -1156,7 +896,7 @@ export default function AttendancePayroll() {
                           Total Actual Payroll
                         </div>
                         <div className="text-xl font-bold">
-                          {summaryData.totalActualPayroll}
+                          ${totalActualPayroll}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
@@ -1164,7 +904,7 @@ export default function AttendancePayroll() {
                           Daily Actual Payroll
                         </div>
                         <div className="text-xl font-bold">
-                          {summaryData.dailyActualPayroll}
+                          ${totalDailyActuallPayroll}
                         </div>
                       </div>
                     </div>
@@ -1203,7 +943,7 @@ export default function AttendancePayroll() {
                         </tr>
                       </thead>
                       <tbody className="text-xs">
-                        {filteredEmployees.map((employee) => (
+                        {filteredEmployees.map((employee: any) => (
                           <tr
                             key={employee.id}
                             className="border-b hover:bg-gray-50"
@@ -1222,25 +962,25 @@ export default function AttendancePayroll() {
                                     alt={employee.name}
                                   />
                                   <AvatarFallback>
-                                    {employee.name.charAt(0)}
+                                    {employee.username.charAt(0)}
                                   </AvatarFallback>
                                 </Avatar>
                                 <span className="font-medium">
-                                  {employee.name}
+                                  {employee.username}
                                 </span>
                               </div>
                             </td>
                             <td className="px-4 py-3 border-r">
-                              ${employee.dailyRate}
+                              ${employee.daily_rate}
                             </td>
                             <td className="px-4 py-3 border-r">
-                              {employee.daysWorked}
+                              {employee.days_worked}
                             </td>
                             <td className="px-4 py-3 border-r">
-                              ${employee.budgetBaseline.toLocaleString()}
+                              ${employee.budget_baseline.toLocaleString()}
                             </td>
                             <td className="px-4 py-3 border-r">
-                              ${employee.totalActual?.toLocaleString()}
+                              ${employee.totalActualPayroll?.toLocaleString()}
                             </td>
                             <td className="px-4 py-3 border-r">
                               {employee.plannedVsActual?.includes(
@@ -1326,7 +1066,7 @@ export default function AttendancePayroll() {
                       </tr>
                     </thead>
                     <tbody className="text-xs">
-                      {filteredEmployees.map((employee) => (
+                      {filteredEmployees.map((employee: any) => (
                         <tr
                           key={employee.id}
                           className="border-b hover:bg-gray-50"
@@ -1341,15 +1081,15 @@ export default function AttendancePayroll() {
                             <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8">
                                 <AvatarImage
-                                  src={employee.avatar}
-                                  alt={employee.name}
+                                  // src={employee.avatar}
+                                  alt={employee.username}
                                 />
                                 <AvatarFallback>
-                                  {employee.name.charAt(0)}
+                                  {employee.username.charAt(0)}
                                 </AvatarFallback>
                               </Avatar>
                               <span className="font-medium">
-                                {employee.name}
+                                {employee.username}
                               </span>
                             </div>
                           </td>
@@ -1360,7 +1100,7 @@ export default function AttendancePayroll() {
                             {employee.vacationDays}
                           </td>
                           <td className="px-4 py-3 border-r">
-                            {employee.unpaidLeave}
+                            {employee.unpaidDays}
                           </td>
                           <td className="px-4 py-3 text-center">
                             <Button
@@ -1369,7 +1109,7 @@ export default function AttendancePayroll() {
                               onClick={() => {
                                 toast({
                                   title: "Leave Management",
-                                  description: `Managing leave for ${employee.name}`,
+                                  description: `Managing leave for ${employee.username}`,
                                 });
                               }}
                             >
