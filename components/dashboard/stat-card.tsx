@@ -37,7 +37,7 @@ export function StatCard({
                 : "text-red-500 border border-red-500 rounded-md h-6 w-10 flex items-center justify-center bg-red-50"
             }
           >
-            {change.type === "increase" ? "+" : "-"}
+            {change.type === "increase" ? "+" : ""}
             {change.value}
           </span>
           {change.text && (

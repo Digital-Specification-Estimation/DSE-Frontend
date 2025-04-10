@@ -332,7 +332,11 @@ export default function Dashboard() {
   }
   let attendancePercentage = 0;
   let totalActualPayroll = 0;
+  let presentPresentChange = 0;
+  let newHires = 0;
+  let newHirePercentage = 0;
   let numberOfPresent = 0;
+  let numberOfPresentYesterday = 0;
   let numberOfLateArrivals = 0;
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
@@ -346,7 +350,17 @@ export default function Dashboard() {
     const year = today.getFullYear();
     return `${month}/${day}/${year}`;
   };
+  const getYesterdayDate = () => {
+    const today = new Date();
+    const day = today.getDate() - 1;
+    const month = today.getMonth() + 1;
+    const year = today.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
   employees.map((employee: any) => {
+    if (formatDate(employee.created_date) === getCurrentDate()) {
+      newHires += 1;
+    }
     totalActualPayroll += Number(employee.totalActualPayroll);
     employee.attendance.map((attendance: any) => {
       if (formatDate(attendance.date) === getCurrentDate()) {
@@ -357,8 +371,23 @@ export default function Dashboard() {
           numberOfLateArrivals += 1;
         }
       }
+      if (formatDate(attendance.date) === getYesterdayDate()) {
+        if (attendance.status === "present") {
+          numberOfPresentYesterday += 1;
+        }
+      }
     });
   });
+  presentPresentChange =
+    ((numberOfPresent - numberOfPresentYesterday) / numberOfPresent) * 100;
+  if (numberOfPresent === 0) {
+    presentPresentChange =
+      ((numberOfPresent - numberOfPresentYesterday) /
+        numberOfPresentYesterday) *
+      100;
+  }
+
+  newHirePercentage = Number((newHires / employees.length) * 100);
   attendancePercentage = Number((numberOfPresent / employees.length) * 100);
   return (
     <div className="flex h-screen bg-gray-50">
@@ -423,9 +452,9 @@ export default function Dashboard() {
                 value={employees.length}
                 icon={Users}
                 change={{
-                  value: dashboardData.employeeChange,
-                  type: "increase",
-                  text: "+5 new hires",
+                  value: `${newHirePercentage}%`,
+                  type: newHires >= 0 ? "increase" : "decrease",
+                  text: `+${newHires} new hires today`,
                 }}
               />
               <StatCard
@@ -434,8 +463,8 @@ export default function Dashboard() {
                 icon={Clock}
                 iconBackground="bg-blue-700"
                 change={{
-                  value: dashboardData.attendanceChange,
-                  type: "increase",
+                  value: `${presentPresentChange}%`,
+                  type: presentPresentChange >= 0 ? "increase" : "decrease",
                   text: "from yesterday",
                 }}
               />
@@ -447,7 +476,7 @@ export default function Dashboard() {
                 change={{
                   value: dashboardData.lateArrivalsChange,
                   type: "decrease",
-                  text: "from last week",
+                  text: "from Yesterday",
                 }}
               />
               <StatCard
@@ -458,7 +487,7 @@ export default function Dashboard() {
                 change={{
                   value: dashboardData.payrollChange,
                   type: "increase",
-                  text: "planned",
+                  text: "planned vs actual change",
                 }}
               />
             </div>
@@ -572,7 +601,10 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="text-3xl font-bold mb-6">
-                    {attendancePercentage}% (Today)
+                    {attendancePercentage}%{" "}
+                    <span className="text-sm font-medium text-muted-foreground">
+                      (Today)
+                    </span>
                   </div>
                 </div>
 
