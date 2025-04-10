@@ -38,8 +38,14 @@ import {
 } from "@/components/ui/select";
 import { SelectValue } from "@radix-ui/react-select";
 import { useSessionQuery } from "@/lib/redux/authSlice";
+import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
 
 export default function Dashboard() {
+  const {
+    data: employees = [],
+    isLoading: isLoading2,
+    refetch,
+  } = useGetEmployeesQuery();
   const { toast } = useToast();
 
   const [user] = useState({
@@ -324,7 +330,36 @@ export default function Dashboard() {
       </div>
     );
   }
-
+  let attendancePercentage = 0;
+  let totalActualPayroll = 0;
+  let numberOfPresent = 0;
+  let numberOfLateArrivals = 0;
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
+  const getCurrentDate = () => {
+    const today = new Date();
+    const day = today.getDate();
+    const month = today.getMonth() + 1;
+    const year = today.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
+  employees.map((employee: any) => {
+    totalActualPayroll += Number(employee.totalActualPayroll);
+    employee.attendance.map((attendance: any) => {
+      if (formatDate(attendance.date) === getCurrentDate()) {
+        if (attendance.status === "present") {
+          numberOfPresent += 1;
+        }
+        if (attendance.status === "late") {
+          numberOfLateArrivals += 1;
+        }
+      }
+    });
+  });
+  attendancePercentage = Number((numberOfPresent / employees.length) * 100);
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
@@ -385,7 +420,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <StatCard
                 title="Total Employees"
-                value={dashboardData.totalEmployees.toString()}
+                value={employees.length}
                 icon={Users}
                 change={{
                   value: dashboardData.employeeChange,
@@ -395,7 +430,7 @@ export default function Dashboard() {
               />
               <StatCard
                 title="Attendance Today"
-                value={dashboardData.attendanceToday}
+                value={`%${attendancePercentage.toString()}`}
                 icon={Clock}
                 iconBackground="bg-blue-700"
                 change={{
@@ -405,8 +440,8 @@ export default function Dashboard() {
                 }}
               />
               <StatCard
-                title="Late Arrivals"
-                value={dashboardData.lateArrivals.toString().padStart(2, "0")}
+                title="Late Arrivals Today"
+                value={numberOfLateArrivals}
                 icon={Calendar}
                 iconBackground="bg-red-600"
                 change={{
@@ -416,8 +451,8 @@ export default function Dashboard() {
                 }}
               />
               <StatCard
-                title="Total Payroll"
-                value={dashboardData.totalPayroll}
+                title="Total Actual Payroll"
+                value={`$${totalActualPayroll}`}
                 icon={DollarSign}
                 iconBackground="bg-green-600"
                 change={{
@@ -433,13 +468,15 @@ export default function Dashboard() {
               <div className="bg-white rounded-lg border">
                 <div className="p-5">
                   <div className="flex justify-between items-center mb-1">
-                    <h3 className="font-medium">Total Payroll Cost</h3>
+                    <h3 className="font-medium">Total Actual Payroll Cost</h3>
                     <div className="flex items-center gap-2 border rounded-full px-3 py-1.5 text-sm">
                       <span>This Year</span>
                       <ChevronDown className="h-4 w-4" />
                     </div>
                   </div>
-                  <div className="text-3xl font-bold mb-6">$236,788.12</div>
+                  <div className="text-3xl font-bold mb-6">
+                    ${totalActualPayroll}
+                  </div>
                 </div>
 
                 <div className="px-5 pb-5">
@@ -534,7 +571,9 @@ export default function Dashboard() {
                       <ChevronDown className="h-4 w-4" />
                     </div>
                   </div>
-                  <div className="text-3xl font-bold mb-6">98%</div>
+                  <div className="text-3xl font-bold mb-6">
+                    {attendancePercentage}% (Today)
+                  </div>
                 </div>
 
                 <div className="px-5 pb-5">

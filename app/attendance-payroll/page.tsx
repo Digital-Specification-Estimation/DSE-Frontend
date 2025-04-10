@@ -626,6 +626,7 @@ export default function AttendancePayroll() {
                                               </Badge>
                                             );
                                           }
+
                                           return null; // avoids unnecessary empty fragments
                                         }
                                       )}
@@ -796,58 +797,60 @@ export default function AttendancePayroll() {
                                       </div>
                                     </div>
                                     <div className="grid grid-cols-7 gap-4">
-                                      {calendarDays.map((day, index) => (
-                                        <div
-                                          key={index}
-                                          className="text-center"
-                                        >
-                                          <div className="text-sm font-medium mb-1">
-                                            {day.day < 10
-                                              ? `0${day.day}`
-                                              : day.day}
+                                      {employee.attendance.map(
+                                        (day: any, index: any) => (
+                                          <div
+                                            key={index}
+                                            className="text-center"
+                                          >
+                                            <div className="text-sm font-medium mb-1">
+                                              {day.day < 10
+                                                ? `0${day.day}`
+                                                : day.day}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground mb-2">
+                                              {day.weekday}
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                              <Badge
+                                                className={
+                                                  day.status === "present"
+                                                    ? "bg-green-50 text-green-700 border-0"
+                                                    : day.status === "late"
+                                                    ? "bg-yellow-50 text-yellow-700 border-0"
+                                                    : "bg-red-50 text-red-700 border-0"
+                                                }
+                                              >
+                                                {day.status}
+                                              </Badge>
+                                              <Badge
+                                                variant="outline"
+                                                className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
+                                                onClick={() => {
+                                                  toast({
+                                                    title: "Attendance Updated",
+                                                    description: `Marked as Late for ${day.day} ${currentMonth}`,
+                                                  });
+                                                }}
+                                              >
+                                                late
+                                              </Badge>
+                                              <Badge
+                                                variant="outline"
+                                                className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
+                                                onClick={() => {
+                                                  toast({
+                                                    title: "Attendance Updated",
+                                                    description: `Marked as Absent for ${day.day} ${currentMonth}`,
+                                                  });
+                                                }}
+                                              >
+                                                Absent
+                                              </Badge>
+                                            </div>
                                           </div>
-                                          <div className="text-xs text-muted-foreground mb-2">
-                                            {day.weekday}
-                                          </div>
-                                          <div className="flex flex-col gap-1">
-                                            <Badge
-                                              className={
-                                                day.status === "Present"
-                                                  ? "bg-green-50 text-green-700 border-0"
-                                                  : day.status === "Late"
-                                                  ? "bg-yellow-50 text-yellow-700 border-0"
-                                                  : "bg-red-50 text-red-700 border-0"
-                                              }
-                                            >
-                                              {day.status}
-                                            </Badge>
-                                            <Badge
-                                              variant="outline"
-                                              className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
-                                              onClick={() => {
-                                                toast({
-                                                  title: "Attendance Updated",
-                                                  description: `Marked as Late for ${day.day} ${currentMonth}`,
-                                                });
-                                              }}
-                                            >
-                                              late
-                                            </Badge>
-                                            <Badge
-                                              variant="outline"
-                                              className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
-                                              onClick={() => {
-                                                toast({
-                                                  title: "Attendance Updated",
-                                                  description: `Marked as Absent for ${day.day} ${currentMonth}`,
-                                                });
-                                              }}
-                                            >
-                                              Absent
-                                            </Badge>
-                                          </div>
-                                        </div>
-                                      ))}
+                                        )
+                                      )}
                                     </div>
                                   </div>
                                 </td>
