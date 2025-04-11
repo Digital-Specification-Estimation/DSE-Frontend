@@ -330,13 +330,17 @@ export default function Dashboard() {
       </div>
     );
   }
+  let latenessDifference = 0;
+
   let attendancePercentage = 0;
   let totalActualPayroll = 0;
   let presentPresentChange = 0;
+  let numberOfLateYesterday = 0;
   let newHires = 0;
   let newHirePercentage = 0;
   let numberOfPresent = 0;
   let numberOfPresentYesterday = 0;
+  let totalDailyActuallPayroll = 0;
   let numberOfLateArrivals = 0;
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
@@ -362,6 +366,7 @@ export default function Dashboard() {
       newHires += 1;
     }
     totalActualPayroll += Number(employee.totalActualPayroll);
+    totalDailyActuallPayroll += Number(employee.daily_rate);
     employee.attendance.map((attendance: any) => {
       if (formatDate(attendance.date) === getCurrentDate()) {
         if (attendance.status === "present") {
@@ -375,9 +380,13 @@ export default function Dashboard() {
         if (attendance.status === "present") {
           numberOfPresentYesterday += 1;
         }
+        if (attendance.status === "late") {
+          numberOfLateYesterday += 1;
+        }
       }
     });
   });
+  latenessDifference = numberOfLateArrivals - numberOfLateYesterday;
   presentPresentChange =
     ((numberOfPresent - numberOfPresentYesterday) / numberOfPresent) * 100;
   if (numberOfPresent === 0) {
@@ -389,6 +398,13 @@ export default function Dashboard() {
 
   newHirePercentage = Number((newHires / employees.length) * 100);
   attendancePercentage = Number((numberOfPresent / employees.length) * 100);
+  let payrollPercentage =
+    ((totalActualPayroll - totalDailyActuallPayroll) / totalActualPayroll) *
+    100;
+  if (Number.isNaN(presentPresentChange)) {
+    presentPresentChange = 0;
+  }
+  console.log(presentPresentChange);
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
@@ -463,7 +479,7 @@ export default function Dashboard() {
                 icon={Clock}
                 iconBackground="bg-blue-700"
                 change={{
-                  value: `${presentPresentChange}%`,
+                  value: `${presentPresentChange.toFixed(1)}%`,
                   type: presentPresentChange >= 0 ? "increase" : "decrease",
                   text: "from yesterday",
                 }}
@@ -474,8 +490,8 @@ export default function Dashboard() {
                 icon={Calendar}
                 iconBackground="bg-red-600"
                 change={{
-                  value: dashboardData.lateArrivalsChange,
-                  type: "decrease",
+                  value: `${latenessDifference}`,
+                  type: latenessDifference >= 0 ? "increase" : "decrease",
                   text: "from Yesterday",
                 }}
               />
@@ -485,8 +501,8 @@ export default function Dashboard() {
                 icon={DollarSign}
                 iconBackground="bg-green-600"
                 change={{
-                  value: dashboardData.payrollChange,
-                  type: "increase",
+                  value: `${payrollPercentage.toFixed(1)}`,
+                  type: payrollPercentage >= 0 ? "increase" : "decrease",
                   text: "planned vs actual change",
                 }}
               />
