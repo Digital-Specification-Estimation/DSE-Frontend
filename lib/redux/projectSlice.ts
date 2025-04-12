@@ -3,9 +3,9 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const projectApi = createApi({
   reducerPath: "projectApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "https://dse-backend-production.up.railway.app/location",
+    // baseUrl: "https://dse-backend-production.up.railway.app/location",
   
-    // baseUrl: "http://localhost:4000/project",
+    baseUrl: "http://localhost:4000/project",
   }),
   endpoints: (builder) => ({
     getProjects: builder.query<any, void>({

@@ -1,58 +1,124 @@
-"use client"
+"use client";
 
-import { useState, useRef, useEffect } from "react"
-import { Search, FileText, ChevronDown, Plus, ChevronUp, MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react"
-import { Sidebar } from "@/components/sidebar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import DashboardHeader from "@/components/DashboardHeader"
-import { useToast } from "@/hooks/use-toast"
+import { useState, useRef, useEffect } from "react";
+import {
+  Search,
+  FileText,
+  ChevronDown,
+  Plus,
+  ChevronUp,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Loader2,
+} from "lucide-react";
+import { Sidebar } from "@/components/sidebar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import DashboardHeader from "@/components/DashboardHeader";
+import { useToast } from "@/hooks/use-toast";
+import { useGetProjectsQuery } from "@/lib/redux/projectSlice";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Types
 interface Trade {
-  id: number
-  role: string
-  icon: string
-  employeesNumber: number
-  workDays: number
-  plannedSalary: number
-  actualCost?: number
+  id: number;
+  role: string;
+  icon: string;
+  employeesNumber: number;
+  workDays: number;
+  plannedSalary: number;
+  actualCost?: number;
 }
 
 interface Project {
-  id: number
-  name: string
-  budget: number
-  trades: Trade[]
-  isExpanded?: boolean
+  id: number;
+  name: string;
+  budget: number;
+  trades: Trade[];
+  isExpanded?: boolean;
 }
 
 export default function BudgetPlanning() {
-  const { toast } = useToast()
+  const [projectsFetched, setProjectsFetched] = useState<any[]>([]);
+  const [projectTrades, setProjectTrades] = useState<{ [key: string]: any }>(
+    {}
+  );
+
+  const { data: fetchedData } = useGetProjectsQuery();
+
+  useEffect(() => {
+    if (!fetchedData) return;
+
+    setProjectsFetched(fetchedData);
+
+    const fetchTrades = async () => {
+      const tradesMap: { [key: string]: any } = {};
+      for (const project of fetchedData) {
+        console.log(project.location_name);
+
+        try {
+          const response = await fetch(
+            `http://localhost:4000/trade-position/trades-location-name/${project.location_name}`
+          );
+          const trades = await response.json();
+          tradesMap[project.location_name] = trades;
+          console.log(trades);
+        } catch (error) {
+          console.error(
+            "Error fetching trades for",
+            project.location_name,
+            error
+          );
+        }
+      }
+      setProjectTrades(tradesMap);
+    };
+
+    fetchTrades();
+  }, [fetchedData]);
+
+  const { toast } = useToast();
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
-  })
+  });
 
-  const [activeTab, setActiveTab] = useState("plan")
-  const [projects, setProjects] = useState<Project[]>([])
-  const [showAddTrade, setShowAddTrade] = useState(false)
-  const [showEditTrade, setShowEditTrade] = useState(false)
-  const [selectedProject, setSelectedProject] = useState<string>("")
-  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [timeFilter, setTimeFilter] = useState("This Month")
-  const [isLoading, setIsLoading] = useState(true)
-  const [isExporting, setIsExporting] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState("plan");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [showAddTrade, setShowAddTrade] = useState(false);
+  const [showEditTrade, setShowEditTrade] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<string>("");
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [timeFilter, setTimeFilter] = useState("This Month");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const chartRef = useRef<HTMLDivElement>(null)
+  const chartRef = useRef<HTMLDivElement>(null);
 
   // New trade form state
   const [newTrade, setNewTrade] = useState({
@@ -61,7 +127,7 @@ export default function BudgetPlanning() {
     workDays: "22",
     plannedSalary: "",
     projectId: "",
-  })
+  });
 
   // Edit trade form state
   const [editTrade, setEditTrade] = useState({
@@ -70,15 +136,15 @@ export default function BudgetPlanning() {
     employeesNumber: "",
     workDays: "",
     plannedSalary: "",
-  })
+  });
 
   // Fetch budget data
   useEffect(() => {
     const fetchBudgetData = async () => {
       try {
-        setIsLoading(true)
+        setIsLoading(true);
         // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // In a real implementation, this would be:
         // const response = await fetch('/api/budget/projects');
@@ -157,37 +223,42 @@ export default function BudgetPlanning() {
               },
             ],
           },
-        ])
+        ]);
 
-        setIsLoading(false)
+        setIsLoading(false);
       } catch (error) {
-        console.error("Error fetching budget data:", error)
+        console.error("Error fetching budget data:", error);
         toast({
           title: "Error",
           description: "Failed to load budget data. Please try again.",
           variant: "destructive",
-        })
-        setIsLoading(false)
+        });
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchBudgetData()
-  }, [toast])
+    fetchBudgetData();
+  }, [toast]);
 
   const handleAddTrade = async () => {
     try {
-      if (!newTrade.role || !newTrade.employeesNumber || !newTrade.plannedSalary || !newTrade.projectId) {
+      if (
+        !newTrade.role ||
+        !newTrade.employeesNumber ||
+        !newTrade.plannedSalary ||
+        !newTrade.projectId
+      ) {
         toast({
           title: "Validation Error",
           description: "All fields are required.",
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
 
-      setIsSaving(true)
+      setIsSaving(true);
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // In a real implementation, this would be:
       // const response = await fetch('/api/budget/trades', {
@@ -197,8 +268,8 @@ export default function BudgetPlanning() {
       // });
       // const data = await response.json();
 
-      const projectId = Number.parseInt(newTrade.projectId)
-      const project = projects.find((p) => p.id === projectId)
+      const projectId = Number.parseInt(newTrade.projectId);
+      const project = projects.find((p) => p.id === projectId);
 
       if (project) {
         const updatedProjects = projects.map((p) => {
@@ -208,7 +279,10 @@ export default function BudgetPlanning() {
               trades: [
                 ...p.trades,
                 {
-                  id: Math.max(...projects.flatMap((p) => p.trades.map((t) => t.id))) + 1,
+                  id:
+                    Math.max(
+                      ...projects.flatMap((p) => p.trades.map((t) => t.id))
+                    ) + 1,
                   role: newTrade.role,
                   icon: getIconForRole(newTrade.role),
                   employeesNumber: Number.parseInt(newTrade.employeesNumber),
@@ -217,53 +291,58 @@ export default function BudgetPlanning() {
                   actualCost: 0,
                 },
               ],
-            }
+            };
           }
-          return p
-        })
+          return p;
+        });
 
-        setProjects(updatedProjects)
-        setShowAddTrade(false)
+        setProjects(updatedProjects);
+        setShowAddTrade(false);
         setNewTrade({
           role: "",
           employeesNumber: "",
           workDays: "22",
           plannedSalary: "",
           projectId: "",
-        })
+        });
 
         toast({
           title: "Trade Added",
           description: `${newTrade.role} has been added to ${project.name}.`,
-        })
+        });
       }
 
-      setIsSaving(false)
+      setIsSaving(false);
     } catch (error) {
-      console.error("Error adding trade:", error)
+      console.error("Error adding trade:", error);
       toast({
         title: "Error",
         description: "Failed to add trade. Please try again.",
         variant: "destructive",
-      })
-      setIsSaving(false)
+      });
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleEditTrade = async () => {
     try {
-      if (!editTrade.role || !editTrade.employeesNumber || !editTrade.workDays || !editTrade.plannedSalary) {
+      if (
+        !editTrade.role ||
+        !editTrade.employeesNumber ||
+        !editTrade.workDays ||
+        !editTrade.plannedSalary
+      ) {
         toast({
           title: "Validation Error",
           description: "All fields are required.",
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
 
-      setIsSaving(true)
+      setIsSaving(true);
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // In a real implementation, this would be:
       // const response = await fetch(`/api/budget/trades/${editTrade.id}`, {
@@ -282,37 +361,41 @@ export default function BudgetPlanning() {
               employeesNumber: Number.parseInt(editTrade.employeesNumber),
               workDays: Number.parseInt(editTrade.workDays),
               plannedSalary: Number.parseInt(editTrade.plannedSalary),
-            }
+            };
           }
-          return trade
-        })
+          return trade;
+        });
 
         return {
           ...project,
           trades: updatedTrades,
-        }
-      })
+        };
+      });
 
-      setProjects(updatedProjects)
-      setShowEditTrade(false)
-      setIsSaving(false)
+      setProjects(updatedProjects);
+      setShowEditTrade(false);
+      setIsSaving(false);
 
       toast({
         title: "Trade Updated",
         description: `${editTrade.role} has been updated successfully.`,
-      })
+      });
     } catch (error) {
-      console.error("Error updating trade:", error)
+      console.error("Error updating trade:", error);
       toast({
         title: "Error",
         description: "Failed to update trade. Please try again.",
         variant: "destructive",
-      })
-      setIsSaving(false)
+      });
+      setIsSaving(false);
     }
-  }
+  };
 
-  const handleTradeAction = (action: string, trade: Trade, projectId: number) => {
+  const handleTradeAction = (
+    action: string,
+    trade: Trade,
+    projectId: number
+  ) => {
     if (action === "edit") {
       setEditTrade({
         id: trade.id,
@@ -320,21 +403,21 @@ export default function BudgetPlanning() {
         employeesNumber: trade.employeesNumber.toString(),
         workDays: trade.workDays.toString(),
         plannedSalary: trade.plannedSalary.toString(),
-      })
-      setSelectedTrade(trade)
-      setShowEditTrade(true)
+      });
+      setSelectedTrade(trade);
+      setShowEditTrade(true);
       toast({
         title: "Edit Trade",
         description: `Editing ${trade.role}.`,
-      })
+      });
     } else if (action === "delete") {
       // In a real implementation, you would show a confirmation dialog
-      const project = projects.find((p) => p.id === projectId)
+      const project = projects.find((p) => p.id === projectId);
       if (project) {
         toast({
           title: "Confirm Deletion",
           description: `Are you sure you want to delete ${trade.role} from ${project.name}?`,
-        })
+        });
 
         // For demo purposes, we'll just delete it
         const updatedProjects = projects.map((project) => {
@@ -342,89 +425,112 @@ export default function BudgetPlanning() {
             return {
               ...project,
               trades: project.trades.filter((t) => t.id !== trade.id),
-            }
+            };
           }
-          return project
-        })
+          return project;
+        });
 
-        setProjects(updatedProjects)
+        setProjects(updatedProjects);
 
         toast({
           title: "Trade Deleted",
           description: `${trade.role} has been deleted successfully.`,
-        })
+        });
       }
     }
-  }
+  };
 
   const toggleProjectExpansion = (projectId: number) => {
-    const project = projects.find((p) => p.id === projectId)
+    const project = projects.find((p) => p.id === projectId);
     setProjects(
-      projects.map((project) => (project.id === projectId ? { ...project, isExpanded: !project.isExpanded } : project)),
-    )
-  }
+      projects.map((project) =>
+        project.id === projectId
+          ? { ...project, isExpanded: !project.isExpanded }
+          : project
+      )
+    );
+  };
 
   const getIconForRole = (role: string) => {
     switch (role) {
       case "Electricians":
-        return "⚡"
+        return "⚡";
       case "Technicians":
-        return "🔧"
+        return "🔧";
       case "HR & Admin":
-        return "👨‍💼"
+        return "👨‍💼";
       case "Supervisors":
-        return "👷"
+        return "👷";
       default:
-        return "👤"
+        return "👤";
     }
-  }
+  };
 
   // Filter projects based on search term
   const filteredProjects = projects.filter((project) => {
-    if (!searchTerm) return true
+    if (!searchTerm) return true;
 
     // Check if project name matches
-    if (project.name.toLowerCase().includes(searchTerm.toLowerCase())) return true
+    if (project.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      return true;
 
     // Check if any trade in the project matches
-    return project.trades.some((trade) => trade.role.toLowerCase().includes(searchTerm.toLowerCase()))
-  })
+    return project.trades.some((trade) =>
+      trade.role.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   // Calculate totals for the cost trend view
   const totalPlannedCost = projects.reduce(
-    (sum, project) => sum + project.trades.reduce((s, trade) => s + trade.plannedSalary, 0),
-    0,
-  )
+    (sum, project) =>
+      sum + project.trades.reduce((s, trade) => s + trade.plannedSalary, 0),
+    0
+  );
 
   const totalActualCost = projects.reduce(
-    (sum, project) => sum + project.trades.reduce((s, trade) => s + (trade.actualCost || 0), 0),
-    0,
-  )
+    (sum, project) =>
+      sum + project.trades.reduce((s, trade) => s + (trade.actualCost || 0), 0),
+    0
+  );
 
   // Get all unique trade roles across all projects
-  const allTrades = Array.from(new Set(projects.flatMap((p) => p.trades.map((t) => t.role))))
+  const allTrades = Array.from(
+    new Set(projects.flatMap((p) => p.trades.map((t) => t.role)))
+  );
 
   // Calculate planned and actual costs for each trade role
   const tradeData = allTrades.map((role) => {
     const plannedCost = projects.reduce(
-      (sum, project) => sum + project.trades.filter((t) => t.role === role).reduce((s, t) => s + t.plannedSalary, 0),
-      0,
-    )
+      (sum, project) =>
+        sum +
+        project.trades
+          .filter((t) => t.role === role)
+          .reduce((s, t) => s + t.plannedSalary, 0),
+      0
+    );
 
     const actualCost = projects.reduce(
       (sum, project) =>
-        sum + project.trades.filter((t) => t.role === role).reduce((s, t) => s + (t.actualCost || 0), 0),
-      0,
-    )
+        sum +
+        project.trades
+          .filter((t) => t.role === role)
+          .reduce((s, t) => s + (t.actualCost || 0), 0),
+      0
+    );
 
-    return { role, plannedCost, actualCost, difference: actualCost - plannedCost }
-  })
+    return {
+      role,
+      plannedCost,
+      actualCost,
+      difference: actualCost - plannedCost,
+    };
+  });
 
   const handleExportReport = async () => {
     try {
-      setIsExporting(true)
+      setIsExporting(true);
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       // In a real implementation, this would be:
       // const response = await fetch('/api/budget/export', {
@@ -441,39 +547,39 @@ export default function BudgetPlanning() {
       // a.click();
       // a.remove();
 
-      setIsExporting(false)
+      setIsExporting(false);
       toast({
         title: "Report Exported",
         description: "Budget report has been exported successfully.",
-      })
+      });
     } catch (error) {
-      console.error("Error exporting report:", error)
+      console.error("Error exporting report:", error);
       toast({
         title: "Error",
         description: "Failed to export report. Please try again.",
         variant: "destructive",
-      })
-      setIsExporting(false)
+      });
+      setIsExporting(false);
     }
-  }
+  };
 
   const handleTimeFilterChange = (value: string) => {
-    setTimeFilter(value)
+    setTimeFilter(value);
     toast({
       title: "Time Filter Changed",
       description: `Viewing data for ${value}.`,
-    })
-  }
+    });
+  };
 
   const handleSearchChange = (value: string) => {
-    setSearchTerm(value)
+    setSearchTerm(value);
     if (value) {
       // toast({
       //   title: "Search Applied",
       //   description: `Searching for "${value}".`,
       // })
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -489,7 +595,7 @@ export default function BudgetPlanning() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -501,7 +607,9 @@ export default function BudgetPlanning() {
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-6">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Budget Planning & Cost Comparison</h1>
+            <h1 className="text-2xl font-bold">
+              Budget Planning & Cost Comparison
+            </h1>
 
             <div className="flex gap-2">
               <Button
@@ -524,7 +632,7 @@ export default function BudgetPlanning() {
               </Button>
               <Button
                 onClick={() => {
-                  setShowAddTrade(true)
+                  setShowAddTrade(true);
                 }}
                 className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full"
               >
@@ -534,7 +642,11 @@ export default function BudgetPlanning() {
             </div>
           </div>
 
-          <Tabs defaultValue="plan" value={activeTab} onValueChange={setActiveTab}>
+          <Tabs
+            defaultValue="plan"
+            value={activeTab}
+            onValueChange={setActiveTab}
+          >
             <div className="border-b mb-6">
               <TabsList className="p-0 h-auto bg-transparent">
                 <TabsTrigger
@@ -544,7 +656,7 @@ export default function BudgetPlanning() {
                     toast({
                       title: "Tab Changed",
                       description: "Viewing Plan Budget tab.",
-                    })
+                    });
                   }}
                 >
                   Plan Budget
@@ -556,7 +668,7 @@ export default function BudgetPlanning() {
                     toast({
                       title: "Tab Changed",
                       description: "Viewing Costs Trend tab.",
-                    })
+                    });
                   }}
                 >
                   Costs Trend
@@ -568,7 +680,10 @@ export default function BudgetPlanning() {
             <TabsContent value="plan" className="p-0 mt-0">
               <div className="flex justify-between items-center mb-4">
                 <div className="relative">
-                  <Select value={timeFilter} onValueChange={handleTimeFilterChange}>
+                  <Select
+                    value={timeFilter}
+                    onValueChange={handleTimeFilterChange}
+                  >
                     <SelectTrigger className="w-[180px] bg-white">
                       <SelectValue placeholder="This Month" />
                     </SelectTrigger>
@@ -594,93 +709,162 @@ export default function BudgetPlanning() {
               </div>
 
               {filteredProjects.length > 0 ? (
-                filteredProjects.map((project) => (
-                  <div key={project.id} className="bg-white rounded-lg border mb-4">
+                projectsFetched.map((project: any) => {
+                  return (
                     <div
-                      className="flex items-center p-4 cursor-pointer"
-                      onClick={() => toggleProjectExpansion(project.id)}
+                      key={project.id}
+                      className="bg-white rounded-lg border mb-4"
                     >
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 bg-gray-800 rounded-full flex items-center justify-center text-white">
-                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                              d="M3 9L12 5L21 9M3 9V17L12 21M3 9L12 13M12 21L21 17V9M12 21V13M21 9L12 13"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
+                      <div
+                        className="flex items-center p-4 cursor-pointer"
+                        onClick={() => toggleProjectExpansion(project.id)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 bg-gray-800 rounded-full flex items-center justify-center text-white">
+                            <svg
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M3 9L12 5L21 9M3 9V17L12 21M3 9L12 13M12 21L21 17V9M12 21V13M21 9L12 13"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </div>
+                          <span className="font-medium">
+                            {project.project_name}
+                          </span>
+                          <span className="text-sm bg-gray-100 px-2 py-0.5 rounded-full">
+                            ${project.budget}
+                          </span>
                         </div>
-                        <span className="font-medium">{project.name}</span>
-                        <span className="text-sm bg-gray-100 px-2 py-0.5 rounded-full">
-                          ${project.budget.toLocaleString()}
-                        </span>
+                        <div className="ml-auto">
+                          {project.isExpanded ? (
+                            <ChevronUp className="h-5 w-5 text-gray-500" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-gray-500" />
+                          )}
+                        </div>
                       </div>
-                      <div className="ml-auto">
-                        {project.isExpanded ? (
-                          <ChevronUp className="h-5 w-5 text-gray-500" />
-                        ) : (
-                          <ChevronDown className="h-5 w-5 text-gray-500" />
-                        )}
-                      </div>
-                    </div>
 
-                    {project.isExpanded && (
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="border-t border-b text-sm text-muted-foreground">
-                              <th className="px-4 py-3 text-left">SN</th>
-                              <th className="px-4 py-3 text-left">Role/Trade</th>
-                              <th className="px-4 py-3 text-left">Employees Number</th>
-                              <th className="px-4 py-3 text-left">Work Days</th>
-                              <th className="px-4 py-3 text-left">Planned Salary ($)</th>
-                              <th className="w-10 px-4 py-3 text-left"></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {project.trades.map((trade, index) => (
-                              <tr key={trade.id} className="border-b hover:bg-gray-50">
-                                <td className="px-4 py-3">{index + 1}</td>
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="h-6 w-6 bg-gray-100 rounded-full flex items-center justify-center text-xs">
-                                      {trade.icon}
-                                    </div>
-                                    <span className="font-medium">{trade.role}</span>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3">{trade.employeesNumber}</td>
-                                <td className="px-4 py-3">{trade.workDays}</td>
-                                <td className="px-4 py-3">${trade.plannedSalary.toLocaleString()}</td>
-                                <td className="px-4 py-3">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem onClick={() => handleTradeAction("edit", trade, project.id)}>
-                                        <Edit className="h-4 w-4 mr-2" />
-                                        Edit
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleTradeAction("delete", trade, project.id)}>
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </td>
+                      {project && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="border-t border-b text-sm text-muted-foreground">
+                                <th className="px-4 py-3 text-left">SN</th>
+                                <th className="px-4 py-3 text-left">
+                                  Role/Trade
+                                </th>
+                                <th className="px-4 py-3 text-left">
+                                  Employees Number
+                                </th>
+                                <th className="px-4 py-3 text-left">
+                                  Work Days
+                                </th>
+                                <th className="px-4 py-3 text-left">
+                                  Planned Salary ($)
+                                </th>
+                                <th className="w-10 px-4 py-3 text-left"></th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                ))
+                            </thead>
+                            <tbody>
+                              {projectTrades[project.location_name].length !==
+                              0 ? (
+                                projectTrades[project.location_name].map(
+                                  (trade: any, index: any) => (
+                                    <tr
+                                      key={trade.id}
+                                      className="border-b hover:bg-gray-50"
+                                    >
+                                      <td className="px-4 py-3">{index + 1}</td>
+                                      <td className="px-4 py-3">
+                                        <div className="flex items-center gap-2">
+                                          <Avatar className="h-8 w-8">
+                                            <AvatarImage
+                                              src={trade.avatar}
+                                              alt={trade.trade_name}
+                                            />
+                                            <AvatarFallback>
+                                              {trade.trade_name.charAt(0)}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                          <span className="font-medium">
+                                            {trade.trade_name}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        {trade.employees.length}
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        {trade.work_days
+                                          ? trade.work_days
+                                          : "unspecified"}
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        ${trade.daily_planned_cost}/day
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                              <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                              onClick={() =>
+                                                handleTradeAction(
+                                                  "edit",
+                                                  trade,
+                                                  project.id
+                                                )
+                                              }
+                                            >
+                                              <Edit className="h-4 w-4 mr-2" />
+                                              Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() =>
+                                                handleTradeAction(
+                                                  "delete",
+                                                  trade,
+                                                  project.id
+                                                )
+                                              }
+                                            >
+                                              <Trash2 className="h-4 w-4 mr-2" />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </td>
+                                    </tr>
+                                  )
+                                )
+                              ) : (
+                                <tr>
+                                  <td
+                                    colSpan={6}
+                                    className="px-4 py-3 text-center"
+                                  >
+                                    No Trade found
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               ) : (
                 <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
                   No projects found matching your search criteria.
@@ -696,16 +880,24 @@ export default function BudgetPlanning() {
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
                         <div className="h-3 w-3 rounded-full bg-orange-500"></div>
-                        <span className="text-sm font-medium">Total Planned Cost</span>
+                        <span className="text-sm font-medium">
+                          Total Planned Cost
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="h-3 w-3 rounded-full bg-blue-700"></div>
-                        <span className="text-sm font-medium">Total Actual Cost</span>
+                        <span className="text-sm font-medium">
+                          Total Actual Cost
+                        </span>
                       </div>
                     </div>
                     <div className="flex gap-8">
-                      <div className="text-3xl font-bold">${totalPlannedCost.toLocaleString()}</div>
-                      <div className="text-3xl font-bold">${totalActualCost.toLocaleString()}</div>
+                      <div className="text-3xl font-bold">
+                        ${totalPlannedCost.toLocaleString()}
+                      </div>
+                      <div className="text-3xl font-bold">
+                        ${totalActualCost.toLocaleString()}
+                      </div>
                     </div>
                   </div>
 
@@ -715,8 +907,11 @@ export default function BudgetPlanning() {
                       onValueChange={(value) => {
                         toast({
                           title: "Project Filter Changed",
-                          description: value === "all" ? "Viewing all projects." : `Viewing ${value} project.`,
-                        })
+                          description:
+                            value === "all"
+                              ? "Viewing all projects."
+                              : `Viewing ${value} project.`,
+                        });
                       }}
                     >
                       <SelectTrigger className="w-[180px] bg-white">
@@ -725,8 +920,11 @@ export default function BudgetPlanning() {
                       <SelectContent>
                         <SelectItem value="all">All Projects</SelectItem>
                         {projects.map((project) => (
-                          <SelectItem key={project.id} value={project.id.toString()}>
-                            {project.name}
+                          <SelectItem
+                            key={project.id}
+                            value={project.id.toString()}
+                          >
+                            {project.project_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -742,7 +940,7 @@ export default function BudgetPlanning() {
                             toast({
                               title: "Date Range Changed",
                               description: "Date range filter applied.",
-                            })
+                            });
                           }}
                         />
                       </div>
@@ -755,7 +953,7 @@ export default function BudgetPlanning() {
                             toast({
                               title: "Date Range Changed",
                               description: "Date range filter applied.",
-                            })
+                            });
                           }}
                         />
                       </div>
@@ -788,16 +986,22 @@ export default function BudgetPlanning() {
                   {/* Chart bars */}
                   <div className="ml-12 h-full flex items-end justify-between">
                     {allTrades.map((role, index) => {
-                      const data = tradeData.find((t) => t.role === role)
-                      if (!data) return null
+                      const data = tradeData.find((t) => t.role === role);
+                      if (!data) return null;
 
-                      const maxHeight = 240 // Maximum height in pixels
-                      const maxValue = Math.max(...tradeData.map((t) => Math.max(t.plannedCost, t.actualCost)))
-                      const plannedHeight = (data.plannedCost / maxValue) * maxHeight
-                      const actualHeight = (data.actualCost / maxValue) * maxHeight
+                      const maxHeight = 240; // Maximum height in pixels
+                      const maxValue = Math.max(
+                        ...tradeData.map((t) =>
+                          Math.max(t.plannedCost, t.actualCost)
+                        )
+                      );
+                      const plannedHeight =
+                        (data.plannedCost / maxValue) * maxHeight;
+                      const actualHeight =
+                        (data.actualCost / maxValue) * maxHeight;
 
                       // Calculate if this bar should show the tooltip
-                      const showTooltip = role === "HR & Admin"
+                      const showTooltip = role === "HR & Admin";
 
                       return (
                         <div
@@ -812,10 +1016,12 @@ export default function BudgetPlanning() {
                               style={{ height: `${plannedHeight}px` }}
                               onMouseEnter={(e) => {
                                 // Show tooltip on hover
-                                const tooltip = e.currentTarget.nextElementSibling?.nextElementSibling
+                                const tooltip =
+                                  e.currentTarget.nextElementSibling
+                                    ?.nextElementSibling;
                                 if (tooltip) {
-                                  tooltip.classList.remove("opacity-0")
-                                  tooltip.classList.add("opacity-100")
+                                  tooltip.classList.remove("opacity-0");
+                                  tooltip.classList.add("opacity-100");
                                 }
                               }}
                             ></div>
@@ -826,10 +1032,11 @@ export default function BudgetPlanning() {
                               style={{ height: `${actualHeight}px` }}
                               onMouseEnter={(e) => {
                                 // Show tooltip on hover
-                                const tooltip = e.currentTarget.nextElementSibling
+                                const tooltip =
+                                  e.currentTarget.nextElementSibling;
                                 if (tooltip) {
-                                  tooltip.classList.remove("opacity-0")
-                                  tooltip.classList.add("opacity-100")
+                                  tooltip.classList.remove("opacity-0");
+                                  tooltip.classList.add("opacity-100");
                                 }
                               }}
                             ></div>
@@ -837,7 +1044,11 @@ export default function BudgetPlanning() {
                             {/* Interactive tooltip - shown on hover or permanently for HR & Admin */}
                             <div
                               className={`absolute top-0 right-0 bg-white border rounded-md p-2 shadow-md transition-opacity duration-200 
-                                ${showTooltip ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                                ${
+                                  showTooltip
+                                    ? "opacity-100"
+                                    : "opacity-0 group-hover:opacity-100"
+                                }`}
                               style={{
                                 transform: "translateY(-100%)",
                                 right: showTooltip ? "0" : "50%",
@@ -846,23 +1057,32 @@ export default function BudgetPlanning() {
                               onMouseLeave={(e) => {
                                 // Hide tooltip on mouse leave unless it's the permanent one
                                 if (!showTooltip) {
-                                  e.currentTarget.classList.remove("opacity-100")
-                                  e.currentTarget.classList.add("opacity-0")
+                                  e.currentTarget.classList.remove(
+                                    "opacity-100"
+                                  );
+                                  e.currentTarget.classList.add("opacity-0");
                                 }
                               }}
                             >
                               <div className="text-sm font-medium">{role}</div>
                               <div className="text-sm">
-                                Actual Cost <span className="font-bold">${data.actualCost.toLocaleString()}</span>
+                                Actual Cost{" "}
+                                <span className="font-bold">
+                                  ${data.actualCost.toLocaleString()}
+                                </span>
                               </div>
                               <div className="text-xs text-green-600">
-                                +${data.difference > 0 ? data.difference.toLocaleString() : 0} over budget
+                                +$
+                                {data.difference > 0
+                                  ? data.difference.toLocaleString()
+                                  : 0}{" "}
+                                over budget
                               </div>
                             </div>
                           </div>
                           <div className="text-xs text-gray-500">{role}</div>
                         </div>
-                      )
+                      );
                     })}
                   </div>
                 </div>
@@ -877,7 +1097,8 @@ export default function BudgetPlanning() {
                         <th className="px-4 py-3 text-left">
                           <div className="flex items-center gap-2">
                             <div className="h-3 w-3 rounded-full bg-orange-500"></div>
-                            Planned Budget (${totalPlannedCost.toLocaleString()})
+                            Planned Budget (${totalPlannedCost.toLocaleString()}
+                            )
                           </div>
                         </th>
                         <th className="px-4 py-3 text-left">
@@ -892,7 +1113,10 @@ export default function BudgetPlanning() {
                     </thead>
                     <tbody>
                       {tradeData.map((data) => (
-                        <tr key={data.role} className="border-b hover:bg-gray-50">
+                        <tr
+                          key={data.role}
+                          className="border-b hover:bg-gray-50"
+                        >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               <div className="h-6 w-6 bg-gray-100 rounded-full flex items-center justify-center text-xs">
@@ -901,11 +1125,17 @@ export default function BudgetPlanning() {
                               <span className="font-medium">{data.role}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3">${data.plannedCost.toLocaleString()}</td>
-                          <td className="px-4 py-3">${data.actualCost.toLocaleString()}</td>
+                          <td className="px-4 py-3">
+                            ${data.plannedCost.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3">
+                            ${data.actualCost.toLocaleString()}
+                          </td>
                           <td className="px-4 py-3">
                             {data.difference > 0 ? (
-                              <Badge className="bg-green-50 text-green-700">+${data.difference.toLocaleString()}</Badge>
+                              <Badge className="bg-green-50 text-green-700">
+                                +${data.difference.toLocaleString()}
+                              </Badge>
                             ) : (
                               <Badge className="bg-red-50 text-red-700">
                                 -${Math.abs(data.difference).toLocaleString()}
@@ -916,8 +1146,7 @@ export default function BudgetPlanning() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => {
-                              }}
+                              onClick={() => {}}
                             >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -945,13 +1174,21 @@ export default function BudgetPlanning() {
                 <h3 className="text-base font-medium mb-4">Trade details</h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Position/Trade</label>
-                    <Select onValueChange={(value) => setNewTrade({ ...newTrade, role: value })}>
+                    <label className="text-sm font-medium">
+                      Position/Trade
+                    </label>
+                    <Select
+                      onValueChange={(value) =>
+                        setNewTrade({ ...newTrade, role: value })
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Electricians">Electricians</SelectItem>
+                        <SelectItem value="Electricians">
+                          Electricians
+                        </SelectItem>
                         <SelectItem value="Technicians">Technicians</SelectItem>
                         <SelectItem value="HR & Admin">HR & Admin</SelectItem>
                         <SelectItem value="Supervisors">Supervisors</SelectItem>
@@ -960,14 +1197,23 @@ export default function BudgetPlanning() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Select Project</label>
-                    <Select onValueChange={(value) => setNewTrade({ ...newTrade, projectId: value })}>
+                    <label className="text-sm font-medium">
+                      Select Project
+                    </label>
+                    <Select
+                      onValueChange={(value) =>
+                        setNewTrade({ ...newTrade, projectId: value })
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
                         {projects.map((project) => (
-                          <SelectItem key={project.id} value={project.id.toString()}>
+                          <SelectItem
+                            key={project.id}
+                            value={project.id.toString()}
+                          >
                             {project.name}
                           </SelectItem>
                         ))}
@@ -980,30 +1226,48 @@ export default function BudgetPlanning() {
                     <Input
                       type="number"
                       value={newTrade.workDays}
-                      onChange={(e) => setNewTrade({ ...newTrade, workDays: e.target.value })}
+                      onChange={(e) =>
+                        setNewTrade({ ...newTrade, workDays: e.target.value })
+                      }
                       placeholder="22"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Employees Number</label>
+                    <label className="text-sm font-medium">
+                      Employees Number
+                    </label>
                     <Input
                       type="number"
                       value={newTrade.employeesNumber}
-                      onChange={(e) => setNewTrade({ ...newTrade, employeesNumber: e.target.value })}
+                      onChange={(e) =>
+                        setNewTrade({
+                          ...newTrade,
+                          employeesNumber: e.target.value,
+                        })
+                      }
                       placeholder="Enter number"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Planned Salary</label>
+                    <label className="text-sm font-medium">
+                      Planned Salary
+                    </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2">
+                        $
+                      </span>
                       <Input
                         type="number"
                         className="pl-7"
                         value={newTrade.plannedSalary}
-                        onChange={(e) => setNewTrade({ ...newTrade, plannedSalary: e.target.value })}
+                        onChange={(e) =>
+                          setNewTrade({
+                            ...newTrade,
+                            plannedSalary: e.target.value,
+                          })
+                        }
                         placeholder="5,000"
                       />
                     </div>
@@ -1012,7 +1276,11 @@ export default function BudgetPlanning() {
               </div>
             </div>
           </div>
-          <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={handleAddTrade} disabled={isSaving}>
+          <Button
+            className="w-full bg-orange-500 hover:bg-orange-600"
+            onClick={handleAddTrade}
+            disabled={isSaving}
+          >
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1034,19 +1302,27 @@ export default function BudgetPlanning() {
           <div className="py-6">
             <div className="space-y-6">
               <div>
-                <h3 className="text-base font-medium mb-4">Position/Trade details</h3>
+                <h3 className="text-base font-medium mb-4">
+                  Position/Trade details
+                </h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Position/Trade</label>
+                    <label className="text-sm font-medium">
+                      Position/Trade
+                    </label>
                     <Select
                       value={editTrade.role}
-                      onValueChange={(value) => setEditTrade({ ...editTrade, role: value })}
+                      onValueChange={(value) =>
+                        setEditTrade({ ...editTrade, role: value })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Electricians">Electricians</SelectItem>
+                        <SelectItem value="Electricians">
+                          Electricians
+                        </SelectItem>
                         <SelectItem value="Technicians">Technicians</SelectItem>
                         <SelectItem value="HR & Admin">HR & Admin</SelectItem>
                         <SelectItem value="Supervisors">Supervisors</SelectItem>
@@ -1055,11 +1331,18 @@ export default function BudgetPlanning() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Employee Numbers</label>
+                    <label className="text-sm font-medium">
+                      Employee Numbers
+                    </label>
                     <Input
                       type="number"
                       value={editTrade.employeesNumber}
-                      onChange={(e) => setEditTrade({ ...editTrade, employeesNumber: e.target.value })}
+                      onChange={(e) =>
+                        setEditTrade({
+                          ...editTrade,
+                          employeesNumber: e.target.value,
+                        })
+                      }
                     />
                   </div>
 
@@ -1068,19 +1351,30 @@ export default function BudgetPlanning() {
                     <Input
                       type="number"
                       value={editTrade.workDays}
-                      onChange={(e) => setEditTrade({ ...editTrade, workDays: e.target.value })}
+                      onChange={(e) =>
+                        setEditTrade({ ...editTrade, workDays: e.target.value })
+                      }
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Planned Salary</label>
+                    <label className="text-sm font-medium">
+                      Planned Salary
+                    </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2">
+                        $
+                      </span>
                       <Input
                         type="number"
                         className="pl-7"
                         value={editTrade.plannedSalary}
-                        onChange={(e) => setEditTrade({ ...editTrade, plannedSalary: e.target.value })}
+                        onChange={(e) =>
+                          setEditTrade({
+                            ...editTrade,
+                            plannedSalary: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -1088,7 +1382,11 @@ export default function BudgetPlanning() {
               </div>
             </div>
           </div>
-          <Button className="w-full bg-orange-500 hover:bg-orange-600" onClick={handleEditTrade} disabled={isSaving}>
+          <Button
+            className="w-full bg-orange-500 hover:bg-orange-600"
+            onClick={handleEditTrade}
+            disabled={isSaving}
+          >
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1101,6 +1399,5 @@ export default function BudgetPlanning() {
         </SheetContent>
       </Sheet>
     </div>
-  )
+  );
 }
-

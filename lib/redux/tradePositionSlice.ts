@@ -18,6 +18,9 @@ export const tradePositionApi = createApi({
     getTrade: builder.query({
       query: (id) => `get/${id}`,
     }),
+    // getTradeByLocationName: builder.query<any, string>({
+    //   query: (locationName) => `trades-location-name/${locationName}`,
+    // }),
     getTrades: builder.query<any, void>({
       // query: () => ({ url: "trades", method: "GET" }),
       query: () => "trades",
@@ -44,6 +47,7 @@ export const tradePositionApi = createApi({
 export const {
   useAddTradeMutation,
   useGetTradeQuery,
+  // useGetTradeByLocationNameQuery,
   useGetTradesQuery,
   useDeleteTradeMutation,
   useEditTradeMutation,

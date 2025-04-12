@@ -39,8 +39,11 @@ import {
 import { SelectValue } from "@radix-ui/react-select";
 import { useSessionQuery } from "@/lib/redux/authSlice";
 import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
+import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
 
 export default function Dashboard() {
+  // const { data: tradesFetched } = useGetTradesQuery()
+  // console.log(tradesFetched)
   const {
     data: employees = [],
     isLoading: isLoading2,
