@@ -47,6 +47,9 @@ export const attendanceApi = createApi({
         method: "DELETE",
       }),
     }),
+    getDailyAttendanceMonthly: builder.query<any, void>({
+      query: () => "daily-percentage-monthly",
+    }),
   }),
 });
 
@@ -58,4 +61,5 @@ export const {
   useGetAttendanceQuery,
   useGetAttendanceByDateQuery,
   useDeleteManyAttendancesMutation,
+  useGetDailyAttendanceMonthlyQuery,
 } = attendanceApi;

@@ -55,6 +55,9 @@ export const employeeApi = createApi({
     getPlannedVsActual: builder.query({
       query: (id) => `plannedVsActual-user/${id}`,
     }),
+    getMonthlyStats: builder.query<any, void>({
+      query: () => "monthly-stats",
+    }),
   }),
 });
 
@@ -64,6 +67,7 @@ export const {
   useDeleteEmployeeMutation,
   useDeleteManyEmployeesMutation,
   useGetEmployeesQuery,
+  useGetMonthlyStatsQuery,
   useGetEmployeeNumberQuery,
   useGetEmployeeQuery,
   useGetTotalPayrollQuery,

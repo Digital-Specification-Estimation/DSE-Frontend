@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+const today = new Date();
 import {
   Search,
   Users,
@@ -38,9 +39,13 @@ import {
 } from "@/components/ui/select";
 import { SelectValue } from "@radix-ui/react-select";
 import { useSessionQuery } from "@/lib/redux/authSlice";
-import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
+import {
+  useGetEmployeesQuery,
+  useGetMonthlyStatsQuery,
+} from "@/lib/redux/employeeSlice";
 import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useGetDailyAttendanceMonthlyQuery } from "@/lib/redux/attendanceSlice";
 
 export default function Dashboard() {
   // const { data: tradesFetched } = useGetTradesQuery()
@@ -71,89 +76,10 @@ export default function Dashboard() {
     payrollChange: "2.5%",
   });
 
-  // Payroll data for the bar chart
-  const [payrollData, setPayrollData] = useState([
-    { month: "Jan", cost: 5000, planned: 5000 },
-    { month: "Feb", cost: 6000, planned: 6000 },
-    { month: "Mar", cost: 7000, planned: 7000 },
-    { month: "Apr", cost: 8000, planned: 8000 },
-    { month: "May", cost: 14000, planned: 14056, highlight: true },
-    { month: "Jun", cost: 9000, planned: 9000 },
-    { month: "Jul", cost: 10000, planned: 10000 },
-    { month: "Aug", cost: 11000, planned: 11000 },
-    { month: "Sep", cost: 12000, planned: 12000 },
-    { month: "Oct", cost: 13000, planned: 13000 },
-    { month: "Nov", cost: 14000, planned: 14000 },
-    { month: "Dec", cost: 15000, planned: 15000 },
-  ]);
+  const { data: payrollData } = useGetMonthlyStatsQuery();
+  // console.log(payrollData);
 
-  const [attendanceData, setAttendanceData] = useState([
-    { day: 1, attendance: 10 },
-    { day: 2, attendance: 35 },
-    { day: 3, attendance: 40 },
-    { day: 4, attendance: 25 },
-    { day: 5, attendance: 35 },
-    { day: 6, attendance: 30 },
-    { day: 7, attendance: 60 },
-    { day: 8, attendance: 45 },
-    { day: 9, attendance: 55 },
-    { day: 10, attendance: 95, highlight: true },
-    { day: 11, attendance: 45 },
-    { day: 12, attendance: 50 },
-    { day: 13, attendance: 45 },
-    { day: 14, attendance: 50 },
-    { day: 15, attendance: 48 },
-    { day: 16, attendance: 48 },
-    { day: 17, attendance: 48 },
-    { day: 18, attendance: 65 },
-    { day: 19, attendance: 60 },
-    { day: 20, attendance: 65 },
-    { day: 21, attendance: 65 },
-    { day: 22, attendance: 65 },
-    { day: 23, attendance: 45 },
-    { day: 24, attendance: 65 },
-    { day: 25, attendance: 65 },
-    { day: 26, attendance: 40 },
-    { day: 27, attendance: 70 },
-    { day: 28, attendance: 75 },
-    { day: 29, attendance: 35 },
-    { day: 30, attendance: 35 },
-  ]);
-
-  const [employeeData, setEmployeeData] = useState([
-    {
-      id: 1,
-      position: "Construction Workers",
-      plannedBudget: "$5,000",
-      actualCost: "$5,500",
-      difference: "$500",
-      icon: "👷",
-    },
-    {
-      id: 2,
-      position: "Electricians",
-      plannedBudget: "$4,200",
-      actualCost: "$4,100",
-      difference: "-$100",
-      icon: "⚡",
-    },
-    {
-      id: 3,
-      position: "IT Staff",
-      plannedBudget: "$6,000",
-      actualCost: "$6,500",
-      difference: "$500",
-      icon: "💻",
-    },
-    {
-      id: 4,
-      position: "Admin Staff",
-      plannedBudget: "$3,800",
-      actualCost: "$3,700",
-      difference: "-$100",
-      icon: "👨‍💼",
-    },
-  ]);
+  const { data: attendanceData } = useGetDailyAttendanceMonthlyQuery();
 
   type Trade = {
     id: number;
@@ -281,9 +207,15 @@ export default function Dashboard() {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border rounded-md shadow-md">
-          <p className="text-sm font-medium mb-1">May, 2025</p>
+          <p className="text-sm font-medium mb-1">
+            {label},{today.getFullYear()}
+          </p>
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm">Planned Cost</span>
+            <span className="text-sm font-medium">
+              ${payload[0].value.toLocaleString()}
+            </span>
+            <span className="text-sm">Actual Cost</span>
             <span className="text-sm font-medium">
               ${payload[0].value.toLocaleString()}
             </span>
@@ -293,6 +225,8 @@ export default function Dashboard() {
     }
     return null;
   };
+  const shortMonth = today.toLocaleString("default", { month: "short" });
+  console.log(shortMonth); // e.g., "Apr"
 
   // Custom tooltip for attendance chart
   const AttendanceTooltip = ({
@@ -307,10 +241,15 @@ export default function Dashboard() {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border rounded-md shadow-md">
-          <p className="text-sm font-medium mb-1">May10, 2025</p>
+          <p className="text-sm font-medium mb-1">
+            {shortMonth},{label},{today.getFullYear()}
+          </p>
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm">Attendance</span>
-            <span className="text-sm font-medium">95%</span>
+            <span className="text-sm font-medium">
+              {" "}
+              {payload[0].value.toLocaleString()}%
+            </span>
           </div>
         </div>
       );
@@ -403,7 +342,7 @@ export default function Dashboard() {
       }
     });
   });
-  console.log(employeesByTrade);
+  // console.log(employeesByTrade);
   let tradeStatistics: {
     [key: string]: {
       planned_budget: number;
@@ -417,7 +356,7 @@ export default function Dashboard() {
     let totalActual = 0;
 
     employeeArray.forEach((employee: any) => {
-      console.log(employee);
+      // console.log(employee);
       totalPlanned += Number(employee.totalPlannedBytrade);
       totalActual += Number(employee.totalActualPayroll);
     });
@@ -430,7 +369,7 @@ export default function Dashboard() {
       difference: difference,
     };
   });
-  console.log(tradeStatistics);
+  // console.log(tradeStatistics);
   latenessDifference = numberOfLateArrivals - numberOfLateYesterday;
   presentPresentChange =
     ((numberOfPresent - numberOfPresentYesterday) / numberOfPresent) * 100;
@@ -594,40 +533,15 @@ export default function Dashboard() {
                           tickLine={false}
                           tick={{ fontSize: 12, fill: "#888888" }}
                           tickFormatter={(value) => `$${value / 1000}K`}
-                          ticks={[0, 5000, 10000, 15000]}
-                        />
-                        <ReferenceLine
-                          y={8000}
-                          stroke="#FFA500"
-                          strokeDasharray="3 3"
-                          strokeWidth={1}
-                          isFront={true}
-                          label={false}
+                          ticks={[0, 250, 500, 750, 1000]}
                         />
                         <Tooltip
-                          content={
-                            <PayrollTooltip
-                              active={undefined}
-                              payload={undefined}
-                              label={undefined}
-                            />
-                          }
+                          content={(props) => <PayrollTooltip {...props} />}
                           cursor={false}
                         />
+
                         <Bar
-                          dataKey={(entry) =>
-                            entry.highlight ? 0 : entry.planned
-                          }
-                          fill="#EEEEEE"
-                          barSize={20}
-                          radius={[0, 0, 0, 0]}
-                          name="Other Months"
-                          isAnimationActive={false}
-                        />
-                        <Bar
-                          dataKey={(entry) =>
-                            entry.highlight ? entry.planned : 0
-                          }
+                          dataKey="planned"
                           fill="#FFA500"
                           barSize={20}
                           radius={[0, 0, 0, 0]}
@@ -635,9 +549,7 @@ export default function Dashboard() {
                           isAnimationActive={false}
                         />
                         <Bar
-                          dataKey={(entry) =>
-                            entry.highlight ? entry.cost : 0
-                          }
+                          dataKey="cost"
                           fill="#1D4ED8"
                           barSize={20}
                           radius={[0, 0, 0, 0]}
@@ -647,6 +559,54 @@ export default function Dashboard() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={payrollData}
+                      margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                      barGap={0}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="#EEEEEE"
+                        strokeWidth={1}
+                      />
+                      <XAxis
+                        dataKey="month"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: "#888888" }}
+                        dy={10}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: "#888888" }}
+                        tickFormatter={(value) => `$${value / 1000}K`}
+                        ticks={[0, 250, 500, 750, 1000]}
+                      />
+                      <Tooltip
+                        content={(props) => <PayrollTooltip {...props} />}
+                        cursor={false}
+                      />
+                      <Bar
+                        dataKey="planned"
+                        fill="#FFA500"
+                        barSize={20}
+                        radius={[0, 0, 0, 0]}
+                        name="Planned Cost"
+                        isAnimationActive={false}
+                      />
+                      <Bar
+                        dataKey="cost"
+                        fill="#1D4ED8"
+                        barSize={20}
+                        radius={[0, 0, 0, 0]}
+                        name="Actual Cost"
+                        isAnimationActive={false}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 
@@ -699,13 +659,7 @@ export default function Dashboard() {
                           domain={[0, 100]}
                         />
                         <Tooltip
-                          content={
-                            <AttendanceTooltip
-                              active={undefined}
-                              payload={undefined}
-                              label={undefined}
-                            />
-                          }
+                          content={(props) => <AttendanceTooltip {...props} />}
                           cursor={false}
                         />
                         <Line
