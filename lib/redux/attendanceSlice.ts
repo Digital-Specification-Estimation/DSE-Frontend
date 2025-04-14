@@ -3,9 +3,9 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const attendanceApi = createApi({
   reducerPath: "attendanceApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "https://dse-backend-production.up.railway.app/location",
+    // baseUrl: "https://dse-backend-production.up.railway.app/location",
 
-    // baseUrl: "http://localhost:4000/attendance",
+    baseUrl: "http://localhost:4000/attendance",
   }),
   endpoints: (builder) => ({
     addAttendance: builder.mutation({

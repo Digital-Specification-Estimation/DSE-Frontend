@@ -40,6 +40,7 @@ import { SelectValue } from "@radix-ui/react-select";
 import { useSessionQuery } from "@/lib/redux/authSlice";
 import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
 import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Dashboard() {
   // const { data: tradesFetched } = useGetTradesQuery()
@@ -364,12 +365,24 @@ export default function Dashboard() {
     const year = today.getFullYear();
     return `${month}/${day}/${year}`;
   };
+  const employeesByTrade: { [key: string]: any[] } = {};
+
   employees.map((employee: any) => {
+    // Grouping by trade
+    const trade = employee.trade_position.trade_name;
+    if (!employeesByTrade[trade]) {
+      employeesByTrade[trade] = [];
+    }
+    employeesByTrade[trade].push(employee);
+
+    // Other logic
     if (formatDate(employee.created_date) === getCurrentDate()) {
       newHires += 1;
     }
+
     totalActualPayroll += Number(employee.totalActualPayroll);
     totalDailyActuallPayroll += Number(employee.daily_rate);
+
     employee.attendance.map((attendance: any) => {
       if (formatDate(attendance.date) === getCurrentDate()) {
         if (attendance.status === "present") {
@@ -379,6 +392,7 @@ export default function Dashboard() {
           numberOfLateArrivals += 1;
         }
       }
+
       if (formatDate(attendance.date) === getYesterdayDate()) {
         if (attendance.status === "present") {
           numberOfPresentYesterday += 1;
@@ -389,6 +403,34 @@ export default function Dashboard() {
       }
     });
   });
+  console.log(employeesByTrade);
+  let tradeStatistics: {
+    [key: string]: {
+      planned_budget: number;
+      actual_cost: number;
+      difference: number;
+    };
+  } = {};
+
+  Object.entries(employeesByTrade).forEach(([trade, employeeArray]) => {
+    let totalPlanned = 0;
+    let totalActual = 0;
+
+    employeeArray.forEach((employee: any) => {
+      console.log(employee);
+      totalPlanned += Number(employee.totalPlannedBytrade);
+      totalActual += Number(employee.totalActualPayroll);
+    });
+
+    const difference = totalPlanned - totalActual;
+
+    tradeStatistics[trade] = {
+      planned_budget: totalPlanned,
+      actual_cost: totalActual,
+      difference: difference,
+    };
+  });
+  console.log(tradeStatistics);
   latenessDifference = numberOfLateArrivals - numberOfLateYesterday;
   presentPresentChange =
     ((numberOfPresent - numberOfPresentYesterday) / numberOfPresent) * 100;
@@ -407,7 +449,6 @@ export default function Dashboard() {
   if (Number.isNaN(presentPresentChange)) {
     presentPresentChange = 0;
   }
-  console.log(presentPresentChange);
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
@@ -754,90 +795,109 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {employeeData.map((employee) => (
-                      <tr key={employee.id} className="border-b">
-                        <td className="p-4">
-                          <Checkbox
-                            onChange={() => {
-                              toast({
-                                title: "Item Selected",
-                                description: `${employee.position} has been selected`,
-                              });
-                            }}
-                          />
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
-                              <span className="text-sm">{employee.icon}</span>
+                    {Object.entries(employeesByTrade).map(
+                      (
+                        [trade, employeeArray]: [
+                          trade: any,
+                          employeeArray: any
+                        ],
+                        index
+                      ) => (
+                        <tr key={index} className="border-b">
+                          <td className="p-4">
+                            <Checkbox
+                              onChange={() => {
+                                toast({
+                                  title: "Item Selected",
+                                  description: `${trade} has been selected`,
+                                });
+                              }}
+                            />
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={trade.avatar} alt={trade} />
+                                <AvatarFallback>
+                                  {trade.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{trade}</span>
                             </div>
-                            <span className="font-medium">
-                              {employee.position}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-4">{employee.plannedBudget}</td>
-                        <td className="p-4">{employee.actualCost}</td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-1">
-                            <div
-                              className={`h-5 w-5 rounded-full flex items-center justify-center ${
-                                Number.parseFloat(
-                                  employee.difference.replace(/[^0-9.-]+/g, "")
-                                ) > 0
-                                  ? "bg-green-100"
-                                  : "bg-red-100"
-                              }`}
-                            >
-                              <span
-                                className={`text-xs ${
+                          </td>
+                          <td className="p-4">
+                            ${tradeStatistics[trade].planned_budget}
+                          </td>
+                          <td className="p-4">
+                            {" "}
+                            ${tradeStatistics[trade].actual_cost}
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-1">
+                              <div
+                                className={`h-5 w-5 rounded-full flex items-center justify-center ${
                                   Number.parseFloat(
-                                    employee.difference.replace(
-                                      /[^0-9.-]+/g,
-                                      ""
-                                    )
+                                    tradeStatistics[trade].difference
+                                      .toString()
+                                      .replace(/[^0-9.-]+/g, "")
+                                  ) > 0
+                                    ? "bg-green-100"
+                                    : "bg-red-100"
+                                }`}
+                              >
+                                <span
+                                  className={`text-xs ${
+                                    Number.parseFloat(
+                                      tradeStatistics[trade].difference
+                                        .toString()
+                                        .replace(/[^0-9.-]+/g, "")
+                                    ) > 0
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                                  }`}
+                                >
+                                  {Number.parseFloat(
+                                    tradeStatistics[trade].difference
+                                      .toString()
+                                      .replace(/[^0-9.-]+/g, "")
+                                  ) > 0
+                                    ? "+"
+                                    : ""}
+                                </span>
+                              </div>
+                              <span
+                                className={`${
+                                  Number.parseFloat(
+                                    tradeStatistics[trade].difference
+                                      .toString()
+                                      .replace(/[^0-9.-]+/g, "")
                                   ) > 0
                                     ? "text-green-600"
                                     : "text-red-600"
                                 }`}
                               >
-                                {Number.parseFloat(
-                                  employee.difference.replace(/[^0-9.-]+/g, "")
-                                ) > 0
-                                  ? "+"
-                                  : ""}
+                                {tradeStatistics[trade].difference.toString()}
                               </span>
                             </div>
-                            <span
-                              className={`${
-                                Number.parseFloat(
-                                  employee.difference.replace(/[^0-9.-]+/g, "")
-                                ) > 0
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }`}
+                          </td>
+                          <td className="p-4">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                toast({
+                                  title: "View Details",
+                                  description: `Viewing details for ${trade}`,
+                                });
+                              }}
                             >
-                              {employee.difference}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => {
-                              toast({
-                                title: "View Details",
-                                description: `Viewing details for ${employee.position}`,
-                              });
-                            }}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      )
+                    )}
                   </tbody>
                 </table>
               </div>

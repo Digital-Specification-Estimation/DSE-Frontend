@@ -3,9 +3,9 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const tradePositionApi = createApi({
   reducerPath: "tradePositionApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "https://dse-backend-production.up.railway.app/trade-position",
+    // baseUrl: "https://dse-backend-production.up.railway.app/trade-position",
 
-    // baseUrl: "http://localhost:4000/trade-position",
+    baseUrl: "http://localhost:4000/trade-position",
   }),
   endpoints: (builder) => ({
     addTrade: builder.mutation({

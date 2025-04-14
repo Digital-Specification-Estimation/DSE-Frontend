@@ -562,7 +562,7 @@ export default function BudgetPlanning() {
       setIsExporting(false);
     }
   };
-
+  console.log(filteredProjects);
   const handleTimeFilterChange = (value: string) => {
     setTimeFilter(value);
     toast({
