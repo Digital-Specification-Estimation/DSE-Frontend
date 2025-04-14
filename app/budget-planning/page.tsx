@@ -38,8 +38,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useToast } from "@/hooks/use-toast";
-import { useGetProjectsQuery } from "@/lib/redux/projectSlice";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useGetProjectsQuery } from "@/lib/redux/projectSlice";
+import {
+  useDeleteTradeMutation,
+  useEditTradeMutation,
+  useGetTradesQuery,
+} from "@/lib/redux/tradePositionSlice";
 
 // Types
 interface Trade {
@@ -61,43 +66,44 @@ interface Project {
 }
 
 export default function BudgetPlanning() {
+  const { data: tradesFetched } = useGetTradesQuery();
   const [projectsFetched, setProjectsFetched] = useState<any[]>([]);
   const [projectTrades, setProjectTrades] = useState<{ [key: string]: any }>(
     {}
   );
 
   const { data: fetchedData } = useGetProjectsQuery();
+  console.log(fetchedData);
+  // useEffect(() => {
+  //   if (!fetchedData) return;
 
-  useEffect(() => {
-    if (!fetchedData) return;
+  //   setProjectsFetched(fetchedData);
 
-    setProjectsFetched(fetchedData);
+  //   const fetchTrades = async () => {
+  //     const tradesMap: { [key: string]: any } = {};
+  //     for (const project of fetchedData) {
+  //       console.log(project.location_name);
 
-    const fetchTrades = async () => {
-      const tradesMap: { [key: string]: any } = {};
-      for (const project of fetchedData) {
-        console.log(project.location_name);
+  //       try {
+  //         const response = await fetch(
+  //           `http://localhost:4000/trade-position/trades-location-name/${project.location_name}`
+  //         );
+  //         const trades = await response.json();
+  //         tradesMap[project.location_name] = trades;
+  //         console.log(trades);
+  //       } catch (error) {
+  //         console.error(
+  //           "Error fetching trades for",
+  //           project.location_name,
+  //           error
+  //         );
+  //       }
+  //     }
+  //     setProjectTrades(tradesMap);
+  //   };
 
-        try {
-          const response = await fetch(
-            `http://localhost:4000/trade-position/trades-location-name/${project.location_name}`
-          );
-          const trades = await response.json();
-          tradesMap[project.location_name] = trades;
-          console.log(trades);
-        } catch (error) {
-          console.error(
-            "Error fetching trades for",
-            project.location_name,
-            error
-          );
-        }
-      }
-      setProjectTrades(tradesMap);
-    };
-
-    fetchTrades();
-  }, [fetchedData]);
+  //   fetchTrades();
+  // }, [fetchedData]);
 
   const { toast } = useToast();
   const [user] = useState({
@@ -122,8 +128,7 @@ export default function BudgetPlanning() {
 
   // New trade form state
   const [newTrade, setNewTrade] = useState({
-    role: "",
-    employeesNumber: "",
+    id: "",
     workDays: "22",
     plannedSalary: "",
     projectId: "",
@@ -137,6 +142,9 @@ export default function BudgetPlanning() {
     workDays: "",
     plannedSalary: "",
   });
+
+  const [updateTrade, { isLoading: isUpdating }] = useEditTradeMutation();
+  const [deleteTrade, { isLoading: isDeleting }] = useDeleteTradeMutation();
 
   // Fetch budget data
   useEffect(() => {
@@ -243,8 +251,8 @@ export default function BudgetPlanning() {
   const handleAddTrade = async () => {
     try {
       if (
-        !newTrade.role ||
-        !newTrade.employeesNumber ||
+        !newTrade.id ||
+        !newTrade.workDays ||
         !newTrade.plannedSalary ||
         !newTrade.projectId
       ) {
@@ -258,61 +266,21 @@ export default function BudgetPlanning() {
 
       setIsSaving(true);
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // In a real implementation, this would be:
-      // const response = await fetch('/api/budget/trades', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(newTrade),
-      // });
-      // const data = await response.json();
-
-      const projectId = Number.parseInt(newTrade.projectId);
-      const project = projects.find((p) => p.id === projectId);
-
-      if (project) {
-        const updatedProjects = projects.map((p) => {
-          if (p.id === projectId) {
-            return {
-              ...p,
-              trades: [
-                ...p.trades,
-                {
-                  id:
-                    Math.max(
-                      ...projects.flatMap((p) => p.trades.map((t) => t.id))
-                    ) + 1,
-                  role: newTrade.role,
-                  icon: getIconForRole(newTrade.role),
-                  employeesNumber: Number.parseInt(newTrade.employeesNumber),
-                  workDays: Number.parseInt(newTrade.workDays),
-                  plannedSalary: Number.parseInt(newTrade.plannedSalary),
-                  actualCost: 0,
-                },
-              ],
-            };
-          }
-          return p;
-        });
-
-        setProjects(updatedProjects);
-        setShowAddTrade(false);
-        setNewTrade({
-          role: "",
-          employeesNumber: "",
-          workDays: "22",
-          plannedSalary: "",
-          projectId: "",
-        });
-
-        toast({
-          title: "Trade Added",
-          description: `${newTrade.role} has been added to ${project.name}.`,
-        });
-      }
-
+      await updateTrade({
+        id: newTrade.id,
+        projectId: newTrade.projectId,
+        work_days: Number.parseInt(newTrade.workDays),
+        daily_planned_cost: Number.parseFloat(
+          newTrade.plannedSalary
+        ).toString(),
+      }).unwrap();
+      setShowAddTrade(false);
       setIsSaving(false);
+
+      toast({
+        title: "Trade Updated",
+        description: `Trade has been added successfully.`,
+      });
     } catch (error) {
       console.error("Error adding trade:", error);
       toast({
@@ -341,38 +309,16 @@ export default function BudgetPlanning() {
       }
 
       setIsSaving(true);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // In a real implementation, this would be:
-      // const response = await fetch(`/api/budget/trades/${editTrade.id}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(editTrade),
-      // });
-      // const data = await response.json();
+      // Use the RTK Query mutation hook
+      await updateTrade({
+        id: editTrade.id,
+        work_days: Number.parseInt(editTrade.workDays),
+        daily_planned_cost: Number.parseFloat(
+          editTrade.plannedSalary
+        ).toString(),
+      }).unwrap();
 
-      const updatedProjects = projects.map((project) => {
-        const updatedTrades = project.trades.map((trade) => {
-          if (trade.id === editTrade.id) {
-            return {
-              ...trade,
-              role: editTrade.role,
-              employeesNumber: Number.parseInt(editTrade.employeesNumber),
-              workDays: Number.parseInt(editTrade.workDays),
-              plannedSalary: Number.parseInt(editTrade.plannedSalary),
-            };
-          }
-          return trade;
-        });
-
-        return {
-          ...project,
-          trades: updatedTrades,
-        };
-      });
-
-      setProjects(updatedProjects);
       setShowEditTrade(false);
       setIsSaving(false);
 
@@ -391,52 +337,39 @@ export default function BudgetPlanning() {
     }
   };
 
-  const handleTradeAction = (
-    action: string,
-    trade: Trade,
-    projectId: number
-  ) => {
+  const handleTradeAction = (action: string, trade: any, projectId: number) => {
     if (action === "edit") {
       setEditTrade({
         id: trade.id,
-        role: trade.role,
-        employeesNumber: trade.employeesNumber.toString(),
-        workDays: trade.workDays.toString(),
-        plannedSalary: trade.plannedSalary.toString(),
+        role: trade.trade_name,
+        employeesNumber: trade.employees.length.toString(),
+        workDays: trade.work_days ? trade.work_days.toString() : "22",
+        plannedSalary: trade.daily_planned_cost.toString(),
       });
       setSelectedTrade(trade);
       setShowEditTrade(true);
       toast({
         title: "Edit Trade",
-        description: `Editing ${trade.role}.`,
+        description: `Editing ${trade.trade_name}.`,
       });
     } else if (action === "delete") {
-      // In a real implementation, you would show a confirmation dialog
-      const project = projects.find((p) => p.id === projectId);
-      if (project) {
-        toast({
-          title: "Confirm Deletion",
-          description: `Are you sure you want to delete ${trade.role} from ${project.name}?`,
+      // Use RTK Query to delete the trade
+      deleteTrade(trade.id)
+        .unwrap()
+        .then(() => {
+          toast({
+            title: "Trade Deleted",
+            description: `${trade.trade_name} has been deleted successfully.`,
+          });
+        })
+        .catch((error) => {
+          console.error("Error deleting trade:", error);
+          toast({
+            title: "Error",
+            description: "Failed to delete trade. Please try again.",
+            variant: "destructive",
+          });
         });
-
-        // For demo purposes, we'll just delete it
-        const updatedProjects = projects.map((project) => {
-          if (project.id === projectId) {
-            return {
-              ...project,
-              trades: project.trades.filter((t) => t.id !== trade.id),
-            };
-          }
-          return project;
-        });
-
-        setProjects(updatedProjects);
-
-        toast({
-          title: "Trade Deleted",
-          description: `${trade.role} has been deleted successfully.`,
-        });
-      }
     }
   };
 
@@ -708,8 +641,8 @@ export default function BudgetPlanning() {
                 </div>
               </div>
 
-              {filteredProjects.length > 0 ? (
-                projectsFetched.map((project: any) => {
+              {fetchedData.length > 0 ? (
+                fetchedData.map((project: any) => {
                   return (
                     <div
                       key={project.id}
@@ -774,9 +707,8 @@ export default function BudgetPlanning() {
                               </tr>
                             </thead>
                             <tbody>
-                              {projectTrades[project.location_name].length !==
-                              0 ? (
-                                projectTrades[project.location_name].map(
+                              {project.trade_positions.length !== 0 ? (
+                                project.trade_positions.map(
                                   (trade: any, index: any) => (
                                     <tr
                                       key={trade.id}
@@ -808,7 +740,7 @@ export default function BudgetPlanning() {
                                           : "unspecified"}
                                       </td>
                                       <td className="px-4 py-3">
-                                        ${trade.daily_planned_cost}/day
+                                        {/* ${trade.daily_planned_cost}/day */}
                                       </td>
                                       <td className="px-4 py-3">
                                         <DropdownMenu>
@@ -1179,19 +1111,18 @@ export default function BudgetPlanning() {
                     </label>
                     <Select
                       onValueChange={(value) =>
-                        setNewTrade({ ...newTrade, role: value })
+                        setNewTrade({ ...newTrade, id: value })
                       }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Electricians">
-                          Electricians
-                        </SelectItem>
-                        <SelectItem value="Technicians">Technicians</SelectItem>
-                        <SelectItem value="HR & Admin">HR & Admin</SelectItem>
-                        <SelectItem value="Supervisors">Supervisors</SelectItem>
+                        {tradesFetched.map((trade: any) => (
+                          <SelectItem value={trade.id} key={trade.id}>
+                            {trade.trade_name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1209,12 +1140,9 @@ export default function BudgetPlanning() {
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        {projects.map((project) => (
-                          <SelectItem
-                            key={project.id}
-                            value={project.id.toString()}
-                          >
-                            {project.name}
+                        {fetchedData.map((project: any) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.project_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1230,23 +1158,6 @@ export default function BudgetPlanning() {
                         setNewTrade({ ...newTrade, workDays: e.target.value })
                       }
                       placeholder="22"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">
-                      Employees Number
-                    </label>
-                    <Input
-                      type="number"
-                      value={newTrade.employeesNumber}
-                      onChange={(e) =>
-                        setNewTrade({
-                          ...newTrade,
-                          employeesNumber: e.target.value,
-                        })
-                      }
-                      placeholder="Enter number"
                     />
                   </div>
 
@@ -1306,46 +1217,6 @@ export default function BudgetPlanning() {
                   Position/Trade details
                 </h3>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">
-                      Position/Trade
-                    </label>
-                    <Select
-                      value={editTrade.role}
-                      onValueChange={(value) =>
-                        setEditTrade({ ...editTrade, role: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Electricians">
-                          Electricians
-                        </SelectItem>
-                        <SelectItem value="Technicians">Technicians</SelectItem>
-                        <SelectItem value="HR & Admin">HR & Admin</SelectItem>
-                        <SelectItem value="Supervisors">Supervisors</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">
-                      Employee Numbers
-                    </label>
-                    <Input
-                      type="number"
-                      value={editTrade.employeesNumber}
-                      onChange={(e) =>
-                        setEditTrade({
-                          ...editTrade,
-                          employeesNumber: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Work Days</label>
                     <Input

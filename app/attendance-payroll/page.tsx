@@ -569,7 +569,7 @@ export default function AttendancePayroll() {
                                 {employee.trade_position.trade_name}
                               </td>
                               <td className="px-4 py-3 border-r">
-                                {employee.assignedProject}
+                                {employee.trade_position.project.project_name}
                               </td>
                               <td className="px-4 py-3 border-r">
                                 {formatDate(employee.created_date)}
