@@ -66,15 +66,13 @@ interface Project {
 }
 
 export default function BudgetPlanning() {
-  const { data: tradesFetched } = useGetTradesQuery();
-  console.log(tradesFetched);
+  const { data: tradesFetched = [] } = useGetTradesQuery();
   const [projectsFetched, setProjectsFetched] = useState<any[]>([]);
   const [projectTrades, setProjectTrades] = useState<{ [key: string]: any }>(
     {}
   );
 
-  const { data: fetchedData } = useGetProjectsQuery();
-  console.log(fetchedData);
+  const { data: fetchedData = [] } = useGetProjectsQuery();
   // useEffect(() => {
   //   if (!fetchedData) return;
 
@@ -496,7 +494,7 @@ export default function BudgetPlanning() {
       setIsExporting(false);
     }
   };
-  console.log(filteredProjects);
+
   const handleTimeFilterChange = (value: string) => {
     setTimeFilter(value);
     toast({
@@ -515,6 +513,29 @@ export default function BudgetPlanning() {
     }
   };
 
+  // Calculate the maximum value for the chart's y-axis
+  const calculateYAxisScale = (data: any[]) => {
+    if (!data || data.length === 0) return [0, 10000, 20000, 30000];
+
+    // Find the maximum value from both planned and actual costs
+    const maxValue = Math.max(
+      ...data.map((t: any) =>
+        Math.max(t.planned_costs || 0, t.actual_cost || 0)
+      )
+    );
+
+    // Round up to a nice number for the y-axis maximum
+    const roundedMax = Math.ceil(maxValue / 5000) * 5000;
+
+    // Create an array of y-axis labels with 5 steps
+    const steps = 5;
+    const yAxisValues = Array.from({ length: steps + 1 }, (_, i) =>
+      Math.round((roundedMax / steps) * i)
+    );
+
+    return yAxisValues;
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-screen bg-gray-50">
@@ -531,6 +552,18 @@ export default function BudgetPlanning() {
       </div>
     );
   }
+
+  let total_planned_cost = 0;
+  let total_actual_cost = 0;
+  if (tradesFetched && tradesFetched.length > 0) {
+    tradesFetched.forEach((trade: any) => {
+      total_actual_cost += trade.actual_cost || 0;
+      total_planned_cost += trade.planned_costs || 0;
+    });
+  }
+
+  // Generate y-axis scale based on actual data
+  const yAxisLabels = calculateYAxisScale(tradesFetched);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -642,7 +675,7 @@ export default function BudgetPlanning() {
                 </div>
               </div>
 
-              {fetchedData.length > 0 ? (
+              {fetchedData && fetchedData.length > 0 ? (
                 fetchedData.map((project: any) => {
                   return (
                     <div
@@ -708,7 +741,8 @@ export default function BudgetPlanning() {
                               </tr>
                             </thead>
                             <tbody>
-                              {project.trade_positions.length !== 0 ? (
+                              {project.trade_positions &&
+                              project.trade_positions.length !== 0 ? (
                                 project.trade_positions.map(
                                   (trade: any, index: any) => (
                                     <tr
@@ -720,7 +754,10 @@ export default function BudgetPlanning() {
                                         <div className="flex items-center gap-2">
                                           <Avatar className="h-8 w-8">
                                             <AvatarImage
-                                              src={trade.avatar}
+                                              src={
+                                                trade.avatar ||
+                                                "/placeholder.svg"
+                                              }
                                               alt={trade.trade_name}
                                             />
                                             <AvatarFallback>
@@ -733,7 +770,8 @@ export default function BudgetPlanning() {
                                         </div>
                                       </td>
                                       <td className="px-4 py-3">
-                                        {trade.employees.length}
+                                        {trade.employees &&
+                                          trade.employees.length}
                                       </td>
                                       <td className="px-4 py-3">
                                         {trade.work_days
@@ -826,10 +864,10 @@ export default function BudgetPlanning() {
                     </div>
                     <div className="flex gap-8">
                       <div className="text-3xl font-bold">
-                        ${totalPlannedCost.toLocaleString()}
+                        ${total_planned_cost.toLocaleString()}
                       </div>
                       <div className="text-3xl font-bold">
-                        ${totalActualCost.toLocaleString()}
+                        ${total_actual_cost.toLocaleString()}
                       </div>
                     </div>
                   </div>
@@ -857,7 +895,7 @@ export default function BudgetPlanning() {
                             key={project.id}
                             value={project.id.toString()}
                           >
-                            {project.project_name}
+                            {project.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -894,129 +932,147 @@ export default function BudgetPlanning() {
                   </div>
                 </div>
 
-                {/* Interactive Chart */}
+                {/* Interactive Chart with Dynamic Y-Axis */}
                 <div className="h-80 relative mb-8" ref={chartRef}>
-                  {/* Y-axis labels */}
+                  {/* Y-axis labels - Now Dynamic */}
                   <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-sm text-gray-500">
-                    <div>$30K</div>
-                    <div>$20K</div>
-                    <div>$15K</div>
-                    <div>$10K</div>
-                    <div>$5K</div>
-                    <div>0</div>
-                  </div>
-
-                  {/* Average line */}
-                  <div className="absolute left-0 top-[48%] w-full z-10">
-                    <div className="relative">
-                      <div className="absolute -left-10 -top-3 bg-green-700 text-white text-xs px-1.5 py-0.5 rounded">
-                        Avg
-                      </div>
-                      <div className="border-t border-dashed border-gray-300 w-full"></div>
-                    </div>
+                    {[...yAxisLabels].reverse().map((value, index) => (
+                      <div key={index}>${(value / 1000).toFixed(0)}K</div>
+                    ))}
                   </div>
 
                   {/* Chart bars */}
                   <div className="ml-12 h-full flex items-end justify-between">
-                    {allTrades.map((role, index) => {
-                      const data = tradeData.find((t) => t.role === role);
-                      if (!data) return null;
+                    {tradesFetched && tradesFetched.length > 0 ? (
+                      tradesFetched.map((trade: any, index: number) => {
+                        // Get the maximum value for scaling
+                        const maxValue = Math.max(
+                          ...tradesFetched.map((t: any) =>
+                            Math.max(t.planned_costs || 0, t.actual_cost || 0)
+                          )
+                        );
 
-                      const maxHeight = 240; // Maximum height in pixels
-                      const maxValue = Math.max(
-                        ...tradeData.map((t) =>
-                          Math.max(t.plannedCost, t.actualCost)
-                        )
-                      );
-                      const plannedHeight =
-                        (data.plannedCost / maxValue) * maxHeight;
-                      const actualHeight =
-                        (data.actualCost / maxValue) * maxHeight;
+                        // Calculate bar heights based on the data's maximum value
+                        const maxHeight = 240; // Maximum height in pixels
+                        const plannedHeight = maxValue
+                          ? ((trade.planned_costs || 0) / maxValue) * maxHeight
+                          : 0;
+                        const actualHeight = maxValue
+                          ? ((trade.actual_cost || 0) / maxValue) * maxHeight
+                          : 0;
 
-                      // Calculate if this bar should show the tooltip
-                      const showTooltip = role === "HR & Admin";
+                        // Calculate if this bar should show the tooltip
+                        const showTooltip = trade.trade_name === "HR & Admin";
 
-                      return (
-                        <div
-                          key={role}
-                          className="flex flex-col items-center gap-2 group"
-                          style={{ width: `${100 / allTrades.length}%` }}
-                        >
-                          <div className="relative flex items-end justify-center w-full gap-1">
-                            {/* Planned cost bar */}
-                            <div
-                              className="w-20 bg-orange-500 transition-all duration-500 ease-in-out cursor-pointer"
-                              style={{ height: `${plannedHeight}px` }}
-                              onMouseEnter={(e) => {
-                                // Show tooltip on hover
-                                const tooltip =
-                                  e.currentTarget.nextElementSibling
-                                    ?.nextElementSibling;
-                                if (tooltip) {
-                                  tooltip.classList.remove("opacity-0");
-                                  tooltip.classList.add("opacity-100");
-                                }
-                              }}
-                            ></div>
+                        // Calculate the difference between actual and planned costs
+                        const difference =
+                          (trade.actual_cost || 0) - (trade.planned_costs || 0);
 
-                            {/* Actual cost bar */}
-                            <div
-                              className="w-20 bg-blue-700 transition-all duration-500 ease-in-out cursor-pointer"
-                              style={{ height: `${actualHeight}px` }}
-                              onMouseEnter={(e) => {
-                                // Show tooltip on hover
-                                const tooltip =
-                                  e.currentTarget.nextElementSibling;
-                                if (tooltip) {
-                                  tooltip.classList.remove("opacity-0");
-                                  tooltip.classList.add("opacity-100");
-                                }
-                              }}
-                            ></div>
+                        return (
+                          <div
+                            key={trade.id}
+                            className="flex flex-col items-center gap-2 group"
+                            style={{ width: `${100 / tradesFetched.length}%` }}
+                          >
+                            <div className="relative flex items-end justify-center w-full gap-1">
+                              {/* Planned cost bar */}
+                              <div
+                                className="w-20 bg-orange-500 transition-all duration-500 ease-in-out cursor-pointer"
+                                style={{ height: `${plannedHeight}px` }}
+                                onMouseEnter={(e) => {
+                                  // Show tooltip on hover
+                                  const tooltip =
+                                    e.currentTarget.nextElementSibling
+                                      ?.nextElementSibling;
+                                  if (tooltip) {
+                                    tooltip.classList.remove("opacity-0");
+                                    tooltip.classList.add("opacity-100");
+                                  }
+                                }}
+                              ></div>
 
-                            {/* Interactive tooltip - shown on hover or permanently for HR & Admin */}
-                            <div
-                              className={`absolute top-0 right-0 bg-white border rounded-md p-2 shadow-md transition-opacity duration-200 
+                              {/* Actual cost bar */}
+                              <div
+                                className="w-20 bg-blue-700 transition-all duration-500 ease-in-out cursor-pointer"
+                                style={{ height: `${actualHeight}px` }}
+                                onMouseEnter={(e) => {
+                                  // Show tooltip on hover
+                                  const tooltip =
+                                    e.currentTarget.nextElementSibling;
+                                  if (tooltip) {
+                                    tooltip.classList.remove("opacity-0");
+                                    tooltip.classList.add("opacity-100");
+                                  }
+                                }}
+                              ></div>
+
+                              {/* Interactive tooltip - shown on hover or permanently for HR & Admin */}
+                              <div
+                                className={`absolute top-0 right-0 bg-white border rounded-md p-2 shadow-md transition-opacity duration-200 
                                 ${
                                   showTooltip
                                     ? "opacity-100"
                                     : "opacity-0 group-hover:opacity-100"
                                 }`}
-                              style={{
-                                transform: "translateY(-100%)",
-                                right: showTooltip ? "0" : "50%",
-                                zIndex: 20,
-                              }}
-                              onMouseLeave={(e) => {
-                                // Hide tooltip on mouse leave unless it's the permanent one
-                                if (!showTooltip) {
-                                  e.currentTarget.classList.remove(
-                                    "opacity-100"
-                                  );
-                                  e.currentTarget.classList.add("opacity-0");
-                                }
-                              }}
-                            >
-                              <div className="text-sm font-medium">{role}</div>
-                              <div className="text-sm">
-                                Actual Cost{" "}
-                                <span className="font-bold">
-                                  ${data.actualCost.toLocaleString()}
-                                </span>
-                              </div>
-                              <div className="text-xs text-green-600">
-                                +$
-                                {data.difference > 0
-                                  ? data.difference.toLocaleString()
-                                  : 0}{" "}
-                                over budget
+                                style={{
+                                  transform: "translateY(-100%)",
+                                  right: showTooltip ? "0" : "50%",
+                                  zIndex: 20,
+                                }}
+                                onMouseLeave={(e) => {
+                                  // Hide tooltip on mouse leave unless it's the permanent one
+                                  if (!showTooltip) {
+                                    e.currentTarget.classList.remove(
+                                      "opacity-100"
+                                    );
+                                    e.currentTarget.classList.add("opacity-0");
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium">
+                                  {trade.trade_name}
+                                </div>
+                                <div className="text-sm">
+                                  Planned Cost{" "}
+                                  <span className="font-bold">
+                                    $
+                                    {(
+                                      trade.planned_costs || 0
+                                    ).toLocaleString()}
+                                  </span>
+                                </div>
+                                <div className="text-sm">
+                                  Actual Cost{" "}
+                                  <span className="font-bold">
+                                    ${(trade.actual_cost || 0).toLocaleString()}
+                                  </span>
+                                </div>
+                                <div
+                                  className={`text-xs ${
+                                    difference > 0
+                                      ? "text-red-600"
+                                      : "text-green-600"
+                                  }`}
+                                >
+                                  {difference > 0 ? "+" : ""}$
+                                  {difference.toLocaleString()}{" "}
+                                  {difference > 0
+                                    ? "over budget"
+                                    : "under budget"}
+                                </div>
                               </div>
                             </div>
+                            <div className="text-xs text-gray-500">
+                              {trade.trade_name}
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500">{role}</div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    ) : (
+                      <div className="w-full flex items-center justify-center h-60 text-gray-500">
+                        No trade data available
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1030,14 +1086,14 @@ export default function BudgetPlanning() {
                         <th className="px-4 py-3 text-left">
                           <div className="flex items-center gap-2">
                             <div className="h-3 w-3 rounded-full bg-orange-500"></div>
-                            Planned Budget (${totalPlannedCost.toLocaleString()}
-                            )
+                            Planned Budget ($
+                            {total_planned_cost.toLocaleString()})
                           </div>
                         </th>
                         <th className="px-4 py-3 text-left">
                           <div className="flex items-center gap-2">
                             <div className="h-3 w-3 rounded-full bg-blue-700"></div>
-                            Actual Cost (${totalActualCost.toLocaleString()})
+                            Actual Cost (${total_actual_cost.toLocaleString()})
                           </div>
                         </th>
                         <th className="px-4 py-3 text-left">Difference</th>
@@ -1045,52 +1101,67 @@ export default function BudgetPlanning() {
                       </tr>
                     </thead>
                     <tbody>
-                      {tradesFetched.map((data: any) => (
-                        <tr key={data.id} className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage
-                                  src={data.avatar}
-                                  alt={data.trade_name}
-                                />
-                                <AvatarFallback>
-                                  {data.trade_name.charAt(0)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium">
-                                {data.trade_name}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            ${data.planned_costs.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-3">
-                            ${data.actual_cost.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-3">
-                            {data.difference > 0 ? (
-                              <Badge className="bg-green-50 text-green-700">
-                                +${data.difference.toLocaleString()}
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-red-50 text-red-700">
-                                -${Math.abs(data.difference).toLocaleString()}
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {}}
+                      {tradesFetched && tradesFetched.length > 0 ? (
+                        tradesFetched.map((data: any) => {
+                          const difference =
+                            (data.actual_cost || 0) - (data.planned_costs || 0);
+                          return (
+                            <tr
+                              key={data.id}
+                              className="border-b hover:bg-gray-50"
                             >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage
+                                      src={data.avatar || "/placeholder.svg"}
+                                      alt={data.trade_name}
+                                    />
+                                    <AvatarFallback>
+                                      {data.trade_name.charAt(0)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="font-medium">
+                                    {data.trade_name}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                ${(data.planned_costs || 0).toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3">
+                                ${(data.actual_cost || 0).toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3">
+                                {difference > 0 ? (
+                                  <Badge className="bg-red-50 text-red-700">
+                                    +${difference.toLocaleString()}
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-green-50 text-green-700">
+                                    -${Math.abs(difference).toLocaleString()}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {}}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-3 text-center">
+                            No trade data available
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1124,11 +1195,12 @@ export default function BudgetPlanning() {
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        {tradesFetched.map((trade: any) => (
-                          <SelectItem value={trade.id} key={trade.id}>
-                            {trade.trade_name}
-                          </SelectItem>
-                        ))}
+                        {tradesFetched &&
+                          tradesFetched.map((trade: any) => (
+                            <SelectItem value={trade.id} key={trade.id}>
+                              {trade.trade_name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1146,11 +1218,12 @@ export default function BudgetPlanning() {
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        {fetchedData.map((project: any) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            {project.project_name}
-                          </SelectItem>
-                        ))}
+                        {fetchedData &&
+                          fetchedData.map((project: any) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.project_name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>

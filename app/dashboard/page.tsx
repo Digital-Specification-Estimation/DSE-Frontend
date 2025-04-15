@@ -480,7 +480,7 @@ export default function Dashboard() {
               />
               <StatCard
                 title="Total Actual Payroll"
-                value={`$${totalActualPayroll}`}
+                value={`$${totalActualPayroll.toLocaleString()}`}
                 icon={DollarSign}
                 iconBackground="bg-green-600"
                 change={{
@@ -503,7 +503,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="text-3xl font-bold mb-6">
-                    ${totalActualPayroll}
+                    ${totalActualPayroll.toLocaleString()}
                   </div>
                 </div>
 
@@ -780,11 +780,17 @@ export default function Dashboard() {
                             </div>
                           </td>
                           <td className="p-4">
-                            ${tradeStatistics[trade].planned_budget}
+                            $
+                            {tradeStatistics[
+                              trade
+                            ].planned_budget.toLocaleString()}
                           </td>
                           <td className="p-4">
                             {" "}
-                            ${tradeStatistics[trade].actual_cost}
+                            $
+                            {tradeStatistics[
+                              trade
+                            ].actual_cost.toLocaleString()}
                           </td>
                           <td className="p-4">
                             <div className="flex items-center gap-1">
@@ -803,6 +809,7 @@ export default function Dashboard() {
                                   className={`text-xs ${
                                     Number.parseFloat(
                                       tradeStatistics[trade].difference
+                                        .toLocaleString()
                                         .toString()
                                         .replace(/[^0-9.-]+/g, "")
                                     ) > 0
@@ -812,6 +819,7 @@ export default function Dashboard() {
                                 >
                                   {Number.parseFloat(
                                     tradeStatistics[trade].difference
+                                      .toLocaleString()
                                       .toString()
                                       .replace(/[^0-9.-]+/g, "")
                                   ) > 0
@@ -823,6 +831,7 @@ export default function Dashboard() {
                                 className={`${
                                   Number.parseFloat(
                                     tradeStatistics[trade].difference
+                                      .toLocaleString()
                                       .toString()
                                       .replace(/[^0-9.-]+/g, "")
                                   ) > 0
