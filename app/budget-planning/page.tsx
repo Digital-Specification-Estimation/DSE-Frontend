@@ -67,6 +67,7 @@ interface Project {
 
 export default function BudgetPlanning() {
   const { data: tradesFetched } = useGetTradesQuery();
+  console.log(tradesFetched);
   const [projectsFetched, setProjectsFetched] = useState<any[]>([]);
   const [projectTrades, setProjectTrades] = useState<{ [key: string]: any }>(
     {}
@@ -740,7 +741,7 @@ export default function BudgetPlanning() {
                                           : "unspecified"}
                                       </td>
                                       <td className="px-4 py-3">
-                                        {/* ${trade.daily_planned_cost}/day */}
+                                        ${trade.daily_planned_cost}/day
                                       </td>
                                       <td className="px-4 py-3">
                                         <DropdownMenu>
@@ -1044,24 +1045,29 @@ export default function BudgetPlanning() {
                       </tr>
                     </thead>
                     <tbody>
-                      {tradeData.map((data) => (
-                        <tr
-                          key={data.role}
-                          className="border-b hover:bg-gray-50"
-                        >
+                      {tradesFetched.map((data: any) => (
+                        <tr key={data.id} className="border-b hover:bg-gray-50">
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <div className="h-6 w-6 bg-gray-100 rounded-full flex items-center justify-center text-xs">
-                                {getIconForRole(data.role)}
-                              </div>
-                              <span className="font-medium">{data.role}</span>
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage
+                                  src={data.avatar}
+                                  alt={data.trade_name}
+                                />
+                                <AvatarFallback>
+                                  {data.trade_name.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">
+                                {data.trade_name}
+                              </span>
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            ${data.plannedCost.toLocaleString()}
+                            ${data.planned_costs.toLocaleString()}
                           </td>
                           <td className="px-4 py-3">
-                            ${data.actualCost.toLocaleString()}
+                            ${data.actual_cost.toLocaleString()}
                           </td>
                           <td className="px-4 py-3">
                             {data.difference > 0 ? (

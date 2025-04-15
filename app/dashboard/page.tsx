@@ -217,7 +217,7 @@ export default function Dashboard() {
             </span>
             <span className="text-sm">Actual Cost</span>
             <span className="text-sm font-medium">
-              ${payload[0].value.toLocaleString()}
+              ${payload[1].value.toLocaleString()}
             </span>
           </div>
         </div>
