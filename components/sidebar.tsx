@@ -31,7 +31,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ user }: SidebarProps) {
-  const [userData, setUserData] = useState({ username: "Guest" });
+  const [userData, setUserData] = useState({ username: "Guest", role: "user" });
   const {
     data: sessionData,
     isLoading,

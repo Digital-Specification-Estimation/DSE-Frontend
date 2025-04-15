@@ -18,8 +18,8 @@ export interface SignupBodyDto {
   username: string;
   password: string;
   role: string;
+  company_id: string;
   email: string;
-  business_name: string;
 }
 
 export interface SignupResponseDto {

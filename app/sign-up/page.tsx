@@ -5,25 +5,71 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, EyeOff, User, Mail, Lock, Loader2 } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  User,
+  Mail,
+  Lock,
+  Loader2,
+  Plus,
+  Building,
+} from "lucide-react";
 import { Logo } from "@/components/logo";
 import { useToast } from "@/hooks/use-toast";
 import { useSignupMutation } from "@/lib/redux/authSlice";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useGetCompaniesQuery } from "@/lib/redux/companySlice";
+
+// Mock company data - replace with actual API call in production
+const mockCompanies = [
+  { id: "1", company_name: "Acme Inc." },
+  { id: "2", company_name: "TechCorp" },
+  { id: "3", company_name: "Global Solutions" },
+];
 
 export default function SignUp() {
+  const { data: companiesFetched = [] } = useGetCompaniesQuery();
+
   const [signup] = useSignupMutation();
   const router = useRouter();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [companies, setCompanies] = useState(mockCompanies);
+  const [modalOpen, setModalOpen] = useState(false);
+
   const [formData, setFormData] = useState({
-    business_name: "",
+    company_id: "",
     username: "",
     email: "",
     password: "",
-    role: "admin", // Add default role
+    role: "admin",
     agreeToTerms: false,
+  });
+
+  const [companyData, setCompanyData] = useState({
+    company_name: "",
+    company_profile: "",
+    business_type: "",
+    standard_work_hours: 8,
+    weekly_work_limit: 40,
+    holidays: [],
+    overtime_rate: 1.5,
+    daily_total_planned_cost: 0,
+    daily_total_actual_cost: 0,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,7 +80,25 @@ export default function SignUp() {
     });
   };
 
-  // Update the handleSubmit function in your frontend:
+  const handleCompanyChange = (
+    e: React.ChangeEvent<
+      HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement
+    >
+  ) => {
+    const { name, value } = e.target;
+    setCompanyData({
+      ...companyData,
+      [name]:
+        name === "standard_work_hours" ||
+        name === "weekly_work_limit" ||
+        name === "overtime_rate" ||
+        name === "daily_total_planned_cost" ||
+        name === "daily_total_actual_cost"
+          ? Number.parseFloat(value)
+          : value,
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -43,7 +107,7 @@ export default function SignUp() {
     try {
       // Validate all required fields
       if (
-        !formData.business_name ||
+        !formData.company_id ||
         !formData.username ||
         !formData.email ||
         !formData.password
@@ -59,16 +123,56 @@ export default function SignUp() {
         username: formData.username,
         password: formData.password,
         email: formData.email,
-        business_name: formData.business_name,
-        role: formData.role, // Add role to the signup payload
+        company_id: formData.company_id, // Changed from business_name to company_id
+        role: formData.role,
       }).unwrap();
       router.push("/sign-in");
     } catch (err: any) {
-      const errorMessage = err ? err.data.message : "Registration failed";
+      const errorMessage = err ? err.data?.message : "Registration failed";
       setError(errorMessage);
       toast({
         title: "Error",
         description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateCompany = async () => {
+    setIsLoading(true);
+    try {
+      // In a real app, this would be an API call to create a company
+      // For now, we'll simulate it with a timeout
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Create a new mock company with a random ID
+      const newCompany = {
+        id: Math.random().toString(36).substring(2, 9),
+        company_name: companyData.company_name,
+      };
+
+      // Add the new company to the list
+      setCompanies([...companies, newCompany]);
+
+      // Select the newly created company
+      setFormData({
+        ...formData,
+        company_id: newCompany.id,
+      });
+
+      // Close the modal
+      setModalOpen(false);
+
+      toast({
+        title: "Success",
+        description: "Company created successfully",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: "Failed to create company",
         variant: "destructive",
       });
     } finally {
@@ -94,7 +198,6 @@ export default function SignUp() {
       }, 1000);
     }
   };
-
   return (
     <div className="w-full min-h-screen lg:grid lg:grid-cols-2 bg-white">
       <div className="flex flex-col items-center justify-center py-3 bg-white border">
@@ -118,24 +221,164 @@ export default function SignUp() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="business_name" className="text-sm font-medium">
-                Business Name
+              <label htmlFor="company_id" className="text-sm font-medium">
+                Company
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                  <User className="h-4 w-4 text-gray-400" />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                    <Building className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <select
+                    id="company_id"
+                    name="company_id"
+                    value={formData.company_id}
+                    onChange={(e) =>
+                      setFormData({ ...formData, company_id: e.target.value })
+                    }
+                    className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
+                    disabled={isLoading}
+                  >
+                    <option value="">Select a company</option>
+                    {companiesFetched.map((company: any) => (
+                      <option key={company.id} value={company.id}>
+                        {company.company_name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <input
-                  id="business_name"
-                  name="business_name"
-                  type="text"
-                  placeholder="Johny Business"
-                  value={formData.business_name}
-                  onChange={handleChange}
-                  className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  required
-                  disabled={isLoading}
-                />
+                <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex items-center gap-1"
+                      disabled={isLoading}
+                    >
+                      <Plus className="h-4 w-4" />
+                      New
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                      <DialogTitle>Create New Company</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="company_name" className="text-right">
+                          Company Name
+                        </Label>
+                        <Input
+                          id="company_name"
+                          name="company_name"
+                          value={companyData.company_name}
+                          onChange={handleCompanyChange}
+                          className="col-span-3"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="company_profile" className="text-right">
+                          Profile
+                        </Label>
+                        <Textarea
+                          id="company_profile"
+                          name="company_profile"
+                          value={companyData.company_profile}
+                          onChange={handleCompanyChange}
+                          className="col-span-3"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="business_type" className="text-right">
+                          Business Type
+                        </Label>
+                        <Input
+                          id="business_type"
+                          name="business_type"
+                          value={companyData.business_type}
+                          onChange={handleCompanyChange}
+                          className="col-span-3"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label
+                          htmlFor="standard_work_hours"
+                          className="text-right"
+                        >
+                          Work Hours
+                        </Label>
+                        <Input
+                          id="standard_work_hours"
+                          name="standard_work_hours"
+                          type="number"
+                          value={companyData.standard_work_hours}
+                          onChange={handleCompanyChange}
+                          className="col-span-3"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label
+                          htmlFor="weekly_work_limit"
+                          className="text-right"
+                        >
+                          Weekly Limit
+                        </Label>
+                        <Input
+                          id="weekly_work_limit"
+                          name="weekly_work_limit"
+                          type="number"
+                          value={companyData.weekly_work_limit}
+                          onChange={handleCompanyChange}
+                          className="col-span-3"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="overtime_rate" className="text-right">
+                          Overtime Rate
+                        </Label>
+                        <Input
+                          id="overtime_rate"
+                          name="overtime_rate"
+                          type="number"
+                          step="0.1"
+                          value={companyData.overtime_rate}
+                          onChange={handleCompanyChange}
+                          className="col-span-3"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setModalOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleCreateCompany}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          "Create Company"
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
 
@@ -390,8 +633,4 @@ export default function SignUp() {
       </div>
     </div>
   );
-}
-
-function setRedirect(arg0: boolean) {
-  throw new Error("Function not implemented.");
 }
