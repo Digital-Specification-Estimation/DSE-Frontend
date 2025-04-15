@@ -27,7 +27,7 @@ export default function SignIn() {
     email: "",
     password: "",
     rememberMe: false,
-    role: "user", // Add default role
+    role: "admin",
   });
   const [error, setError] = useState(""); // Error state for handling failed login
 
@@ -51,11 +51,11 @@ export default function SignIn() {
       if (!formData.email || !formData.password) {
         throw new Error("Email and password are required");
       }
-
+      console.log(formData);
       const response: ResponseError | ResponseData = await login({
         email: formData.email,
         password: formData.password,
-        role: formData.role, // Include role in login request
+        role: formData.role,
       });
 
       // Check for error response structure

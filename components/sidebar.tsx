@@ -182,7 +182,7 @@ export function Sidebar({ user }: SidebarProps) {
                 {userData.username}
               </span>
               <span className="text-xs text-gray-500 truncate">
-                {user.role}
+                {userData.role}
               </span>
             </div>
             <button>

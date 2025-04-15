@@ -5,6 +5,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface LoginBodyDto {
   email: string;
+  role: string;
   password: string;
 }
 
@@ -16,6 +17,7 @@ export interface LoginResponseDto {
 export interface SignupBodyDto {
   username: string;
   password: string;
+  role: string;
   email: string;
   business_name: string;
 }
@@ -23,6 +25,7 @@ export interface SignupBodyDto {
 export interface SignupResponseDto {
   id: string;
   username: string;
+  role: string;
   email: string;
   password: string;
   refresh_token: string;
