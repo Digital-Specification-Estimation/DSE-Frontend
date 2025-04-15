@@ -490,7 +490,7 @@ export default function AttendancePayroll() {
                           Total Budget Baseline
                         </div>
                         <div className="text-xl font-bold">
-                          ${totalBaseline}
+                          ${totalBaseline.toLocaleString()}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4 flex-1">
@@ -498,7 +498,7 @@ export default function AttendancePayroll() {
                           Total Actual Payroll
                         </div>
                         <div className="text-xl font-bold">
-                          ${totalActualPayroll}
+                          ${totalActualPayroll.toLocaleString()}
                         </div>
                       </div>
                     </div>
@@ -569,7 +569,9 @@ export default function AttendancePayroll() {
                                 {employee.trade_position.trade_name}
                               </td>
                               <td className="px-4 py-3 border-r">
-                                {employee.trade_position.project.project_name}
+                                {employee.trade_position.project?.project_name
+                                  ? employee.trade_position.project.project_name
+                                  : "no project"}
                               </td>
                               <td className="px-4 py-3 border-r">
                                 {formatDate(employee.created_date)}
@@ -891,7 +893,7 @@ export default function AttendancePayroll() {
                           Total Budget Baseline
                         </div>
                         <div className="text-xl font-bold">
-                          ${totalBaseline}
+                          ${totalBaseline.toLocaleString()}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
@@ -899,7 +901,7 @@ export default function AttendancePayroll() {
                           Total Actual Payroll
                         </div>
                         <div className="text-xl font-bold">
-                          ${totalActualPayroll}
+                          ${totalActualPayroll.toLocaleString()}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
@@ -907,7 +909,7 @@ export default function AttendancePayroll() {
                           Daily Actual Payroll
                         </div>
                         <div className="text-xl font-bold">
-                          ${totalDailyActuallPayroll}
+                          ${totalDailyActuallPayroll.toLocaleString()}
                         </div>
                       </div>
                     </div>
@@ -974,13 +976,13 @@ export default function AttendancePayroll() {
                               </div>
                             </td>
                             <td className="px-4 py-3 border-r">
-                              ${employee.daily_rate}
+                              ${employee.daily_rate.toLocaleString()}
                             </td>
                             <td className="px-4 py-3 border-r">
                               {employee.days_worked}
                             </td>
                             <td className="px-4 py-3 border-r">
-                              ${employee.budget_baseline.toLocaleString()}
+                              ${employee.budget_baseline?.toLocaleString()}
                             </td>
                             <td className="px-4 py-3 border-r">
                               ${employee.totalActualPayroll?.toLocaleString()}

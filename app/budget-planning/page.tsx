@@ -44,6 +44,7 @@ import {
   useDeleteTradeMutation,
   useEditTradeMutation,
   useGetTradesQuery,
+  useUnassignTradeProjectIdMutation,
 } from "@/lib/redux/tradePositionSlice";
 
 // Types
@@ -66,43 +67,12 @@ interface Project {
 }
 
 export default function BudgetPlanning() {
-  const { data: tradesFetched = [] } = useGetTradesQuery();
-  const [projectsFetched, setProjectsFetched] = useState<any[]>([]);
-  const [projectTrades, setProjectTrades] = useState<{ [key: string]: any }>(
-    {}
-  );
+  const [unassignProject] = useUnassignTradeProjectIdMutation();
 
-  const { data: fetchedData = [] } = useGetProjectsQuery();
-  // useEffect(() => {
-  //   if (!fetchedData) return;
-
-  //   setProjectsFetched(fetchedData);
-
-  //   const fetchTrades = async () => {
-  //     const tradesMap: { [key: string]: any } = {};
-  //     for (const project of fetchedData) {
-  //       console.log(project.location_name);
-
-  //       try {
-  //         const response = await fetch(
-  //           `http://localhost:4000/trade-position/trades-location-name/${project.location_name}`
-  //         );
-  //         const trades = await response.json();
-  //         tradesMap[project.location_name] = trades;
-  //         console.log(trades);
-  //       } catch (error) {
-  //         console.error(
-  //           "Error fetching trades for",
-  //           project.location_name,
-  //           error
-  //         );
-  //       }
-  //     }
-  //     setProjectTrades(tradesMap);
-  //   };
-
-  //   fetchTrades();
-  // }, [fetchedData]);
+  const { data: tradesFetched = [], refetch: refetchTrades } =
+    useGetTradesQuery();
+  const { data: fetchedData = [], refetch: refetchProjects } =
+    useGetProjectsQuery();
 
   const { toast } = useToast();
   const [user] = useState({
@@ -122,6 +92,7 @@ export default function BudgetPlanning() {
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [expandedProjectIds, setExpandedProjectIds] = useState<number[]>([]);
 
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -143,7 +114,6 @@ export default function BudgetPlanning() {
   });
 
   const [updateTrade, { isLoading: isUpdating }] = useEditTradeMutation();
-  const [deleteTrade, { isLoading: isDeleting }] = useDeleteTradeMutation();
 
   // Fetch budget data
   useEffect(() => {
@@ -152,85 +122,6 @@ export default function BudgetPlanning() {
         setIsLoading(true);
         // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        // In a real implementation, this would be:
-        // const response = await fetch('/api/budget/projects');
-        // const data = await response.json();
-        // setProjects(data);
-
-        // Sample data for now
-        setProjects([
-          {
-            id: 1,
-            name: "Project A",
-            budget: 32000,
-            isExpanded: true,
-            trades: [
-              {
-                id: 1,
-                role: "Electricians",
-                icon: "⚡",
-                employeesNumber: 10,
-                workDays: 22,
-                plannedSalary: 5000,
-                actualCost: 5500,
-              },
-              {
-                id: 2,
-                role: "Technicians",
-                icon: "🔧",
-                employeesNumber: 8,
-                workDays: 22,
-                plannedSalary: 3200,
-                actualCost: 4100,
-              },
-              {
-                id: 3,
-                role: "HR & Admin",
-                icon: "👨‍💼",
-                employeesNumber: 4,
-                workDays: 22,
-                plannedSalary: 4000,
-                actualCost: 6500,
-              },
-              {
-                id: 4,
-                role: "Supervisors",
-                icon: "👷",
-                employeesNumber: 6,
-                workDays: 22,
-                plannedSalary: 6500,
-                actualCost: 3700,
-              },
-            ],
-          },
-          {
-            id: 2,
-            name: "Project B",
-            budget: 32000,
-            isExpanded: false,
-            trades: [
-              {
-                id: 5,
-                role: "Electricians",
-                icon: "⚡",
-                employeesNumber: 8,
-                workDays: 22,
-                plannedSalary: 5000,
-                actualCost: 4800,
-              },
-              {
-                id: 6,
-                role: "Technicians",
-                icon: "🔧",
-                employeesNumber: 6,
-                workDays: 22,
-                plannedSalary: 4200,
-                actualCost: 4100,
-              },
-            ],
-          },
-        ]);
 
         setIsLoading(false);
       } catch (error) {
@@ -273,6 +164,10 @@ export default function BudgetPlanning() {
           newTrade.plannedSalary
         ).toString(),
       }).unwrap();
+
+      // Refetch data after successful update
+      await Promise.all([refetchTrades(), refetchProjects()]);
+
       setShowAddTrade(false);
       setIsSaving(false);
 
@@ -318,6 +213,9 @@ export default function BudgetPlanning() {
         ).toString(),
       }).unwrap();
 
+      // Refetch data after successful update
+      await Promise.all([refetchTrades(), refetchProjects()]);
+
       setShowEditTrade(false);
       setIsSaving(false);
 
@@ -353,9 +251,12 @@ export default function BudgetPlanning() {
       });
     } else if (action === "delete") {
       // Use RTK Query to delete the trade
-      deleteTrade(trade.id)
+      unassignProject(trade.id)
         .unwrap()
-        .then(() => {
+        .then(async () => {
+          // Refetch data after successful delete
+          await Promise.all([refetchTrades(), refetchProjects()]);
+
           toast({
             title: "Trade Deleted",
             description: `${trade.trade_name} has been deleted successfully.`,
@@ -373,7 +274,6 @@ export default function BudgetPlanning() {
   };
 
   const toggleProjectExpansion = (projectId: number) => {
-    const project = projects.find((p) => p.id === projectId);
     setProjects(
       projects.map((project) =>
         project.id === projectId
@@ -620,10 +520,10 @@ export default function BudgetPlanning() {
                   value="plan"
                   className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                   onClick={() => {
-                    toast({
-                      title: "Tab Changed",
-                      description: "Viewing Plan Budget tab.",
-                    });
+                    // toast({
+                    //   title: "Tab Changed",
+                    //   description: "Viewing Plan Budget tab.",
+                    // });
                   }}
                 >
                   Plan Budget
@@ -632,10 +532,10 @@ export default function BudgetPlanning() {
                   value="costs"
                   className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                   onClick={() => {
-                    toast({
-                      title: "Tab Changed",
-                      description: "Viewing Costs Trend tab.",
-                    });
+                    // toast({
+                    //   title: "Tab Changed",
+                    //   description: "Viewing Costs Trend tab.",
+                    // });
                   }}
                 >
                   Costs Trend
@@ -684,7 +584,13 @@ export default function BudgetPlanning() {
                     >
                       <div
                         className="flex items-center p-4 cursor-pointer"
-                        onClick={() => toggleProjectExpansion(project.id)}
+                        onClick={() => {
+                          setExpandedProjectIds((prev) =>
+                            prev.includes(project.id)
+                              ? prev.filter((id) => id !== project.id)
+                              : [...prev, project.id]
+                          );
+                        }}
                       >
                         <div className="flex items-center gap-2">
                           <div className="h-8 w-8 bg-gray-800 rounded-full flex items-center justify-center text-white">
@@ -711,7 +617,7 @@ export default function BudgetPlanning() {
                           </span>
                         </div>
                         <div className="ml-auto">
-                          {project.isExpanded ? (
+                          {expandedProjectIds.includes(project.id) ? (
                             <ChevronUp className="h-5 w-5 text-gray-500" />
                           ) : (
                             <ChevronDown className="h-5 w-5 text-gray-500" />
@@ -719,7 +625,7 @@ export default function BudgetPlanning() {
                         </div>
                       </div>
 
-                      {project && (
+                      {project && expandedProjectIds.includes(project.id) && (
                         <div className="overflow-x-auto">
                           <table className="w-full">
                             <thead>

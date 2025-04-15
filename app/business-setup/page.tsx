@@ -57,7 +57,13 @@ import {
 } from "@/lib/redux/projectSlice";
 
 // Separate Location Form Component
-function LocationForm({ onClose }: { onClose: () => void }) {
+function LocationForm({
+  onClose,
+  refetchLocations,
+}: {
+  onClose: () => void;
+  refetchLocations: () => void;
+}) {
   const { toast } = useToast();
   const [newLocation, setNewLocation] = useState<NewLocation>({
     location_name: "",
@@ -78,6 +84,9 @@ function LocationForm({ onClose }: { onClose: () => void }) {
 
       // Use RTK Query mutation
       await addLocation(newLocation).unwrap();
+
+      // Explicitly refetch locations after successful addition
+      refetchLocations();
 
       setNewLocation({ location_name: "" });
       onClose();
@@ -129,7 +138,13 @@ function LocationForm({ onClose }: { onClose: () => void }) {
 }
 
 // Separate Trade Form Component
-function TradeForm({ onClose }: { onClose: () => void }) {
+function TradeForm({
+  onClose,
+  refetchTrades,
+}: {
+  onClose: () => void;
+  refetchTrades: () => void;
+}) {
   const { toast } = useToast();
   const [newTrade, setNewTrade] = useState({
     location_name: "",
@@ -162,6 +177,9 @@ function TradeForm({ onClose }: { onClose: () => void }) {
       };
       // Use RTK Query mutation
       await addTrade(newTradeToAdd).unwrap();
+
+      // Explicitly refetch trades after successful addition
+      refetchTrades();
 
       setNewTrade({
         location_name: "",
@@ -254,7 +272,13 @@ function TradeForm({ onClose }: { onClose: () => void }) {
 }
 
 // Separate Project Form Component
-function ProjectForm({ onClose }: { onClose: () => void }) {
+function ProjectForm({
+  onClose,
+  refetchProjects,
+}: {
+  onClose: () => void;
+  refetchProjects: () => void;
+}) {
   const { toast } = useToast();
   const [newProject, setNewProject] = useState<NewProject>({
     project_name: "",
@@ -285,6 +309,9 @@ function ProjectForm({ onClose }: { onClose: () => void }) {
 
       // Use RTK Query mutation
       await addProject(newProject).unwrap();
+
+      // Explicitly refetch projects after successful addition
+      refetchProjects();
 
       setNewProject({
         project_name: "",
@@ -841,7 +868,10 @@ export default function BusinessSetup() {
           <DialogHeader>
             <DialogTitle>Adding New Location</DialogTitle>
           </DialogHeader>
-          <LocationForm onClose={() => setShowAddLocation(false)} />
+          <LocationForm
+            onClose={() => setShowAddLocation(false)}
+            refetchLocations={refetchLocations}
+          />
         </DialogContent>
       </Dialog>
 
@@ -851,7 +881,10 @@ export default function BusinessSetup() {
           <DialogHeader>
             <DialogTitle>Adding New Trade</DialogTitle>
           </DialogHeader>
-          <TradeForm onClose={() => setShowAddTrade(false)} />
+          <TradeForm
+            onClose={() => setShowAddTrade(false)}
+            refetchTrades={refetchTrades}
+          />
         </DialogContent>
       </Dialog>
 
@@ -861,7 +894,10 @@ export default function BusinessSetup() {
           <DialogHeader>
             <DialogTitle>Adding New Project</DialogTitle>
           </DialogHeader>
-          <ProjectForm onClose={() => setShowAddProject(false)} />
+          <ProjectForm
+            onClose={() => setShowAddProject(false)}
+            refetchProjects={refetchProjects}
+          />
         </DialogContent>
       </Dialog>
     </div>
