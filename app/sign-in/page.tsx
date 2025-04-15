@@ -27,6 +27,7 @@ export default function SignIn() {
     email: "",
     password: "",
     rememberMe: false,
+    role: "user", // Add default role
   });
   const [error, setError] = useState(""); // Error state for handling failed login
 
@@ -54,6 +55,7 @@ export default function SignIn() {
       const response: ResponseError | ResponseData = await login({
         email: formData.email,
         password: formData.password,
+        role: formData.role, // Include role in login request
       });
 
       // Check for error response structure
@@ -230,6 +232,29 @@ export default function SignIn() {
                     <Eye className="h-4 w-4 text-gray-400" />
                   )}
                 </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="role" className="text-sm font-medium">
+                Role
+              </label>
+              <div className="relative">
+                <select
+                  id="role"
+                  name="role"
+                  value={formData.role}
+                  onChange={(e) =>
+                    setFormData({ ...formData, role: e.target.value })
+                  }
+                  className="w-full py-2 px-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  disabled={isLoading}
+                >
+                  <option value="admin">Admin</option>
+                  <option value="hr manager">HR Manager</option>
+                  <option value="departure manager">Departure Manager</option>
+                  <option value="employee">Employee</option>
+                </select>
               </div>
             </div>
 

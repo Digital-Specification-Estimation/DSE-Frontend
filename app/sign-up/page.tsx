@@ -22,6 +22,7 @@ export default function SignUp() {
     username: "",
     email: "",
     password: "",
+    // role: "admin", // Add default role
     agreeToTerms: false,
   });
 
@@ -59,6 +60,7 @@ export default function SignUp() {
         password: formData.password,
         email: formData.email,
         business_name: formData.business_name,
+        // role: formData.role, // Add role to the signup payload
       }).unwrap();
       router.push("/sign-in");
     } catch (err: any) {
@@ -180,6 +182,29 @@ export default function SignUp() {
                 />
               </div>
             </div>
+
+            {/* <div className="space-y-2">
+              <label htmlFor="role" className="text-sm font-medium">
+                Role
+              </label>
+              <div className="relative">
+                <select
+                  id="role"
+                  name="role"
+                  value={formData.role}
+                  onChange={(e) =>
+                    setFormData({ ...formData, role: e.target.value })
+                  }
+                  className="w-full pl-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  disabled={isLoading}
+                >
+                  <option value="admin">Admin</option>
+                  <option value="hr manager">HR Manager</option>
+                  <option value="departure manager">Departure Manager</option>
+                  <option value="employee">Employee</option>
+                </select>
+              </div>
+            </div> */}
 
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
