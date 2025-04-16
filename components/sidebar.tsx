@@ -126,7 +126,6 @@ export function Sidebar({ user }: SidebarProps) {
     { name: "Attendance & Payroll", href: "/attendance-payroll", icon: Users2 },
     { name: "Logout", href: "/", icon: LogOut, onClick: handleLogout },
   ];
-
   return (
     <div className="w-[280px] min-h-screen bg-[#FAFAFA] flex flex-col border-r border-gray-200">
       {/* Logo */}

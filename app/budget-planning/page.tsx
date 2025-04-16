@@ -46,8 +46,6 @@ import {
   useGetTradesQuery,
   useUnassignTradeProjectIdMutation,
 } from "@/lib/redux/tradePositionSlice";
-
-// Types
 interface Trade {
   id: number;
   role: string;
@@ -96,7 +94,6 @@ export default function BudgetPlanning() {
 
   const chartRef = useRef<HTMLDivElement>(null);
 
-  // New trade form state
   const [newTrade, setNewTrade] = useState({
     id: "",
     workDays: "22",
@@ -104,7 +101,6 @@ export default function BudgetPlanning() {
     projectId: "",
   });
 
-  // Edit trade form state
   const [editTrade, setEditTrade] = useState({
     id: 0,
     role: "",
@@ -115,12 +111,10 @@ export default function BudgetPlanning() {
 
   const [updateTrade, { isLoading: isUpdating }] = useEditTradeMutation();
 
-  // Fetch budget data
   useEffect(() => {
     const fetchBudgetData = async () => {
       try {
         setIsLoading(true);
-        // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         setIsLoading(false);
@@ -155,7 +149,6 @@ export default function BudgetPlanning() {
       }
 
       setIsSaving(true);
-      // Simulate API call
       await updateTrade({
         id: newTrade.id,
         projectId: newTrade.projectId,
@@ -165,7 +158,6 @@ export default function BudgetPlanning() {
         ).toString(),
       }).unwrap();
 
-      // Refetch data after successful update
       await Promise.all([refetchTrades(), refetchProjects()]);
 
       setShowAddTrade(false);
@@ -204,7 +196,6 @@ export default function BudgetPlanning() {
 
       setIsSaving(true);
 
-      // Use the RTK Query mutation hook
       await updateTrade({
         id: editTrade.id,
         work_days: Number.parseInt(editTrade.workDays),
@@ -213,7 +204,6 @@ export default function BudgetPlanning() {
         ).toString(),
       }).unwrap();
 
-      // Refetch data after successful update
       await Promise.all([refetchTrades(), refetchProjects()]);
 
       setShowEditTrade(false);
@@ -250,11 +240,9 @@ export default function BudgetPlanning() {
         description: `Editing ${trade.trade_name}.`,
       });
     } else if (action === "delete") {
-      // Use RTK Query to delete the trade
       unassignProject(trade.id)
         .unwrap()
         .then(async () => {
-          // Refetch data after successful delete
           await Promise.all([refetchTrades(), refetchProjects()]);
 
           toast({
@@ -298,21 +286,17 @@ export default function BudgetPlanning() {
     }
   };
 
-  // Filter projects based on search term
   const filteredProjects = projects.filter((project) => {
     if (!searchTerm) return true;
 
-    // Check if project name matches
     if (project.name.toLowerCase().includes(searchTerm.toLowerCase()))
       return true;
 
-    // Check if any trade in the project matches
     return project.trades.some((trade) =>
       trade.role.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
 
-  // Calculate totals for the cost trend view
   const totalPlannedCost = projects.reduce(
     (sum, project) =>
       sum + project.trades.reduce((s, trade) => s + trade.plannedSalary, 0),
@@ -325,12 +309,10 @@ export default function BudgetPlanning() {
     0
   );
 
-  // Get all unique trade roles across all projects
   const allTrades = Array.from(
     new Set(projects.flatMap((p) => p.trades.map((t) => t.role)))
   );
 
-  // Calculate planned and actual costs for each trade role
   const tradeData = allTrades.map((role) => {
     const plannedCost = projects.reduce(
       (sum, project) =>
@@ -361,24 +343,7 @@ export default function BudgetPlanning() {
   const handleExportReport = async () => {
     try {
       setIsExporting(true);
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // In a real implementation, this would be:
-      // const response = await fetch('/api/budget/export', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ timeFilter, projects: filteredProjects }),
-      // });
-      // const blob = await response.blob();
-      // const url = window.URL.createObjectURL(blob);
-      // const a = document.createElement('a');
-      // a.href = url;
-      // a.download = 'budget_report.pdf';
-      // document.body.appendChild(a);
-      // a.click();
-      // a.remove();
-
       setIsExporting(false);
       toast({
         title: "Report Exported",
@@ -413,21 +378,17 @@ export default function BudgetPlanning() {
     }
   };
 
-  // Calculate the maximum value for the chart's y-axis
   const calculateYAxisScale = (data: any[]) => {
     if (!data || data.length === 0) return [0, 10000, 20000, 30000];
 
-    // Find the maximum value from both planned and actual costs
     const maxValue = Math.max(
       ...data.map((t: any) =>
         Math.max(t.planned_costs || 0, t.actual_cost || 0)
       )
     );
 
-    // Round up to a nice number for the y-axis maximum
     const roundedMax = Math.ceil(maxValue / 5000) * 5000;
 
-    // Create an array of y-axis labels with 5 steps
     const steps = 5;
     const yAxisValues = Array.from({ length: steps + 1 }, (_, i) =>
       Math.round((roundedMax / steps) * i)
@@ -462,7 +423,6 @@ export default function BudgetPlanning() {
     });
   }
 
-  // Generate y-axis scale based on actual data
   const yAxisLabels = calculateYAxisScale(tradesFetched);
 
   return (
@@ -471,7 +431,6 @@ export default function BudgetPlanning() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardHeader />
-        {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold">
@@ -749,7 +708,6 @@ export default function BudgetPlanning() {
               )}
             </TabsContent>
 
-            {/* Costs Trend Tab */}
             <TabsContent value="costs" className="p-0 mt-0">
               <div className="bg-white rounded-lg border p-6">
                 <div className="flex justify-between items-start mb-8">
@@ -838,28 +796,23 @@ export default function BudgetPlanning() {
                   </div>
                 </div>
 
-                {/* Interactive Chart with Dynamic Y-Axis */}
                 <div className="h-80 relative mb-8" ref={chartRef}>
-                  {/* Y-axis labels - Now Dynamic */}
                   <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-sm text-gray-500">
                     {[...yAxisLabels].reverse().map((value, index) => (
                       <div key={index}>${(value / 1000).toFixed(0)}K</div>
                     ))}
                   </div>
 
-                  {/* Chart bars */}
                   <div className="ml-12 h-full flex items-end justify-between">
                     {tradesFetched && tradesFetched.length > 0 ? (
                       tradesFetched.map((trade: any, index: number) => {
-                        // Get the maximum value for scaling
                         const maxValue = Math.max(
                           ...tradesFetched.map((t: any) =>
                             Math.max(t.planned_costs || 0, t.actual_cost || 0)
                           )
                         );
 
-                        // Calculate bar heights based on the data's maximum value
-                        const maxHeight = 240; // Maximum height in pixels
+                        const maxHeight = 240;
                         const plannedHeight = maxValue
                           ? ((trade.planned_costs || 0) / maxValue) * maxHeight
                           : 0;
@@ -867,10 +820,8 @@ export default function BudgetPlanning() {
                           ? ((trade.actual_cost || 0) / maxValue) * maxHeight
                           : 0;
 
-                        // Calculate if this bar should show the tooltip
                         const showTooltip = trade.trade_name === "HR & Admin";
 
-                        // Calculate the difference between actual and planned costs
                         const difference =
                           (trade.actual_cost || 0) - (trade.planned_costs || 0);
 
@@ -881,12 +832,10 @@ export default function BudgetPlanning() {
                             style={{ width: `${100 / tradesFetched.length}%` }}
                           >
                             <div className="relative flex items-end justify-center w-full gap-1">
-                              {/* Planned cost bar */}
                               <div
                                 className="w-20 bg-orange-500 transition-all duration-500 ease-in-out cursor-pointer"
                                 style={{ height: `${plannedHeight}px` }}
                                 onMouseEnter={(e) => {
-                                  // Show tooltip on hover
                                   const tooltip =
                                     e.currentTarget.nextElementSibling
                                       ?.nextElementSibling;
@@ -897,12 +846,10 @@ export default function BudgetPlanning() {
                                 }}
                               ></div>
 
-                              {/* Actual cost bar */}
                               <div
                                 className="w-20 bg-blue-700 transition-all duration-500 ease-in-out cursor-pointer"
                                 style={{ height: `${actualHeight}px` }}
                                 onMouseEnter={(e) => {
-                                  // Show tooltip on hover
                                   const tooltip =
                                     e.currentTarget.nextElementSibling;
                                   if (tooltip) {
@@ -912,7 +859,6 @@ export default function BudgetPlanning() {
                                 }}
                               ></div>
 
-                              {/* Interactive tooltip - shown on hover or permanently for HR & Admin */}
                               <div
                                 className={`absolute top-0 right-0 bg-white border rounded-md p-2 shadow-md transition-opacity duration-200 
                                 ${
@@ -926,7 +872,6 @@ export default function BudgetPlanning() {
                                   zIndex: 20,
                                 }}
                                 onMouseLeave={(e) => {
-                                  // Hide tooltip on mouse leave unless it's the permanent one
                                   if (!showTooltip) {
                                     e.currentTarget.classList.remove(
                                       "opacity-100"
@@ -1077,7 +1022,6 @@ export default function BudgetPlanning() {
         </main>
       </div>
 
-      {/* Add Trade Sheet */}
       <Sheet open={showAddTrade} onOpenChange={setShowAddTrade}>
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
@@ -1189,7 +1133,6 @@ export default function BudgetPlanning() {
         </SheetContent>
       </Sheet>
 
-      {/* Edit Trade Sheet */}
       <Sheet open={showEditTrade} onOpenChange={setShowEditTrade}>
         <SheetContent className="sm:max-w-md">
           <SheetHeader>

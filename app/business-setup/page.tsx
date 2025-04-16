@@ -56,7 +56,6 @@ import {
   useGetProjectsQuery,
 } from "@/lib/redux/projectSlice";
 
-// Separate Location Form Component
 function LocationForm({
   onClose,
   refetchLocations,
