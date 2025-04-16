@@ -30,7 +30,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useGetCompaniesQuery } from "@/lib/redux/companySlice";
+import {
+  useAddCompanyMutation,
+  useGetCompaniesQuery,
+} from "@/lib/redux/companySlice";
 
 // Mock company data - replace with actual API call in production
 const mockCompanies = [
@@ -40,7 +43,9 @@ const mockCompanies = [
 ];
 
 export default function SignUp() {
-  const { data: companiesFetched = [] } = useGetCompaniesQuery();
+  const [createCompany] = useAddCompanyMutation();
+  const { data: companiesFetched = [], refetch: refetchCompanies } =
+    useGetCompaniesQuery();
 
   const [signup] = useSignupMutation();
   const router = useRouter();
@@ -62,14 +67,10 @@ export default function SignUp() {
 
   const [companyData, setCompanyData] = useState({
     company_name: "",
-    company_profile: "",
     business_type: "",
-    standard_work_hours: 8,
-    weekly_work_limit: 40,
-    holidays: [],
-    overtime_rate: 1.5,
-    daily_total_planned_cost: 0,
-    daily_total_actual_cost: 0,
+    standard_work_hours: "",
+    weekly_work_limit: "",
+    overtime_rate: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,26 +144,15 @@ export default function SignUp() {
   const handleCreateCompany = async () => {
     setIsLoading(true);
     try {
-      // In a real app, this would be an API call to create a company
-      // For now, we'll simulate it with a timeout
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Create a new mock company with a random ID
-      const newCompany = {
-        id: Math.random().toString(36).substring(2, 9),
+      await createCompany({
         company_name: companyData.company_name,
-      };
+        business_type: companyData.business_type,
+        standard_work_hours: companyData.standard_work_hours,
+        weekly_work_limit: companyData.weekly_work_limit,
+        overtime_rate: parseFloat(companyData.overtime_rate),
+      }).unwrap();
+      await Promise.all([refetchCompanies()]);
 
-      // Add the new company to the list
-      setCompanies([...companies, newCompany]);
-
-      // Select the newly created company
-      setFormData({
-        ...formData,
-        company_id: newCompany.id,
-      });
-
-      // Close the modal
       setModalOpen(false);
 
       toast({
@@ -170,6 +160,7 @@ export default function SignUp() {
         description: "Company created successfully",
       });
     } catch (err: any) {
+      console.log(err);
       toast({
         title: "Error",
         description: "Failed to create company",
@@ -185,7 +176,7 @@ export default function SignUp() {
 
     // Redirect to backend OAuth endpoint
     if (provider === "google") {
-      window.location.href = "http://localhost:4001/auth/google";
+      window.location.href = "http://localhost:4000/auth/google";
     } else {
       // Apple signup would go here
       setTimeout(() => {
@@ -260,7 +251,7 @@ export default function SignUp() {
                       New
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]">
+                  <DialogContent className="sm:max-w-[700px]">
                     <DialogHeader>
                       <DialogTitle>Create New Company</DialogTitle>
                     </DialogHeader>
@@ -273,19 +264,6 @@ export default function SignUp() {
                           id="company_name"
                           name="company_name"
                           value={companyData.company_name}
-                          onChange={handleCompanyChange}
-                          className="col-span-3"
-                          required
-                        />
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="company_profile" className="text-right">
-                          Profile
-                        </Label>
-                        <Textarea
-                          id="company_profile"
-                          name="company_profile"
-                          value={companyData.company_profile}
                           onChange={handleCompanyChange}
                           className="col-span-3"
                           required
