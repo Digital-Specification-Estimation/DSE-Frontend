@@ -9,6 +9,9 @@ export const companyApi = createApi({
     getCompanies: builder.query<any, void>({
       query: () => "companies",
     }),
+    getCompany: builder.query<any, string>({
+      query: (id) => `get/${id}`,
+    }),
     addCompany: builder.mutation({
       query: (company) => ({
         url: "add",
@@ -35,6 +38,7 @@ export const companyApi = createApi({
 export const {
   useGetCompaniesQuery,
   useAddCompanyMutation,
+  useGetCompanyQuery,
   useEditCompanyMutation,
   useDeleteCompanyMutation,
 } = companyApi;

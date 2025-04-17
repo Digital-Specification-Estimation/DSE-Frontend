@@ -8,11 +8,16 @@ import { Sidebar } from "@/components/sidebar";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionQuery } from "@/lib/redux/authSlice";
+import {
+  useEditCompanyMutation,
+  useGetCompanyQuery,
+} from "@/lib/redux/companySlice";
 
 export default function Settings() {
   const [userData, setUserData] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [newHoliday, setNewHoliday] = useState<string>("");
 
   const {
@@ -28,6 +33,19 @@ export default function Settings() {
     refetchOnReconnect: true,
     skip: false,
   });
+
+  // Get the first company ID from the session data
+  const companyId = sessionData?.user?.companies?.[0]?.id || "default";
+
+  // RTK Query hooks
+  const { data: companyData, isLoading: isCompanyLoading } = useGetCompanyQuery(
+    companyId,
+    {
+      skip: !companyId || companyId === "default",
+    }
+  );
+
+  const [updateCompany, { isLoading: isUpdating }] = useEditCompanyMutation();
 
   const { toast } = useToast();
   const [user] = useState({
@@ -57,32 +75,14 @@ export default function Settings() {
 
   const [activeTab, setActiveTab] = useState("company");
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [companySettings, setCompanySettings] = useState({
     companyName: "",
     businessType: "",
-    holidays: [],
+    holidays: [] as string[],
     workHours: "",
     weeklyWorkLimit: "",
     overtimeRate: "",
   });
-
-  useEffect(() => {
-    if (sessionData && sessionData.user) {
-      setUserData(sessionData.user);
-    }
-    sessionData.user.companies.map((company: any) => {
-      setCompanySettings({
-        companyName: company.company_name,
-        businessType: company.business_type,
-        holidays: company.holidays,
-        workHours: company.standard_work_hours,
-        weeklyWorkLimit: company.weekly_work_limit,
-        overtimeRate: company.overtime_rate,
-      });
-    });
-    console.log(companySettings);
-  }, [sessionData]);
 
   const [payrollSettings, setPayrollSettings] = useState({
     salaryCalculation: "Daily Rate",
@@ -96,33 +96,71 @@ export default function Settings() {
     deadline: true,
   });
 
+  // Update local state when company data is loaded
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        setIsLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error fetching settings:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load settings. Please try again.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
+    if (companyData) {
+      setCompanySettings({
+        companyName: companyData.company_name,
+        businessType: companyData.business_type,
+        holidays: companyData.holidays,
+        workHours: companyData.standard_work_hours,
+        weeklyWorkLimit: companyData.weekly_work_limit,
+        overtimeRate: companyData.overtime_rate,
+      });
+      if (companyData.company_profile) {
+        setCompanyLogo(`http://localhost:4000/${companyData.company_profile}`);
       }
-    };
+    }
+  }, [companyData]);
 
-    fetchSettings();
-  }, [toast]);
+  // Update local state from session data
+  useEffect(() => {
+    if (sessionData && sessionData.user) {
+      setUserData(sessionData.user);
+    }
+
+    if (sessionData.user?.companies?.length > 0) {
+      const company = sessionData.user.companies[0];
+      setCompanySettings({
+        companyName: company.company_name,
+        businessType: company.business_type,
+        holidays: company.holidays || [],
+        workHours: company.standard_work_hours,
+        weeklyWorkLimit: company.weekly_work_limit,
+        overtimeRate: company.overtime_rate,
+      });
+      if (company.company_profile) {
+        setCompanyLogo(`http://localhost:4000/${company.company_profile}`);
+      }
+    }
+
+    setIsLoading(false);
+  }, [sessionData]);
 
   const handleSaveSettings = async () => {
     try {
-      setIsSaving(true);
-      // Here you would add code to also upload the company logo file
-      // if companyLogo state is not null
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setIsSaving(false);
+      // Create a FormData object to handle file upload
+      const formData = new FormData();
+
+      // Add all company settings to the FormData
+      formData.append("id", companyId);
+      formData.append("company_name", companySettings.companyName);
+      formData.append("business_type", companySettings.businessType);
+      companySettings.holidays.forEach((holiday: any) => {
+        formData.append("holidays", holiday);
+      });
+      formData.append("standard_work_hours", companySettings.workHours);
+      formData.append("weekly_work_limit", companySettings.weeklyWorkLimit);
+      formData.append("overtime_rate", companySettings.overtimeRate);
+
+      // Add the logo file if it exists
+      if (logoFile) {
+        formData.append("image", logoFile);
+      }
+
+      // Call the RTK Query mutation
+      const result = await updateCompany(formData).unwrap();
+
       toast({
         title: "Settings Saved",
         description: "Your settings have been updated successfully.",
@@ -134,7 +172,6 @@ export default function Settings() {
         description: "Failed to save settings. Please try again.",
         variant: "destructive",
       });
-      setIsSaving(false);
     }
   };
 
@@ -235,6 +272,9 @@ export default function Settings() {
       return;
     }
 
+    // Store the file for later upload
+    setLogoFile(file);
+
     // Create object URL for preview
     const imageUrl = URL.createObjectURL(file);
     setCompanyLogo(imageUrl);
@@ -250,7 +290,7 @@ export default function Settings() {
     fileInputRef.current?.click();
   };
 
-  if (isLoading) {
+  if (isLoading || isCompanyLoading) {
     return (
       <div className="flex h-screen bg-[#FAFAFA]">
         <Sidebar user={user} />
@@ -266,6 +306,8 @@ export default function Settings() {
       </div>
     );
   }
+
+  console.log("logo -> ", companyLogo);
 
   return (
     <div className="flex h-screen bg-[#FAFAFA]">
@@ -294,9 +336,9 @@ export default function Settings() {
                 <button
                   className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm flex items-center gap-2"
                   onClick={handleSaveSettings}
-                  disabled={isSaving}
+                  disabled={isUpdating}
                 >
-                  {isSaving ? (
+                  {isUpdating ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Saving...
