@@ -31,7 +31,11 @@ interface SidebarProps {
 }
 
 export function Sidebar({ user }: SidebarProps) {
-  const [userData, setUserData] = useState({ username: "Guest", role: "user" });
+  const [userData, setUserData] = useState({
+    username: "Guest",
+    role: "user",
+    current_role: "user",
+  });
   const {
     data: sessionData,
     isLoading,
@@ -61,6 +65,7 @@ export function Sidebar({ user }: SidebarProps) {
       setUserData(sessionData.user);
     }
   }, [sessionData]);
+  console.log(sessionData);
 
   // Effect to check authentication on mount and reload
   useEffect(() => {
@@ -181,7 +186,7 @@ export function Sidebar({ user }: SidebarProps) {
                 {userData.username}
               </span>
               <span className="text-xs text-gray-500 truncate">
-                {userData.role}
+                {userData.current_role}
               </span>
             </div>
             <button>

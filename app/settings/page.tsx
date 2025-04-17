@@ -19,6 +19,19 @@ export default function Settings() {
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [newHoliday, setNewHoliday] = useState<string>("");
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [newPrivilege, setNewPrivilege] = useState<string>("");
+  const [availablePrivileges] = useState([
+    "Full access",
+    "Approve attendance",
+    "Manage payroll",
+    "View reports",
+    "Approve leaves",
+    "View payslips",
+    "Mark attendance",
+    "Manage employees",
+    "Generate reports",
+  ]);
 
   const {
     data: sessionData = { user: { companies: [] } },
@@ -54,24 +67,24 @@ export default function Settings() {
     avatar: "/placeholder.svg?height=40&width=40",
   });
 
-  const userSettings = [
+  const [userSettings, setUserSettings] = useState([
     {
-      label: "Admin",
+      role: "Admin",
       permissions: ["Full access"],
     },
     {
-      label: "HR Manager",
+      role: "HR Manager",
       permissions: ["Approve attendance", "Manage payroll"],
     },
     {
-      label: "Department Manager",
+      role: "Department Manager",
       permissions: ["View reports", "Approve leaves"],
     },
     {
-      label: "Employee",
+      role: "Employee",
       permissions: ["View payslips", "Mark attendance"],
     },
-  ];
+  ]);
 
   const [activeTab, setActiveTab] = useState("company");
   const [isLoading, setIsLoading] = useState(true);
@@ -222,9 +235,64 @@ export default function Settings() {
   };
 
   const handleRemovePermission = (role: string, permission: string) => {
+    const updatedSettings = userSettings.map((setting) => {
+      if (setting.role === role) {
+        return {
+          ...setting,
+          permissions: setting.permissions.filter((p) => p !== permission),
+        };
+      }
+      return setting;
+    });
+
+    setUserSettings(updatedSettings);
+
     toast({
       title: "Permission Removed",
       description: `"${permission}" permission removed from ${role} role.`,
+    });
+  };
+
+  const handleAddPrivilege = (role: string) => {
+    if (!newPrivilege.trim()) {
+      toast({
+        title: "Error",
+        description: "Please select a privilege to add",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Find the role in userSettings
+    const updatedSettings = userSettings.map((setting) => {
+      if (setting.role === role) {
+        // Check if the privilege already exists
+        if (setting.permissions.includes(newPrivilege)) {
+          toast({
+            title: "Error",
+            description: "This privilege already exists for this role",
+            variant: "destructive",
+          });
+          return setting;
+        }
+
+        // Add the new privilege
+        return {
+          ...setting,
+          permissions: [...setting.permissions, newPrivilege],
+        };
+      }
+      return setting;
+    });
+
+    // Update the state
+    setUserSettings(updatedSettings);
+    setNewPrivilege("");
+    setSelectedRole(null);
+
+    toast({
+      title: "Privilege Added",
+      description: `"${newPrivilege}" privilege added to ${role} role.`,
     });
   };
 
@@ -600,24 +668,39 @@ export default function Settings() {
                       {userSettings.map((user, index) => (
                         <div
                           key={index}
-                          className="flex justify-between items-center border-b-2 border-gray-300 h-16"
+                          className="flex flex-col border-b-2 border-gray-300 py-4"
                         >
-                          <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
-                            {user.label}{" "}
-                            <span className="text-red-500 ml-0.5">*</span>
-                          </label>
-                          <div className="flex flex-wrap gap-2 border border-gray-200 h-10 rounded-lg items-center w-[400px]">
+                          <div className="flex justify-between items-center mb-3">
+                            <label className="flex items-center text-sm font-medium text-gray-700">
+                              {user.role}{" "}
+                              <span className="text-red-500 ml-0.5">*</span>
+                            </label>
+                            <button
+                              onClick={() =>
+                                setSelectedRole(
+                                  selectedRole === user.role ? null : user.role
+                                )
+                              }
+                              className="px-3 py-1 text-sm border border-gray-200 rounded-md hover:bg-gray-50"
+                            >
+                              {selectedRole === user.role
+                                ? "Cancel"
+                                : "Add Privilege"}
+                            </button>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 border border-gray-200 min-h-10 p-2 rounded-lg w-full mb-3">
                             {user.permissions.map((permission, idx) => (
                               <div
                                 key={`${index}-${idx}`}
-                                className="inline-flex items-center gap-1.5 px-3 h-7 bg-gray-100 rounded-md text-sm border border-gray-300 ml-3"
+                                className="inline-flex items-center gap-1.5 px-3 h-7 bg-gray-100 rounded-md text-sm border border-gray-300"
                               >
                                 {permission}
                                 <button
                                   className="text-red-500 hover:text-gray-600"
                                   onClick={() =>
                                     handleRemovePermission(
-                                      user.label,
+                                      user.role,
                                       permission
                                     )
                                   }
@@ -627,6 +710,36 @@ export default function Settings() {
                               </div>
                             ))}
                           </div>
+
+                          {selectedRole === user.role && (
+                            <div className="flex items-center gap-2 mt-2">
+                              <div className="relative flex-1">
+                                <select
+                                  value={newPrivilege}
+                                  onChange={(e) =>
+                                    setNewPrivilege(e.target.value)
+                                  }
+                                  className="w-full px-3 h-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none"
+                                >
+                                  <option value="">Select a privilege</option>
+                                  {availablePrivileges.map((privilege) => (
+                                    <option key={privilege} value={privilege}>
+                                      {privilege}
+                                    </option>
+                                  ))}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleAddPrivilege(user.role)}
+                                className="px-3 h-10 bg-orange-500 text-white rounded-lg flex items-center justify-center hover:bg-orange-600"
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Add
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
