@@ -16,8 +16,8 @@ import {
 export default function Settings() {
   const [userData, setUserData] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [newHoliday, setNewHoliday] = useState<string>("");
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [newPrivilege, setNewPrivilege] = useState<string>("");
@@ -121,7 +121,9 @@ export default function Settings() {
         overtimeRate: companyData.overtime_rate,
       });
       if (companyData.company_profile) {
-        setCompanyLogo(`http://localhost:4000/${companyData.company_profile}`);
+        setCompanyLogo(
+          `http://localhost:40userSettings00/${companyData.company_profile}`
+        );
       }
     }
   }, [companyData]);
@@ -170,7 +172,7 @@ export default function Settings() {
       if (logoFile) {
         formData.append("image", logoFile);
       }
-
+      console.log("user settings on handle save ", userSettings);
       // Call the RTK Query mutation
       const result = await updateCompany(formData).unwrap();
 
@@ -260,6 +262,7 @@ export default function Settings() {
         description: "Please select a privilege to add",
         variant: "destructive",
       });
+      console.log("new previelege on adding ", newPrivilege);
       return;
     }
 
