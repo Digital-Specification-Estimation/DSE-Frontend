@@ -121,9 +121,8 @@ export default function Settings() {
         overtimeRate: companyData.overtime_rate,
       });
       if (companyData.company_profile) {
-        setCompanyLogo(
-          `http://localhost:40userSettings00/${companyData.company_profile}`
-        );
+        console.log(`http://localhost:4000/${companyData.company_profile}`);
+        setCompanyLogo(`http://localhost:4000/${companyData.company_profile}`);
       }
     }
   }, [companyData]);

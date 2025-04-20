@@ -399,9 +399,8 @@ export default function Dashboard() {
           <div className="mb-6">
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-2xl font-bold">Dashboard</h1>
-
               <div className="flex gap-2">
-                <Select
+                {/* <Select
                   onValueChange={(value) => handleFilterChange("trade", value)}
                 >
                   <SelectTrigger className="w-[180px]">
@@ -430,7 +429,7 @@ export default function Dashboard() {
                       </SelectItem>
                     ))}
                   </SelectContent>
-                </Select>
+                </Select> */}
                 <Button
                   variant="outline"
                   className="gap-2 h-10 rounded-full"
