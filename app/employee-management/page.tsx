@@ -2,7 +2,17 @@
 
 import type React from "react";
 import { useEffect, useState } from "react";
-import { Search, Upload, Plus, User, DollarSign } from "lucide-react";
+import {
+  Search,
+  Upload,
+  Plus,
+  User,
+  DollarSign,
+  Edit,
+  Trash2,
+  MoreHorizontal,
+  Loader2,
+} from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,12 +24,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import DashboardHeader from "@/components/DashboardHeader";
 import {
   useAddEmployeeMutation,
   useGetEmployeesQuery,
+  useEditEmployeeMutation,
+  useDeleteEmployeeMutation,
 } from "@/lib/redux/employeeSlice";
 import { employeeSlice } from "@/lib/redux/employeeSlice";
+import { useToast } from "@/hooks/use-toast";
+
 export interface NewEmployee {
   username: string;
   trade_position_id?: string;
@@ -29,26 +55,24 @@ export interface NewEmployee {
   budget_baseline?: string;
   company_id?: string;
 }
-// Sample data for trades, projects, and daily rates
-// const trades = [
-//   "Electrician",
-//   "HR Manager",
-//   "Technician",
-//   "Construction Worker",
-// ];
+
+// Sample data for projects and daily rates
 const projects = ["Metro Bridge", "Mall Construction"];
 const dailyRates = ["$100", "$120", "$140", "$200"];
 
 export default function EmployeeManagement() {
+  const { toast } = useToast();
   const [trades, setTrades] = useState([]);
   const [companies, setCompanies] = useState([]);
-  // const { data: trades, error: tradeError } = useGetTradesQuery();
-  // console.log(trades);
-  // console.log(tradeError);
   const [tradesError, setTradesError] = useState<string | null>(null);
   const [companiesError, setCompaniesError] = useState<string | null>(null);
   const [isLoadingTrades, setIsLoadingTrades] = useState(true);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
+
+  // State for edit and delete modals
+  const [showEditEmployee, setShowEditEmployee] = useState(false);
+  const [showDeleteEmployee, setShowDeleteEmployee] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
 
   useEffect(() => {
     // Define the async function inside useEffect
@@ -156,6 +180,11 @@ export default function EmployeeManagement() {
     },
   });
 
+  // Add update and delete mutations
+  const [updateEmployee, { isLoading: isUpdating }] = useEditEmployeeMutation();
+  const [deleteEmployee, { isLoading: isDeleting }] =
+    useDeleteEmployeeMutation();
+
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [filters, setFilters] = useState({
@@ -175,11 +204,30 @@ export default function EmployeeManagement() {
     company_id: "",
   });
 
+  // State for edited employee
+  const [editedEmployee, setEditedEmployee] = useState({
+    id: "",
+    username: "",
+    trade_position_id: "",
+    daily_rate: "",
+    contract_finish_date: "",
+    days_projection: "",
+    budget_baseline: "",
+    company_id: "",
+  });
+
   // Format date for display
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
     return date.toLocaleDateString();
+  };
+
+  // Format date for input fields
+  const formatDateForInput = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toISOString().split("T")[0];
   };
 
   // Format currency for display
@@ -222,8 +270,11 @@ export default function EmployeeManagement() {
 
     // Validate form data
     if (!newEmployee.username) {
-      // Add toast notification for error
-      alert("Please enter a username");
+      toast({
+        title: "Validation Error",
+        description: "Please enter a username",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -260,10 +311,123 @@ export default function EmployeeManagement() {
       setShowAddEmployee(false);
 
       // Show success notification
-      alert("Employee added successfully!");
+      toast({
+        title: "Success",
+        description: "Employee added successfully!",
+      });
     } catch (error) {
       console.error("Failed to add employee:", error);
-      alert("Failed to add employee. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to add employee. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle edit employee
+  const handleEditEmployee = (employee: any) => {
+    setSelectedEmployee(employee);
+    setEditedEmployee({
+      id: employee.id,
+      username: employee.username,
+      trade_position_id: employee.trade_position_id,
+      daily_rate: employee.daily_rate,
+      contract_finish_date: formatDateForInput(employee.contract_finish_date),
+      days_projection: employee.days_projection?.toString() || "",
+      budget_baseline: employee.budget_baseline,
+      company_id: employee.company_id,
+    });
+    setShowEditEmployee(true);
+  };
+
+  // Handle delete employee
+  const handleDeleteEmployee = (employee: any) => {
+    setSelectedEmployee(employee);
+    setShowDeleteEmployee(true);
+  };
+
+  // Handle update employee submission
+  const handleUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validate form data
+    if (!editedEmployee.username) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a username",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Create an updated employee object formatted for the API
+      const employeeToUpdate: any = {
+        id: editedEmployee.id,
+        username: editedEmployee.username,
+        trade_position_id: editedEmployee.trade_position_id || undefined,
+        daily_rate: editedEmployee.daily_rate || undefined,
+        contract_finish_date: editedEmployee.contract_finish_date
+          ? new Date(editedEmployee.contract_finish_date).toISOString()
+          : undefined,
+        days_projection: editedEmployee.days_projection
+          ? Number.parseInt(editedEmployee.days_projection)
+          : undefined,
+        budget_baseline: editedEmployee.budget_baseline || undefined,
+        company_id: editedEmployee.company_id || undefined,
+      };
+
+      // Send the data using RTK Query mutation
+      await updateEmployee(employeeToUpdate).unwrap();
+
+      // Close the edit modal
+      setShowEditEmployee(false);
+
+      // Refetch the employees to get the updated data
+      refetch();
+
+      // Show success notification
+      toast({
+        title: "Success",
+        description: "Employee updated successfully!",
+      });
+    } catch (error) {
+      console.error("Failed to update employee:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update employee. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle delete employee confirmation
+  const handleDeleteConfirm = async () => {
+    if (!selectedEmployee) return;
+
+    try {
+      // Send the delete request using RTK Query mutation
+      await deleteEmployee(selectedEmployee.id).unwrap();
+
+      // Close the delete modal
+      setShowDeleteEmployee(false);
+
+      // Refetch the employees to get the updated data
+      refetch();
+
+      // Show success notification
+      toast({
+        title: "Success",
+        description: "Employee deleted successfully!",
+      });
+    } catch (error) {
+      console.error("Failed to delete employee:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete employee. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -325,7 +489,7 @@ export default function EmployeeManagement() {
           <div className="bg-white rounded-lg border">
             {/* Filters */}
             <div className="p-4 flex gap-4 rounded-lg">
-              <Select
+              {/* <Select
                 onValueChange={(value) =>
                   setFilters((prev) => ({ ...prev, trade: value }))
                 }
@@ -382,7 +546,7 @@ export default function EmployeeManagement() {
                     </SelectItem>
                   ))}
                 </SelectContent>
-              </Select>
+              </Select> */}
 
               <div className="relative w-64 ml-auto">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground " />
@@ -438,14 +602,14 @@ export default function EmployeeManagement() {
                   <thead>
                     <tr className="border-t border-b text-sm text-muted-foreground">
                       <th className="w-10 px-4 py-3 text-left">
-                        <input
+                        {/* <input
                           type="checkbox"
                           className="h-4 w-4 rounded border-gray-300"
                           checked={
                             selectedEmployees.length === employees.length
                           }
                           onChange={(e) => handleSelectAll(e.target.checked)}
-                        />
+                        /> */}
                       </th>
                       <th className="px-4 py-3 text-left text-[10px]">
                         Username
@@ -478,7 +642,7 @@ export default function EmployeeManagement() {
                         className="border-b hover:bg-gray-50"
                       >
                         <td className="px-4 py-3">
-                          <input
+                          {/* <input
                             type="checkbox"
                             className="h-4 w-4 rounded border-gray-300"
                             checked={selectedEmployees.includes(employee.id)}
@@ -488,7 +652,7 @@ export default function EmployeeManagement() {
                                 e.target.checked
                               )
                             }
-                          />
+                          /> */}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
@@ -503,7 +667,7 @@ export default function EmployeeManagement() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          {employee.trade_position.trade_name || "N/A"}
+                          {employee.trade_position?.trade_name || "N/A"}
                         </td>
                         <td className="px-4 py-3">
                           {formatCurrency(employee.daily_rate)}
@@ -518,9 +682,31 @@ export default function EmployeeManagement() {
                           {formatCurrency(employee.budget_baseline || "0")}
                         </td>
                         <td className="px-4 py-3">
-                          {employee.company.company_name || "N/A"}
+                          {employee.company?.company_name || "N/A"}
                         </td>
-                        <td className="px-4 py-3 text-right">...</td>
+                        <td className="px-4 py-3 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleEditEmployee(employee)}
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteEmployee(employee)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -785,6 +971,263 @@ export default function EmployeeManagement() {
           </form>
         </div>
       )}
+
+      {/* Edit Employee Dialog */}
+      <Dialog open={showEditEmployee} onOpenChange={setShowEditEmployee}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Employee</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateSubmit} className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <label htmlFor="edit-username" className="text-sm font-medium">
+                Username
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <User className="h-4 w-4 text-gray-400" />
+                </div>
+                <input
+                  id="edit-username"
+                  name="username"
+                  type="text"
+                  placeholder="johndoe"
+                  value={editedEmployee.username}
+                  onChange={(e) =>
+                    setEditedEmployee({
+                      ...editedEmployee,
+                      username: e.target.value,
+                    })
+                  }
+                  className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="edit-trade-position"
+                className="text-sm font-medium"
+              >
+                Trade Position
+              </label>
+              <Select
+                value={editedEmployee.trade_position_id}
+                onValueChange={(value) =>
+                  setEditedEmployee({
+                    ...editedEmployee,
+                    trade_position_id: value,
+                  })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Trade Position" />
+                </SelectTrigger>
+                <SelectContent>
+                  {trades.map((trade: any) => (
+                    <SelectItem key={trade.id} value={trade.id}>
+                      {trade.trade_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="edit-daily-rate" className="text-sm font-medium">
+                Daily Rate
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <DollarSign className="h-4 w-4 text-gray-400" />
+                </div>
+                <input
+                  id="edit-daily-rate"
+                  name="daily_rate"
+                  type="text"
+                  placeholder="100.00"
+                  value={editedEmployee.daily_rate}
+                  onChange={(e) =>
+                    setEditedEmployee({
+                      ...editedEmployee,
+                      daily_rate: e.target.value,
+                    })
+                  }
+                  className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="edit-contract-finish-date"
+                className="text-sm font-medium"
+              >
+                Contract Finish Date
+              </label>
+              <div className="relative">
+                <input
+                  id="edit-contract-finish-date"
+                  name="contract_finish_date"
+                  type="date"
+                  value={editedEmployee.contract_finish_date}
+                  onChange={(e) =>
+                    setEditedEmployee({
+                      ...editedEmployee,
+                      contract_finish_date: e.target.value,
+                    })
+                  }
+                  className="w-full py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="edit-days-projection"
+                className="text-sm font-medium"
+              >
+                Days Projection
+              </label>
+              <div className="relative">
+                <input
+                  id="edit-days-projection"
+                  name="days_projection"
+                  type="number"
+                  placeholder="30"
+                  value={editedEmployee.days_projection}
+                  onChange={(e) =>
+                    setEditedEmployee({
+                      ...editedEmployee,
+                      days_projection: e.target.value,
+                    })
+                  }
+                  className="w-full py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="edit-budget-baseline"
+                className="text-sm font-medium"
+              >
+                Budget Baseline
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <DollarSign className="h-4 w-4 text-gray-400" />
+                </div>
+                <input
+                  id="edit-budget-baseline"
+                  name="budget_baseline"
+                  type="text"
+                  placeholder="1000.00"
+                  value={editedEmployee.budget_baseline}
+                  onChange={(e) =>
+                    setEditedEmployee({
+                      ...editedEmployee,
+                      budget_baseline: e.target.value,
+                    })
+                  }
+                  className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="edit-company" className="text-sm font-medium">
+                Company
+              </label>
+              <Select
+                value={editedEmployee.company_id}
+                onValueChange={(value) =>
+                  setEditedEmployee({
+                    ...editedEmployee,
+                    company_id: value,
+                  })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select company" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((company: any) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.company_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowEditEmployee(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="bg-orange-500 hover:bg-orange-600"
+                disabled={isUpdating}
+              >
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update Employee"
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Employee Dialog */}
+      <Dialog open={showDeleteEmployee} onOpenChange={setShowDeleteEmployee}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Employee</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <p>
+              Are you sure you want to delete the employee "
+              {selectedEmployee?.username}"?
+            </p>
+            <p className="text-sm text-gray-500">
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteEmployee(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Search,
   RefreshCw,
@@ -29,6 +29,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
+import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
 
 // API endpoints
 const API_ENDPOINTS = {
@@ -40,12 +41,6 @@ const API_ENDPOINTS = {
   PAYROLL_REPORT: "/api/payroll/report",
 };
 
-const trades = [
-  "Electrician",
-  "HR Manager",
-  "Technician",
-  "Construction Worker",
-];
 const projects = ["Metro Bridge", "Mall Construction"];
 const dailyRates = ["$100", "$120", "$140", "$200"];
 
@@ -56,7 +51,12 @@ export default function AttendancePayroll() {
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
   });
-
+  const [trades, setTrades] = useState([
+    "Electrician",
+    "testing",
+    "Technician",
+    "Construction Worker",
+  ]);
   const [activeTab, setActiveTab] = useState("attendance");
   const [expandedEmployee, setExpandedEmployee] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -87,7 +87,15 @@ export default function AttendancePayroll() {
     startDate: "",
     endDate: "",
   });
-
+  const { data: tradesFetched, refetch: refetchTrades } = useGetTradesQuery();
+  // useEffect(() => {
+  // refetchTrades();
+  // if (tradesFetched) {
+  //   tradesFetched.map((trade: any) => {
+  //     setTrades([...trades, trade.trade_name]);
+  //   });
+  // }
+  // }, []);
   // Update employee attendance using fetch
   const updateEmployeeAttendance = async (
     employeeId: number,
@@ -254,17 +262,6 @@ export default function AttendancePayroll() {
       return false;
     return true;
   });
-
-  // Calendar days for the expanded employee view
-  const calendarDays = [
-    { day: 1, weekday: "Mon", status: "Present" },
-    { day: 2, weekday: "Tue", status: "Present" },
-    { day: 3, weekday: "Wed", status: "Present" },
-    { day: 4, weekday: "Thu", status: "Present" },
-    { day: 5, weekday: "Fri", status: "Present" },
-    { day: 6, weekday: "Sun", status: "Present" },
-    { day: 7, weekday: "Wed", status: "Present" },
-  ];
 
   return (
     <div className="flex h-screen bg-white">
@@ -436,7 +433,7 @@ export default function AttendancePayroll() {
                 </SelectContent>
               </Select>
 
-              <Select
+              {/* <Select
                 value={filters.startDate}
                 onValueChange={(value) =>
                   setFilters((prev) => ({ ...prev, startDate: value }))
@@ -466,7 +463,7 @@ export default function AttendancePayroll() {
                   <SelectItem value="date2">Nov 30, 2025</SelectItem>
                   <SelectItem value="date3">Oct 31, 2025</SelectItem>
                 </SelectContent>
-              </Select>
+              </Select> */}
             </div>
           )}
 
@@ -509,12 +506,12 @@ export default function AttendancePayroll() {
                     <table className="w-full border rounded-md">
                       <thead>
                         <tr className="border-t border-b text-[10px] text-gray-500">
-                          <th className="w-10 px-4 py-3 text-left border-r">
+                          {/* <th className="w-10 px-4 py-3 text-left border-r">
                             <input
                               type="checkbox"
                               className="h-4 w-4 rounded border-gray-300"
                             />
-                          </th>
+                          </th> */}
                           <th className="px-4 py-3 text-left border-r">
                             Employee Name
                           </th>
@@ -543,12 +540,12 @@ export default function AttendancePayroll() {
                         {filteredEmployees.map((employee: any) => (
                           <React.Fragment key={employee.id}>
                             <tr className="border-b hover:bg-gray-50">
-                              <td className="px-4 py-3 border-r">
+                              {/* <td className="px-4 py-3 border-r">
                                 <input
                                   type="checkbox"
                                   className="h-4 w-4 rounded border-gray-300"
                                 />
-                              </td>
+                              </td> */}
                               <td className="px-4 py-3 border-r">
                                 <div className="flex items-center gap-2">
                                   <Avatar className="h-8 w-8">

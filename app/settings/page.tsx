@@ -12,7 +12,13 @@ import {
   useEditCompanyMutation,
   useGetCompanyQuery,
 } from "@/lib/redux/companySlice";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 export default function Settings() {
   const [userData, setUserData] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -98,15 +104,15 @@ export default function Settings() {
   });
 
   const [payrollSettings, setPayrollSettings] = useState({
-    salaryCalculation: "Daily Rate",
+    salary_calculation: "daily rate",
     currency: "USD",
-    payslipFormat: "PDF",
+    payslip_format: "PDF",
   });
 
   const [notificationSettings, setNotificationSettings] = useState({
-    emailAlerts: true,
-    reminder: false,
-    deadline: true,
+    send_email_alerts: true,
+    remind_approvals: false,
+    deadline_notify: true,
   });
 
   // Update local state when company data is loaded
@@ -132,7 +138,26 @@ export default function Settings() {
     if (sessionData && sessionData.user) {
       setUserData(sessionData.user);
     }
-
+    setPayrollSettings({
+      salary_calculation: sessionData.user?.salary_calculation
+        ? sessionData.user?.salary_calculation
+        : "daily rate",
+      payslip_format: sessionData.user?.payslip_format
+        ? sessionData.user?.payslip_format
+        : "PDF",
+      currency: sessionData.user?.currency ? sessionData.user?.currency : "USD",
+    });
+    setNotificationSettings({
+      send_email_alerts: sessionData.user?.send_email_alerts
+        ? sessionData.user?.send_email_alerts
+        : false,
+      deadline_notify: sessionData.user?.deadline_notify
+        ? sessionData.user?.deadline_notify
+        : false,
+      remind_approvals: sessionData.user?.remind_approvals
+        ? sessionData.user?.remind_approvals
+        : false,
+    });
     if (sessionData.user?.companies?.length > 0) {
       const company = sessionData.user.companies[0];
       setCompanySettings({
@@ -144,6 +169,7 @@ export default function Settings() {
         overtimeRate: company.overtime_rate,
       });
       if (company.company_profile) {
+        console.log(`http://localhost:4000/${company.company_profile}`);
         setCompanyLogo(`http://localhost:4000/${company.company_profile}`);
       }
     }
@@ -171,7 +197,10 @@ export default function Settings() {
       if (logoFile) {
         formData.append("image", logoFile);
       }
-      console.log("user settings on handle save ", userSettings);
+      console.log(
+        "notification settings on handle save ",
+        notificationSettings
+      );
       // Call the RTK Query mutation
       const result = await updateCompany(formData).unwrap();
 
@@ -305,13 +334,6 @@ export default function Settings() {
       ...notificationSettings,
       [setting]: !notificationSettings[setting],
     });
-
-    toast({
-      title: "Notification Setting Updated",
-      description: `${setting} notifications ${
-        notificationSettings[setting] ? "disabled" : "enabled"
-      }.`,
-    });
   };
 
   const handleTabChange = (tab: string) => {
@@ -376,8 +398,6 @@ export default function Settings() {
       </div>
     );
   }
-
-  console.log("logo -> ", companyLogo);
 
   return (
     <div className="flex h-screen bg-[#FAFAFA]">
@@ -765,20 +785,29 @@ export default function Settings() {
                           Salary Calculation{" "}
                           <span className="text-red-500 ml-0.5">*</span>
                         </label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={payrollSettings.salaryCalculation}
-                            onChange={(e) =>
+                        <div className="w-[400px]">
+                          <Select
+                            value={payrollSettings.salary_calculation}
+                            onValueChange={(value) =>
                               setPayrollSettings({
                                 ...payrollSettings,
-                                salaryCalculation: e.target.value,
+                                salary_calculation: value,
                               })
                             }
-                            className="w-[400px] px-3 h-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            readOnly
-                          />
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily rate">
+                                Daily rate
+                              </SelectItem>
+
+                              <SelectItem value="monthly rate">
+                                Monthly rate
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
 
@@ -787,19 +816,24 @@ export default function Settings() {
                           Currency{" "}
                           <span className="text-red-500 ml-0.5">*</span>
                         </label>
-                        <div className="relative">
-                          <input
-                            type="text"
+                        <div className="w-[400px]">
+                          <Select
                             value={payrollSettings.currency}
-                            onChange={(e) =>
+                            onValueChange={(value) =>
                               setPayrollSettings({
                                 ...payrollSettings,
-                                currency: e.target.value,
+                                currency: value,
                               })
                             }
-                            className="w-[400px] px-3 h-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="USD">USD</SelectItem>
+                              <SelectItem value="FRW">FRW</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
 
@@ -811,11 +845,11 @@ export default function Settings() {
                         <div className="relative">
                           <input
                             type="text"
-                            value={payrollSettings.payslipFormat}
+                            value={payrollSettings.payslip_format}
                             onChange={(e) =>
                               setPayrollSettings({
                                 ...payrollSettings,
-                                payslipFormat: e.target.value,
+                                payslip_format: e.target.value,
                               })
                             }
                             className="w-[400px] px-3 h-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -854,9 +888,9 @@ export default function Settings() {
                           <input
                             type="checkbox"
                             className="sr-only peer"
-                            checked={notificationSettings.emailAlerts}
+                            checked={notificationSettings.send_email_alerts}
                             onChange={() =>
-                              handleToggleNotification("emailAlerts")
+                              handleToggleNotification("send_email_alerts")
                             }
                           />
                           <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
@@ -876,9 +910,9 @@ export default function Settings() {
                           <input
                             type="checkbox"
                             className="sr-only peer"
-                            checked={notificationSettings.reminder}
+                            checked={notificationSettings.remind_approvals}
                             onChange={() =>
-                              handleToggleNotification("reminder")
+                              handleToggleNotification("remind_approvals")
                             }
                           />
                           <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
@@ -898,9 +932,9 @@ export default function Settings() {
                           <input
                             type="checkbox"
                             className="sr-only peer"
-                            checked={notificationSettings.deadline}
+                            checked={notificationSettings.deadline_notify}
                             onChange={() =>
-                              handleToggleNotification("deadline")
+                              handleToggleNotification("deadline_notify")
                             }
                           />
                           <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
