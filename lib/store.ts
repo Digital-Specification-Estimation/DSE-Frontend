@@ -7,11 +7,15 @@ import { projectApi } from "./redux/projectSlice";
 import { attendanceApi } from "./redux/attendanceSlice";
 import { companyApi } from "./redux/companySlice";
 import { userApi } from "./redux/userSlice";
-import { notificationsApi } from "./redux/notificationSlice";
+import {
+  notificationsApi,
+  notificationsSlice,
+} from "./redux/notificationSlice";
 
 export const makeStore = () => {
   return configureStore({
     reducer: {
+      notificationsState: notificationsSlice.reducer,
       [authApi.reducerPath]: authApi.reducer,
       [employeeApi.reducerPath]: employeeApi.reducer,
       [tradePositionApi.reducerPath]: tradePositionApi.reducer,
