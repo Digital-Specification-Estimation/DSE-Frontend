@@ -144,10 +144,10 @@ export default function Dashboard() {
         // setEmployeeData(data.employeeData);
 
         setIsLoading(false);
-        toast({
-          title: "Dashboard Loaded",
-          description: "Dashboard data has been loaded successfully.",
-        });
+        // toast({
+        //   title: "Dashboard Loaded",
+        //   description: "Dashboard data has been loaded successfully.",
+        // });
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
         toast({

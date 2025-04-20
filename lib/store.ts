@@ -7,6 +7,7 @@ import { projectApi } from "./redux/projectSlice";
 import { attendanceApi } from "./redux/attendanceSlice";
 import { companyApi } from "./redux/companySlice";
 import { userApi } from "./redux/userSlice";
+import { notificationsApi } from "./redux/notificationSlice";
 
 export const makeStore = () => {
   return configureStore({
@@ -19,6 +20,7 @@ export const makeStore = () => {
       [attendanceApi.reducerPath]: attendanceApi.reducer,
       [companyApi.reducerPath]: companyApi.reducer,
       [userApi.reducerPath]: userApi.reducer,
+      [notificationsApi.reducerPath]: notificationsApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware()
@@ -29,7 +31,8 @@ export const makeStore = () => {
         .concat(projectApi.middleware)
         .concat(attendanceApi.middleware)
         .concat(companyApi.middleware)
-        .concat(userApi.middleware),
+        .concat(userApi.middleware)
+        .concat(notificationsApi.middleware),
   });
 };
 
