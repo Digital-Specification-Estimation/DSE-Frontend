@@ -498,7 +498,7 @@ export default function Dashboard() {
                     <h3 className="font-medium">Total Actual Payroll Cost</h3>
                     <div className="flex items-center gap-2 border rounded-full px-3 py-1.5 text-sm">
                       <span>This Year</span>
-                      <ChevronDown className="h-4 w-4" />
+                      {/* <ChevronDown className="h-4 w-4" /> */}
                     </div>
                   </div>
                   <div className="text-3xl font-bold mb-6">
@@ -616,7 +616,7 @@ export default function Dashboard() {
                     <h3 className="font-medium">Total Attendance</h3>
                     <div className="flex items-center gap-2 border rounded-full px-3 py-1.5 text-sm">
                       <span>This Month</span>
-                      <ChevronDown className="h-4 w-4" />
+                      {/* <ChevronDown className="h-4 w-4" /> */}
                     </div>
                   </div>
                   <div className="text-3xl font-bold mb-6">
@@ -681,7 +681,7 @@ export default function Dashboard() {
             <div className="bg-white rounded-lg border">
               <div className="p-4 flex justify-between items-center">
                 <h3 className="font-medium">Budget vs Actual Report</h3>
-                <div className="flex items-center gap-2">
+                {/* <div className="flex items-center gap-2">
                   <div className="relative">
                     <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
@@ -715,14 +715,14 @@ export default function Dashboard() {
                       />
                     </svg>
                   </Button>
-                </div>
+                </div> */}
               </div>
 
               <div className="border-t">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
-                      <th className="w-12 p-4">
+                      {/* <th className="w-12 p-4">
                         <Checkbox
                           onChange={() => {
                             toast({
@@ -731,7 +731,7 @@ export default function Dashboard() {
                             });
                           }}
                         />
-                      </th>
+                      </th> */}
                       <th className="text-left p-4 font-medium text-sm text-gray-500">
                         Trade/Position
                       </th>
@@ -757,7 +757,7 @@ export default function Dashboard() {
                         index
                       ) => (
                         <tr key={index} className="border-b">
-                          <td className="p-4">
+                          {/* <td className="p-4">
                             <Checkbox
                               onChange={() => {
                                 toast({
@@ -766,7 +766,7 @@ export default function Dashboard() {
                                 });
                               }}
                             />
-                          </td>
+                          </td> */}
                           <td className="p-4">
                             <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8">
