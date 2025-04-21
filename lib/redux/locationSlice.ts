@@ -5,6 +5,7 @@ export const locationApi = createApi({
   baseQuery: fetchBaseQuery({
     // baseUrl: "https://dse-backend-production.up.railway.app/location",
     baseUrl: "http://localhost:4000/location",
+    credentials: "include",
   }),
   endpoints: (builder) => ({
     getLocations: builder.query<any, void>({

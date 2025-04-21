@@ -6,6 +6,7 @@ export const attendanceApi = createApi({
     // baseUrl: "https://dse-backend-production.up.railway.app/location",
 
     baseUrl: "http://localhost:4000/attendance",
+    credentials: "include",
   }),
   endpoints: (builder) => ({
     addAttendance: builder.mutation({

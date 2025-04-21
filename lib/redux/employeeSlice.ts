@@ -6,6 +6,7 @@ export const employeeApi = createApi({
     // baseUrl: "https://dse-backend-production.up.railway.app/employee",
 
     baseUrl: "http://localhost:4000/employee",
+    credentials: "include",
   }),
   endpoints: (builder) => ({
     addEmployee: builder.mutation({

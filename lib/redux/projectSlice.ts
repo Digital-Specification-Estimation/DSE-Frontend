@@ -6,6 +6,7 @@ export const projectApi = createApi({
     // baseUrl: "https://dse-backend-production.up.railway.app/project",
 
     baseUrl: "http://localhost:4000/project",
+    credentials: "include",
   }),
   endpoints: (builder) => ({
     getProjects: builder.query<any, void>({
@@ -30,9 +31,8 @@ export const projectApi = createApi({
     }),
     deleteProject: builder.mutation({
       query: (id) => ({
-        url: "delete",
+        url: `delete/${id}`,
         method: "DELETE",
-        body: { id },
       }),
     }),
   }),

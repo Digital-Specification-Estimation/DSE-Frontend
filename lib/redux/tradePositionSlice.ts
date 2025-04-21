@@ -6,6 +6,7 @@ export const tradePositionApi = createApi({
     // baseUrl: "https://dse-backend-production.up.railway.app/trade-position",
 
     baseUrl: "http://localhost:4000/trade-position",
+    credentials: "include",
   }),
   endpoints: (builder) => ({
     addTrade: builder.mutation({

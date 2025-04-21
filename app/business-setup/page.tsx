@@ -1079,6 +1079,7 @@ function DeleteProjectConfirmation({
     useDeleteProjectMutation();
 
   const handleDeleteProject = async () => {
+    console.log("project id", project.id);
     try {
       await deleteProject(project.id).unwrap();
       refetchProjects();
