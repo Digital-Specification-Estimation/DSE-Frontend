@@ -23,6 +23,13 @@ export const attendanceApi = createApi({
         body: data,
       }),
     }),
+    editUserStatus: builder.mutation({
+      query: (data) => ({
+        url: "edit-status-user",
+        method: "PUT",
+        body: data,
+      }),
+    }),
     deleteAttendance: builder.mutation({
       query: (id) => ({
         url: `delete/${id}`,
@@ -60,6 +67,7 @@ export const {
   useDeleteAttendanceMutation,
   useAddReasonMutation,
   useGetAttendanceQuery,
+  useEditUserStatusMutation,
   useGetAttendanceByDateQuery,
   useDeleteManyAttendancesMutation,
   useGetDailyAttendanceMonthlyQuery,

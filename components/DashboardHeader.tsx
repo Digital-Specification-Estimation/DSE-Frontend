@@ -16,9 +16,11 @@ import {
   useGetNotificationsQuery,
 } from "@/lib/redux/notificationSlice";
 import { RootState } from "@/lib/store";
+import { userApi } from "@/lib/redux/userSlice";
 
 const SOCKET_SERVER_URL = "http://localhost:4000";
 const DashboardHeader = () => {
+  console.log(userApi.endpoints);
   const dispatch = useDispatch();
   const { data: pastNotifications } = useGetNotificationsQuery();
   const notifications = useSelector(

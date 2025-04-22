@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Search,
   RefreshCw,
@@ -30,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
 import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
+import { useEditUserStatusMutation } from "@/lib/redux/attendanceSlice";
 
 // API endpoints
 const API_ENDPOINTS = {
@@ -70,6 +71,9 @@ export default function AttendancePayroll() {
 
   // RTK Query hook for fetching employees
   const { data: employees = [], isLoading, refetch } = useGetEmployeesQuery();
+  const { data: tradesFetched, refetch: refetchTrades } = useGetTradesQuery();
+  const [updateAttendance, { isLoading: isUpdatingAttendance }] =
+    useEditUserStatusMutation();
 
   const [totalPayroll, setTotalPayroll] = useState("$25,000");
   const [summaryData, setSummaryData] = useState({
@@ -87,7 +91,8 @@ export default function AttendancePayroll() {
     startDate: "",
     endDate: "",
   });
-  const { data: tradesFetched, refetch: refetchTrades } = useGetTradesQuery();
+  const [attendancePeriod, setAttendancePeriod] = useState("1week");
+
   // useEffect(() => {
   // refetchTrades();
   // if (tradesFetched) {
@@ -102,17 +107,18 @@ export default function AttendancePayroll() {
     status: "Present" | "Absent" | "Late"
   ) => {
     try {
-      // API call
-      await fetch(`${API_ENDPOINTS.ATTENDANCE}/${employeeId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-
-      // Update local state by refetching
-      await refetch();
+      // Use RTK Query mutation instead of fetch
+      await updateAttendance({
+        employeeId,
+        status,
+        date: getCurrentDate(),
+        time: "today",
+      }).unwrap();
 
       setOpenAttendanceDropdown(null);
+
+      // Add refetch here to update data
+      await refetch();
 
       toast({
         title: "Attendance Updated",
@@ -262,6 +268,22 @@ export default function AttendancePayroll() {
       return false;
     return true;
   });
+
+  const getFilteredAttendance = (attendance, period) => {
+    if (!attendance || !attendance.length) return [];
+
+    // Use array slicing based on selected period
+    switch (period) {
+      case "1week":
+        return attendance.slice(0, 7);
+      case "2weeks":
+        return attendance.slice(0, 14);
+      case "month":
+        return attendance;
+      default:
+        return attendance.slice(0, 7);
+    }
+  };
 
   return (
     <div className="flex h-screen bg-white">
@@ -550,7 +572,9 @@ export default function AttendancePayroll() {
                                 <div className="flex items-center gap-2">
                                   <Avatar className="h-8 w-8">
                                     <AvatarImage
-                                      src={employee.avatar}
+                                      src={
+                                        employee.avatar || "/placeholder.svg"
+                                      }
                                       alt={employee.username}
                                     />
                                     <AvatarFallback>
@@ -641,42 +665,63 @@ export default function AttendancePayroll() {
                                       <div className="text-sm font-medium text-muted-foreground mb-2">
                                         Attendance Dropdown
                                       </div>
-                                      <Button
-                                        variant="outline"
-                                        className="w-full justify-center bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-100"
-                                        onClick={() =>
-                                          updateEmployeeAttendance(
-                                            employee.id,
-                                            "Present"
-                                          )
-                                        }
-                                      >
-                                        Present
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        className="w-full justify-center bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 border-orange-100"
-                                        onClick={() =>
-                                          updateEmployeeAttendance(
-                                            employee.id,
-                                            "Late"
-                                          )
-                                        }
-                                      >
-                                        late
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        className="w-full justify-center bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 border-red-100"
-                                        onClick={() =>
-                                          updateEmployeeAttendance(
-                                            employee.id,
-                                            "Absent"
-                                          )
-                                        }
-                                      >
-                                        Absent
-                                      </Button>
+                                      {!employee.attendance.some(
+                                        (a: any) =>
+                                          formatDate(a.date) ===
+                                            getCurrentDate() &&
+                                          a.status === "present"
+                                      ) && (
+                                        <Button
+                                          variant="outline"
+                                          className="w-full justify-center bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-100"
+                                          onClick={() =>
+                                            updateEmployeeAttendance(
+                                              employee.id,
+                                              "Present"
+                                            )
+                                          }
+                                        >
+                                          Present
+                                        </Button>
+                                      )}
+                                      {!employee.attendance.some(
+                                        (a: any) =>
+                                          formatDate(a.date) ===
+                                            getCurrentDate() &&
+                                          a.status === "late"
+                                      ) && (
+                                        <Button
+                                          variant="outline"
+                                          className="w-full justify-center bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 border-orange-100"
+                                          onClick={() =>
+                                            updateEmployeeAttendance(
+                                              employee.id,
+                                              "Late"
+                                            )
+                                          }
+                                        >
+                                          late
+                                        </Button>
+                                      )}
+                                      {!employee.attendance.some(
+                                        (a: any) =>
+                                          formatDate(a.date) ===
+                                            getCurrentDate() &&
+                                          a.status === "absent"
+                                      ) && (
+                                        <Button
+                                          variant="outline"
+                                          className="w-full justify-center bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 border-red-100"
+                                          onClick={() =>
+                                            updateEmployeeAttendance(
+                                              employee.id,
+                                              "Absent"
+                                            )
+                                          }
+                                        >
+                                          Absent
+                                        </Button>
+                                      )}
                                     </div>
                                   </PopoverContent>
                                 </Popover>
@@ -777,7 +822,12 @@ export default function AttendancePayroll() {
                                         </div>
                                       </div>
                                       <div>
-                                        <Select defaultValue="1week">
+                                        <Select
+                                          value={attendancePeriod}
+                                          onValueChange={(value) =>
+                                            setAttendancePeriod(value)
+                                          }
+                                        >
                                           <SelectTrigger className="h-8 w-32">
                                             <SelectValue placeholder="Show" />
                                           </SelectTrigger>
@@ -796,60 +846,133 @@ export default function AttendancePayroll() {
                                       </div>
                                     </div>
                                     <div className="grid grid-cols-7 gap-4">
-                                      {employee.attendance.map(
-                                        (day: any, index: any) => (
-                                          <div
-                                            key={index}
-                                            className="text-center"
-                                          >
-                                            <div className="text-sm font-medium mb-1">
-                                              {day.day < 10
-                                                ? `0${day.day}`
-                                                : day.day}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground mb-2">
-                                              {day.weekday}
-                                            </div>
-                                            <div className="flex flex-col gap-1">
-                                              <Badge
-                                                className={
-                                                  day.status === "present"
-                                                    ? "bg-green-50 text-green-700 border-0"
-                                                    : day.status === "late"
-                                                    ? "bg-yellow-50 text-yellow-700 border-0"
-                                                    : "bg-red-50 text-red-700 border-0"
-                                                }
-                                              >
-                                                {day.status}
-                                              </Badge>
+                                      {getFilteredAttendance(
+                                        employee.attendance,
+                                        attendancePeriod
+                                      ).map((day: any, index: any) => (
+                                        <div
+                                          key={index}
+                                          className="text-center"
+                                        >
+                                          <div className="text-sm font-medium mb-1">
+                                            {day.day < 10
+                                              ? `0${day.day}`
+                                              : day.day}
+                                          </div>
+                                          <div className="text-xs text-muted-foreground mb-2">
+                                            {day.weekday}
+                                          </div>
+                                          <div className="flex flex-col gap-1">
+                                            <Badge
+                                              className={
+                                                day.status === "present"
+                                                  ? "bg-green-50 text-green-700 border-0"
+                                                  : day.status === "late"
+                                                  ? "bg-yellow-50 text-yellow-700 border-0"
+                                                  : "bg-red-50 text-red-700 border-0"
+                                              }
+                                            >
+                                              {day.status}
+                                            </Badge>
+                                            {day.status !== "late" && (
                                               <Badge
                                                 variant="outline"
                                                 className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
                                                 onClick={() => {
-                                                  toast({
-                                                    title: "Attendance Updated",
-                                                    description: `Marked as Late for ${day.day} ${currentMonth}`,
-                                                  });
+                                                  updateAttendance({
+                                                    employeeId: employee.id,
+                                                    status: "Late",
+                                                    date: day.date,
+                                                  })
+                                                    .unwrap()
+                                                    .then(() => {
+                                                      toast({
+                                                        title:
+                                                          "Attendance Updated",
+                                                        description: `Marked as Late for ${day.day} ${currentMonth}`,
+                                                      });
+                                                      refetch();
+                                                    })
+                                                    .catch((error) => {
+                                                      toast({
+                                                        title: "Error",
+                                                        description:
+                                                          "Failed to update attendance status.",
+                                                        variant: "destructive",
+                                                      });
+                                                    });
                                                 }}
                                               >
                                                 late
                                               </Badge>
+                                            )}
+                                            {day.status !== "absent" && (
                                               <Badge
                                                 variant="outline"
                                                 className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
                                                 onClick={() => {
-                                                  toast({
-                                                    title: "Attendance Updated",
-                                                    description: `Marked as Absent for ${day.day} ${currentMonth}`,
-                                                  });
+                                                  updateAttendance({
+                                                    employeeId: employee.id,
+                                                    status: "Absent",
+                                                    date: day.date,
+                                                  })
+                                                    .unwrap()
+                                                    .then(() => {
+                                                      toast({
+                                                        title:
+                                                          "Attendance Updated",
+                                                        description: `Marked as Absent for ${day.day} ${currentMonth}`,
+                                                      });
+                                                      refetch();
+                                                    })
+                                                    .catch((error) => {
+                                                      toast({
+                                                        title: "Error",
+                                                        description:
+                                                          "Failed to update attendance status.",
+                                                        variant: "destructive",
+                                                      });
+                                                    });
                                                 }}
                                               >
                                                 Absent
                                               </Badge>
-                                            </div>
+                                            )}
+                                            {day.status !== "present" && (
+                                              <Badge
+                                                variant="outline"
+                                                className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
+                                                onClick={() => {
+                                                  updateAttendance({
+                                                    employeeId: employee.id,
+                                                    status: "Present",
+                                                    date: day.date,
+                                                  })
+                                                    .unwrap()
+                                                    .then(() => {
+                                                      toast({
+                                                        title:
+                                                          "Attendance Updated",
+                                                        description: `Marked as Present for ${day.day} ${currentMonth}`,
+                                                      });
+                                                      refetch();
+                                                    })
+                                                    .catch((error) => {
+                                                      toast({
+                                                        title: "Error",
+                                                        description:
+                                                          "Failed to update attendance status.",
+                                                        variant: "destructive",
+                                                      });
+                                                    });
+                                                }}
+                                              >
+                                                Present
+                                              </Badge>
+                                            )}
                                           </div>
-                                        )
-                                      )}
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
                                 </td>
@@ -960,7 +1083,7 @@ export default function AttendancePayroll() {
                               <div className="flex items-center gap-2">
                                 <Avatar className="h-8 w-8">
                                   <AvatarImage
-                                    src={employee.avatar}
+                                    src={employee.avatar || "/placeholder.svg"}
                                     alt={employee.name}
                                   />
                                   <AvatarFallback>
@@ -1083,7 +1206,7 @@ export default function AttendancePayroll() {
                             <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8">
                                 <AvatarImage
-                                  // src={employee.avatar}
+                                  // src={employee.avatar || "/placeholder.svg"}
                                   alt={employee.username}
                                 />
                                 <AvatarFallback>
