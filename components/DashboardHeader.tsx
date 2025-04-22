@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { IoFilterOutline, IoSearchSharp } from "react-icons/io5";
 import { IoMdNotificationsOutline } from "react-icons/io";
 import io, { Socket } from "socket.io-client";
 import { useDispatch, useSelector } from "react-redux";
@@ -30,7 +29,7 @@ const DashboardHeader = () => {
 
   const [socketUpdateTrigger, setSocketUpdateTrigger] = useState(0);
 
-  const socketRef = useRef<Socket>(null);
+  const socketRef = useRef<ReturnType<typeof io>>(null);
 
   useEffect(() => {
     socketRef.current = io(SOCKET_SERVER_URL, { transports: ["websocket"] });
