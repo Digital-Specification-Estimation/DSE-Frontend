@@ -385,7 +385,15 @@ export default function Dashboard() {
   let payrollPercentage =
     ((totalActualPayroll - totalDailyActuallPayroll) / totalActualPayroll) *
     100;
+  console.log("infinity check", payrollPercentage === -Infinity);
+  if (payrollPercentage === -Infinity) {
+    payrollPercentage = 0;
+  }
+  if (payrollPercentage === Infinity) {
+    payrollPercentage = 0;
+  }
   if (Number.isNaN(presentPresentChange)) {
+    Infinity;
     presentPresentChange = 0;
   }
   return (

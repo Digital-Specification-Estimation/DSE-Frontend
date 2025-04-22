@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { IoFilterOutline, IoSearchSharp } from "react-icons/io5";
 import { IoMdNotificationsOutline } from "react-icons/io";
-import io, { Socket } from "socket.io-client";
+import io, { type Socket } from "socket.io-client";
 import { useDispatch, useSelector } from "react-redux";
 import Image from "next/image";
 
@@ -11,14 +10,15 @@ import asread from "@/public/asread.svg";
 import {
   addNotification,
   markAllAsRead,
-  NotificationType,
+  type NotificationType,
   setNotifications,
   useGetNotificationsQuery,
 } from "@/lib/redux/notificationSlice";
-import { RootState } from "@/lib/store";
+import type { RootState } from "@/lib/store";
 import { userApi } from "@/lib/redux/userSlice";
 
-const SOCKET_SERVER_URL = "http://localhost:4000";
+const SOCKET_SERVER_URL =
+  process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:4000";
 const DashboardHeader = () => {
   console.log(userApi.endpoints);
   const dispatch = useDispatch();
@@ -30,60 +30,58 @@ const DashboardHeader = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("title");
 
-  const [socketUpdateTrigger, setSocketUpdateTrigger] = useState(0);
-
-  const socketRef = useRef<Socket>(null);
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    socketRef.current = io(SOCKET_SERVER_URL, { transports: ["websocket"] });
+    // Only create the socket connection once
+    if (!socketRef.current) {
+      socketRef.current = io(SOCKET_SERVER_URL, { transports: ["websocket"] });
 
-    socketRef.current.on("connect", () => {
-      console.log("Connected to WebSocket server");
-    });
+      socketRef.current.on("connect", () => {
+        console.log("Connected to WebSocket server");
+      });
 
-    socketRef?.current?.on("notification", (message: string) => {
-      const isDuplicate = notifications.some(
-        (notif: NotificationType) => notif.message === message
-      );
+      socketRef.current.on("notification", (message: string) => {
+        dispatch(
+          addNotification({
+            id: Date.now().toString(),
+            message,
+            read: false,
+            createdAt: new Date().toISOString(),
+          })
+        );
+      });
 
-      if (!isDuplicate) {
-        const newNotification = {
-          id: Date.now().toString(),
-          message,
-          read: false,
-          createdAt: new Date().toISOString(),
-        };
-        dispatch(addNotification(newNotification));
-        setSocketUpdateTrigger((prev) => prev + 1);
-      }
-    });
+      socketRef.current.on("notification-read", () => {
+        dispatch(markAllAsRead());
+      });
 
-    socketRef.current.on("notification-read", () => {
-      dispatch(markAllAsRead());
-      setSocketUpdateTrigger((prev) => prev + 1);
-    });
+      socketRef.current.on("broadcast-message", (message: string) => {
+        dispatch(
+          addNotification({
+            id: Date.now().toString(),
+            message,
+            read: false,
+            createdAt: new Date().toISOString(),
+          })
+        );
+      });
+    }
 
-    socketRef.current.on("broadcast-message", (message: string) => {
-      const newNotification = {
-        id: Date.now().toString(),
-        message,
-        read: false,
-        createdAt: new Date().toISOString(),
-      };
-      dispatch(addNotification(newNotification));
-      setSocketUpdateTrigger((prev) => prev + 1);
-    });
-
+    // Clean up function
     return () => {
-      socketRef?.current?.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
-  }, [dispatch, notifications, socketUpdateTrigger]);
+  }, []); // Empty dependency array ensures this only runs once
 
   useEffect(() => {
     if (pastNotifications) {
       dispatch(setNotifications(pastNotifications));
     }
-  }, [pastNotifications, socketUpdateTrigger, dispatch]);
+  }, [pastNotifications, dispatch]);
 
   const unreadCount = notifications.filter(
     (n: NotificationType) => !n.read
@@ -97,8 +95,10 @@ const DashboardHeader = () => {
 
   const handleMarkAllAsRead = () => {
     dispatch(markAllAsRead());
-    socketRef?.current?.emit("mark-notifications-read");
-    setNotificationShow(false); // Emit event to backend
+    if (socketRef.current) {
+      socketRef.current.emit("mark-notifications-read");
+    }
+    setNotificationShow(false);
   };
 
   return (
@@ -170,7 +170,7 @@ const DashboardHeader = () => {
                   onClick={handleMarkAllAsRead}
                 >
                   <Image
-                    src={asread}
+                    src={asread || "/placeholder.svg"}
                     width={20}
                     height={20}
                     alt="asread"
