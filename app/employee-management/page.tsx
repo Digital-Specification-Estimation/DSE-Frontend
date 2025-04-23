@@ -45,11 +45,13 @@ import {
 } from "@/lib/redux/employeeSlice";
 import { employeeSlice } from "@/lib/redux/employeeSlice";
 import { useToast } from "@/hooks/use-toast";
+import { useSessionQuery } from "@/lib/redux/authSlice";
 
 export interface NewEmployee {
   username: string;
   trade_position_id?: string;
   daily_rate?: string;
+  monthly_rate?: string;
   contract_finish_date?: string;
   days_projection?: number;
   budget_baseline?: string;
@@ -61,6 +63,20 @@ const projects = ["Metro Bridge", "Mall Construction"];
 const dailyRates = ["$100", "$120", "$140", "$200"];
 
 export default function EmployeeManagement() {
+  const {
+    data: sessionData = { user: {} },
+    isLoading: isSessionLoading,
+    isError,
+    // error,
+    // refetch,
+    // isFetching,
+  } = useSessionQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    skip: false,
+  });
+  console.log(sessionData.user.salary_calculation);
   const { toast } = useToast();
   const [trades, setTrades] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -73,6 +89,13 @@ export default function EmployeeManagement() {
   const [showEditEmployee, setShowEditEmployee] = useState(false);
   const [showDeleteEmployee, setShowDeleteEmployee] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+
+  // Helper function to determine if we're using monthly rate
+  const isMonthlyRate = sessionData.user?.salary_calculation === "monthly rate";
+
+  // Helper function to get the appropriate rate field name
+  const getRateFieldName = () =>
+    isMonthlyRate ? "monthly_rate" : "daily_rate";
 
   useEffect(() => {
     // Define the async function inside useEffect
@@ -160,6 +183,7 @@ export default function EmployeeManagement() {
               username: newEmployeeData.username,
               trade_position: { trade_name: "Loading..." },
               daily_rate: newEmployeeData.daily_rate || "0",
+              monthly_rate: newEmployeeData.monthly_rate || "0",
               contract_finish_date: newEmployeeData.contract_finish_date || "",
               days_projection: newEmployeeData.days_projection || 0,
               budget_baseline: newEmployeeData.budget_baseline || "0",
@@ -173,6 +197,8 @@ export default function EmployeeManagement() {
       try {
         // Wait for the actual API response
         await queryFulfilled;
+        // Explicitly refetch to ensure data is up to date
+        refetch();
       } catch {
         // If the mutation fails, undo the optimistic update
         patchResult.undo();
@@ -198,6 +224,7 @@ export default function EmployeeManagement() {
     username: "",
     trade_position_id: "",
     daily_rate: "",
+    monthly_rate: "",
     contract_finish_date: "",
     days_projection: "",
     budget_baseline: "",
@@ -210,6 +237,7 @@ export default function EmployeeManagement() {
     username: "",
     trade_position_id: "",
     daily_rate: "",
+    monthly_rate: "",
     contract_finish_date: "",
     days_projection: "",
     budget_baseline: "",
@@ -283,7 +311,7 @@ export default function EmployeeManagement() {
       const employeeToAdd: NewEmployee = {
         username: newEmployee.username,
         trade_position_id: newEmployee.trade_position_id || undefined,
-        daily_rate: newEmployee.daily_rate || undefined,
+        [getRateFieldName()]: newEmployee[getRateFieldName()] || undefined,
         contract_finish_date: newEmployee.contract_finish_date
           ? new Date(newEmployee.contract_finish_date).toISOString()
           : undefined,
@@ -302,6 +330,7 @@ export default function EmployeeManagement() {
         username: "",
         trade_position_id: "",
         daily_rate: "",
+        monthly_rate: "",
         contract_finish_date: "",
         days_projection: "",
         budget_baseline: "",
@@ -309,6 +338,9 @@ export default function EmployeeManagement() {
       });
 
       setShowAddEmployee(false);
+
+      // Explicitly refetch to ensure data is up to date
+      refetch();
 
       // Show success notification
       toast({
@@ -333,6 +365,7 @@ export default function EmployeeManagement() {
       username: employee.username,
       trade_position_id: employee.trade_position_id,
       daily_rate: employee.daily_rate,
+      monthly_rate: employee.monthly_rate,
       contract_finish_date: formatDateForInput(employee.contract_finish_date),
       days_projection: employee.days_projection?.toString() || "",
       budget_baseline: employee.budget_baseline,
@@ -367,7 +400,7 @@ export default function EmployeeManagement() {
         id: editedEmployee.id,
         username: editedEmployee.username,
         trade_position_id: editedEmployee.trade_position_id || undefined,
-        daily_rate: editedEmployee.daily_rate || undefined,
+        [getRateFieldName()]: editedEmployee[getRateFieldName()] || undefined,
         contract_finish_date: editedEmployee.contract_finish_date
           ? new Date(editedEmployee.contract_finish_date).toISOString()
           : undefined,
@@ -618,7 +651,7 @@ export default function EmployeeManagement() {
                         Trade Position
                       </th>
                       <th className="px-4 py-3 text-left text-[10px]">
-                        Daily Rate
+                        {isMonthlyRate ? "Monthly Rate" : "Daily Rate"}
                       </th>
                       <th className="px-4 py-3 text-left text-[10px]">
                         Contract Finish Date
@@ -670,7 +703,9 @@ export default function EmployeeManagement() {
                           {employee.trade_position?.trade_name || "N/A"}
                         </td>
                         <td className="px-4 py-3">
-                          {formatCurrency(employee.daily_rate)}
+                          {formatCurrency(
+                            employee[getRateFieldName()] || employee.daily_rate
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           {formatDate(employee.contract_finish_date)}
@@ -813,23 +848,26 @@ export default function EmployeeManagement() {
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="daily_rate" className="text-sm font-medium">
-                      Daily Rate
+                    <label
+                      htmlFor={getRateFieldName()}
+                      className="text-sm font-medium"
+                    >
+                      {isMonthlyRate ? "Monthly Rate" : "Daily Rate"}
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                         <DollarSign className="h-4 w-4 text-gray-400" />
                       </div>
                       <input
-                        id="daily_rate"
-                        name="daily_rate"
+                        id={getRateFieldName()}
+                        name={getRateFieldName()}
                         type="text"
                         placeholder="100.00"
-                        value={newEmployee.daily_rate}
+                        value={newEmployee[getRateFieldName()] || ""}
                         onChange={(e) =>
                           setNewEmployee({
                             ...newEmployee,
-                            daily_rate: e.target.value,
+                            [getRateFieldName()]: e.target.value,
                           })
                         }
                         className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
@@ -1036,7 +1074,7 @@ export default function EmployeeManagement() {
 
             <div className="space-y-2">
               <label htmlFor="edit-daily-rate" className="text-sm font-medium">
-                Daily Rate
+                {isMonthlyRate ? "Monthly Rate" : "Daily Rate"}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
@@ -1044,14 +1082,14 @@ export default function EmployeeManagement() {
                 </div>
                 <input
                   id="edit-daily-rate"
-                  name="daily_rate"
+                  name={getRateFieldName()}
                   type="text"
                   placeholder="100.00"
-                  value={editedEmployee.daily_rate}
+                  value={editedEmployee[getRateFieldName()] || ""}
                   onChange={(e) =>
                     setEditedEmployee({
                       ...editedEmployee,
-                      daily_rate: e.target.value,
+                      [getRateFieldName()]: e.target.value,
                     })
                   }
                   className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
