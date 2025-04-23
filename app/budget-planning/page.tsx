@@ -386,14 +386,15 @@ export default function BudgetPlanning() {
         Math.max(t.planned_costs || 0, t.actual_cost || 0)
       )
     );
-
-    const roundedMax = Math.ceil(maxValue / 5000) * 5000;
+    console.log("max value", maxValue);
 
     const steps = 5;
+    const stepValue = maxValue / steps;
+    console.log("step value", stepValue);
     const yAxisValues = Array.from({ length: steps + 1 }, (_, i) =>
-      Math.round((roundedMax / steps) * i)
+      Math.round(stepValue * i)
     );
-
+    console.log(yAxisValues);
     return yAxisValues;
   };
 
@@ -424,7 +425,7 @@ export default function BudgetPlanning() {
   }
 
   const yAxisLabels = calculateYAxisScale(tradesFetched);
-
+  console.log("yAxisLabels", yAxisLabels);
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
@@ -799,7 +800,7 @@ export default function BudgetPlanning() {
                 <div className="h-80 relative mb-8" ref={chartRef}>
                   <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-sm text-gray-500">
                     {[...yAxisLabels].reverse().map((value, index) => (
-                      <div key={index}>${(value / 1000).toFixed(0)}K</div>
+                      <div key={index}>${value.toFixed(0)}</div>
                     ))}
                   </div>
 
@@ -812,7 +813,7 @@ export default function BudgetPlanning() {
                           )
                         );
 
-                        const maxHeight = 240;
+                        const maxHeight = 289;
                         const plannedHeight = maxValue
                           ? ((trade.planned_costs || 0) / maxValue) * maxHeight
                           : 0;
@@ -993,15 +994,6 @@ export default function BudgetPlanning() {
                                     -${Math.abs(difference).toLocaleString()}
                                   </Badge>
                                 )}
-                              </td>
-                              <td className="px-4 py-3">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => {}}
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
                               </td>
                             </tr>
                           );

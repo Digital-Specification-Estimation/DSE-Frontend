@@ -15,8 +15,9 @@ export type NewProject = {
 };
 export type NewTrade = {
   trade_name?: string;
-  daily_planned_cost?: number;
+  monthly_planned_cost?: number;
   location_name?: string;
+  daily_planned_cost?: number;
 };
 export type NewLocation = {
   location_name?: string;
@@ -69,6 +70,7 @@ import {
   useUpdateProjectMutation,
   useDeleteProjectMutation,
 } from "@/lib/redux/projectSlice";
+import { useSessionQuery } from "@/lib/redux/authSlice";
 
 function LocationForm({
   onClose,
@@ -154,13 +156,16 @@ function LocationForm({
 function TradeForm({
   onClose,
   refetchTrades,
+  sessionData,
 }: {
   onClose: () => void;
   refetchTrades: () => void;
+  sessionData: any;
 }) {
   const { toast } = useToast();
   const [newTrade, setNewTrade] = useState({
     location_name: "",
+    monthly_planned_cost: "",
     daily_planned_cost: "",
     trade_name: "",
   });
@@ -171,23 +176,48 @@ function TradeForm({
 
   const handleAddTrade = async () => {
     try {
-      if (
-        !newTrade.location_name?.trim() ||
-        !newTrade.daily_planned_cost ||
-        !newTrade.trade_name?.trim()
-      ) {
+      if (!newTrade.location_name?.trim() || !newTrade.trade_name?.trim()) {
         toast({
           title: "Validation Error",
-          description: "All trade fields are required.",
+          description: "Trade name and location are required.",
           variant: "destructive",
         });
         return;
       }
+
+      // Check if the rate field is filled based on salary calculation type
+      if (
+        (sessionData?.user?.salary_calculation === "monthly rate" &&
+          !newTrade.monthly_planned_cost) ||
+        (sessionData?.user?.salary_calculation !== "monthly rate" &&
+          !newTrade.daily_planned_cost)
+      ) {
+        toast({
+          title: "Validation Error",
+          description: `${
+            sessionData?.user?.salary_calculation === "monthly rate"
+              ? "Monthly"
+              : "Daily"
+          } rate is required.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const newTradeToAdd: any = {
         location_name: newTrade.location_name,
-        daily_planned_cost: newTrade.daily_planned_cost,
         trade_name: newTrade.trade_name,
       };
+
+      // Set either monthly_planned_cost or daily_planned_cost based on salary calculation type
+      if (sessionData?.user?.salary_calculation === "monthly rate") {
+        newTradeToAdd.monthly_planned_cost = newTrade.monthly_planned_cost;
+        // newTradeToAdd.daily_planned_cost = 0; // Set default value for the other field
+      } else {
+        newTradeToAdd.daily_planned_cost = newTrade.daily_planned_cost;
+        // newTradeToAdd.monthly_planned_cost = 0; // Set default value for the other field
+      }
+
       // Use RTK Query mutation
       await addTrade(newTradeToAdd).unwrap();
 
@@ -196,6 +226,7 @@ function TradeForm({
 
       setNewTrade({
         location_name: "",
+        monthly_planned_cost: "",
         daily_planned_cost: "",
         trade_name: "",
       });
@@ -252,16 +283,32 @@ function TradeForm({
         </Select>
       </div>
       <div className="space-y-2">
-        <label className="text-sm font-medium">Daily Rate</label>
+        <label className="text-sm font-medium">
+          {sessionData?.user?.salary_calculation === "monthly rate"
+            ? "Monthly Rate"
+            : "Daily Rate"}
+        </label>
         <div className="relative">
           <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Enter rate"
             type="decimal"
             className="pl-10"
-            value={newTrade.daily_planned_cost}
+            value={
+              sessionData?.user?.salary_calculation === "monthly rate"
+                ? newTrade.monthly_planned_cost
+                : newTrade.daily_planned_cost
+            }
             onChange={(e) =>
-              setNewTrade({ ...newTrade, daily_planned_cost: e.target.value })
+              sessionData?.user?.salary_calculation === "monthly rate"
+                ? setNewTrade({
+                    ...newTrade,
+                    monthly_planned_cost: e.target.value,
+                  })
+                : setNewTrade({
+                    ...newTrade,
+                    daily_planned_cost: e.target.value,
+                  })
             }
           />
         </div>
@@ -727,15 +774,18 @@ function EditTradeForm({
   trade,
   onClose,
   refetchTrades,
+  sessionData,
 }: {
   trade: any;
   onClose: () => void;
   refetchTrades: () => void;
+  sessionData: any;
 }) {
   const { toast } = useToast();
   const [editedTrade, setEditedTrade] = useState({
     location_name: trade.location_name,
-    daily_planned_cost: trade.daily_planned_cost.toString(),
+    monthly_planned_cost: trade.monthly_planned_cost?.toString() || "",
+    daily_planned_cost: trade.daily_planned_cost?.toString() || "",
     trade_name: trade.trade_name,
   });
 
@@ -746,12 +796,30 @@ function EditTradeForm({
     try {
       if (
         !editedTrade.location_name?.trim() ||
-        !editedTrade.daily_planned_cost ||
         !editedTrade.trade_name?.trim()
       ) {
         toast({
           title: "Validation Error",
-          description: "All trade fields are required.",
+          description: "Trade name and location are required.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if the rate field is filled based on salary calculation type
+      if (
+        (sessionData?.user?.salary_calculation === "monthly rate" &&
+          !editedTrade.monthly_planned_cost) ||
+        (sessionData?.user?.salary_calculation !== "monthly rate" &&
+          !editedTrade.daily_planned_cost)
+      ) {
+        toast({
+          title: "Validation Error",
+          description: `${
+            sessionData?.user?.salary_calculation === "monthly rate"
+              ? "Monthly"
+              : "Daily"
+          } rate is required.`,
           variant: "destructive",
         });
         return;
@@ -760,9 +828,17 @@ function EditTradeForm({
       const tradeToUpdate: any = {
         id: trade.id,
         location_name: editedTrade.location_name,
-        daily_planned_cost: editedTrade.daily_planned_cost,
         trade_name: editedTrade.trade_name,
       };
+
+      // Set either monthly_planned_cost or daily_planned_cost based on salary calculation type
+      if (sessionData?.user?.salary_calculation === "monthly rate") {
+        tradeToUpdate.monthly_planned_cost = editedTrade.monthly_planned_cost;
+        // tradeToUpdate.daily_planned_cost = 0; // Set default value for the other field
+      } else {
+        tradeToUpdate.daily_planned_cost = editedTrade.daily_planned_cost;
+        // tradeToUpdate.monthly_planned_cost = 0; // Set default value for the other field
+      }
 
       await updateTrade(tradeToUpdate).unwrap();
       refetchTrades();
@@ -819,19 +895,32 @@ function EditTradeForm({
         </Select>
       </div>
       <div className="space-y-2">
-        <label className="text-sm font-medium">Daily Rate</label>
+        <label className="text-sm font-medium">
+          {sessionData?.user?.salary_calculation === "monthly rate"
+            ? "Monthly Rate"
+            : "Daily Rate"}
+        </label>
         <div className="relative">
           <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Enter rate"
             type="decimal"
             className="pl-10"
-            value={editedTrade.daily_planned_cost}
+            value={
+              sessionData?.user?.salary_calculation === "monthly rate"
+                ? editedTrade.monthly_planned_cost
+                : editedTrade.daily_planned_cost
+            }
             onChange={(e) =>
-              setEditedTrade({
-                ...editedTrade,
-                daily_planned_cost: e.target.value,
-              })
+              sessionData?.user?.salary_calculation === "monthly rate"
+                ? setEditedTrade({
+                    ...editedTrade,
+                    monthly_planned_cost: e.target.value,
+                  })
+                : setEditedTrade({
+                    ...editedTrade,
+                    daily_planned_cost: e.target.value,
+                  })
             }
           />
         </div>
@@ -1130,6 +1219,20 @@ function DeleteProjectConfirmation({
 
 // Main Business Setup Component
 export default function BusinessSetup() {
+  const {
+    data: sessionData = { user: {} },
+    isLoading: isSessionLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useSessionQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    skip: false,
+  });
+  console.log("user", sessionData.user.salary_calculation);
   const { toast } = useToast();
   const [user] = useState({
     name: "Kristin Watson",
@@ -1350,7 +1453,12 @@ export default function BusinessSetup() {
                         headers={[
                           "Role/Trade",
                           "Location Name",
-                          "Daily Rate ($)",
+                          `${
+                            sessionData?.user?.salary_calculation ===
+                            "monthly rate"
+                              ? "Monthly"
+                              : "Daily"
+                          } Rate ($)`,
                         ]}
                         data={trades}
                         isLoading={isLoadingTrades}
@@ -1376,7 +1484,11 @@ export default function BusinessSetup() {
                             </td>
                             <td className="px-4 py-3">{trade.location_name}</td>
                             <td className="px-4 py-3">
-                              ${trade.daily_planned_cost}
+                              $
+                              {sessionData?.user?.salary_calculation ===
+                              "monthly rate"
+                                ? trade.monthly_planned_cost
+                                : trade.daily_planned_cost}
                             </td>
                           </>
                         )}
@@ -1478,6 +1590,7 @@ export default function BusinessSetup() {
           <TradeForm
             onClose={() => setShowAddTrade(false)}
             refetchTrades={refetchTrades}
+            sessionData={sessionData}
           />
         </DialogContent>
       </Dialog>
@@ -1538,6 +1651,7 @@ export default function BusinessSetup() {
               trade={selectedItem}
               onClose={() => setShowEditTrade(false)}
               refetchTrades={refetchTrades}
+              sessionData={sessionData}
             />
           )}
         </DialogContent>

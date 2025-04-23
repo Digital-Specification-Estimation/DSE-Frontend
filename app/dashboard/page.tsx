@@ -3,12 +3,10 @@
 import { useState, useEffect } from "react";
 const today = new Date();
 import {
-  Search,
   Users,
   Clock,
   Calendar,
   DollarSign,
-  ChevronDown,
   MoreVertical,
   Loader2,
   RefreshCw,
@@ -16,7 +14,6 @@ import {
 import { Sidebar } from "@/components/sidebar";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -29,21 +26,11 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
 } from "recharts";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
-import { SelectValue } from "@radix-ui/react-select";
-import { useSessionQuery } from "@/lib/redux/authSlice";
 import {
   useGetEmployeesQuery,
   useGetMonthlyStatsQuery,
 } from "@/lib/redux/employeeSlice";
-import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useGetDailyAttendanceMonthlyQuery } from "@/lib/redux/attendanceSlice";
 
@@ -355,7 +342,7 @@ export default function Dashboard() {
     });
   });
   // console.log(employeesByTrade);
-  let tradeStatistics: {
+  const tradeStatistics: {
     [key: string]: {
       planned_budget: number;
       actual_cost: number;
@@ -398,10 +385,10 @@ export default function Dashboard() {
     ((totalActualPayroll - totalDailyActuallPayroll) / totalActualPayroll) *
     100;
 
-  if (payrollPercentage === -Infinity) {
+  if (payrollPercentage === Number.NEGATIVE_INFINITY) {
     payrollPercentage = 0;
   }
-  if (payrollPercentage === Infinity) {
+  if (payrollPercentage === Number.POSITIVE_INFINITY) {
     payrollPercentage = 0;
   }
   if (Number.isNaN(presentPresentChange)) {
@@ -551,7 +538,8 @@ export default function Dashboard() {
                           tickLine={false}
                           tick={{ fontSize: 12, fill: "#888888" }}
                           tickFormatter={(value) => `$${value / 1000}K`}
-                          ticks={[0, 250, 500, 750, 1000]}
+                          domain={["auto", "auto"]}
+                          allowDataOverflow={false}
                         />
                         <Tooltip
                           content={(props) => <PayrollTooltip {...props} />}
@@ -601,7 +589,8 @@ export default function Dashboard() {
                         tickLine={false}
                         tick={{ fontSize: 12, fill: "#888888" }}
                         tickFormatter={(value) => `$${value / 1000}K`}
-                        ticks={[0, 250, 500, 750, 1000]}
+                        domain={["auto", "auto"]}
+                        allowDataOverflow={false}
                       />
                       <Tooltip
                         content={(props) => <PayrollTooltip {...props} />}
@@ -789,7 +778,10 @@ export default function Dashboard() {
                           <td className="p-4">
                             <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8">
-                                <AvatarImage src={trade.avatar} alt={trade} />
+                                <AvatarImage
+                                  src={trade.avatar || "/placeholder.svg"}
+                                  alt={trade}
+                                />
                                 <AvatarFallback>
                                   {trade.charAt(0)}
                                 </AvatarFallback>
