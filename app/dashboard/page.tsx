@@ -324,19 +324,31 @@ export default function Dashboard() {
 
     employee.attendance.map((attendance: any) => {
       if (formatDate(attendance.date) === getCurrentDate()) {
-        if (attendance.status === "present") {
+        if (
+          attendance.status === "present" ||
+          attendance.status === "Present"
+        ) {
           numberOfPresent += 1;
         }
-        if (attendance.status === "late") {
+        if (attendance.status === "late" || attendance.status === "Late") {
           numberOfLateArrivals += 1;
         }
       }
-
+      console.log(
+        "date check",
+        formatDate(attendance.date) === getYesterdayDate(),
+        "date",
+        formatDate(attendance.date)
+      );
       if (formatDate(attendance.date) === getYesterdayDate()) {
-        if (attendance.status === "present") {
+        if (
+          attendance.status === "present" ||
+          attendance.status === "Present"
+        ) {
           numberOfPresentYesterday += 1;
         }
-        if (attendance.status === "late") {
+        console.log("number of present yesterday", numberOfPresentYesterday);
+        if (attendance.status === "late" || attendance.status === "Late") {
           numberOfLateYesterday += 1;
         }
       }
@@ -356,7 +368,7 @@ export default function Dashboard() {
     let totalActual = 0;
 
     employeeArray.forEach((employee: any) => {
-      // console.log(employee);
+      console.log(employee);
       totalPlanned += Number(employee.totalPlannedBytrade);
       totalActual += Number(employee.totalActualPayroll);
     });
@@ -385,7 +397,7 @@ export default function Dashboard() {
   let payrollPercentage =
     ((totalActualPayroll - totalDailyActuallPayroll) / totalActualPayroll) *
     100;
-  console.log("infinity check", payrollPercentage === -Infinity);
+
   if (payrollPercentage === -Infinity) {
     payrollPercentage = 0;
   }
@@ -393,7 +405,6 @@ export default function Dashboard() {
     payrollPercentage = 0;
   }
   if (Number.isNaN(presentPresentChange)) {
-    Infinity;
     presentPresentChange = 0;
   }
   return (

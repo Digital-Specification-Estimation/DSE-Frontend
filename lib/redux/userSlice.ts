@@ -1,6 +1,6 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query";
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-export const userApi: any = createApi({
+export const userApi = createApi({
   reducerPath: "userApi",
   baseQuery: fetchBaseQuery({
     baseUrl: "http://localhost:4000/users",
@@ -10,7 +10,7 @@ export const userApi: any = createApi({
     getUsers: builder.query({
       query: () => "",
     }),
-    getPrevieleges: builder.query({
+    getPrevieleges: builder.query<any, void>({
       query: () => "get-previeleges",
     }),
     getUser: builder.query({
@@ -25,7 +25,7 @@ export const userApi: any = createApi({
     }),
     updateUserPicture: builder.mutation({
       query: (data: any) => ({
-        url: `profile/picture/${data.id}`,
+        url: `profile-picture/${data.id}`,
         method: "PATCH",
         body: data,
       }),

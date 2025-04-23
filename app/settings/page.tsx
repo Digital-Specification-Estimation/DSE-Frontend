@@ -19,7 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  useGetPrevielegesQuery,
+  useUpdatePrevielegesMutation,
+  useUpdateUserMutation,
+} from "@/lib/redux/userSlice";
 export default function Settings() {
+  const [updateUser] = useUpdateUserMutation();
+  const [updatePrevielges] = useUpdatePrevielegesMutation();
   const [userData, setUserData] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -52,6 +59,7 @@ export default function Settings() {
     refetchOnReconnect: true,
     skip: false,
   });
+  const { data: previelegesFetched } = useGetPrevielegesQuery();
 
   // Get the first company ID from the session data
   const companyId = sessionData?.user?.companies?.[0]?.id || "default";
@@ -72,25 +80,14 @@ export default function Settings() {
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
   });
-
-  const [userSettings, setUserSettings] = useState([
-    {
-      role: "Admin",
-      permissions: ["Full access"],
-    },
-    {
-      role: "HR Manager",
-      permissions: ["Approve attendance", "Manage payroll"],
-    },
-    {
-      role: "Department Manager",
-      permissions: ["View reports", "Approve leaves"],
-    },
-    {
-      role: "Employee",
-      permissions: ["View payslips", "Mark attendance"],
-    },
-  ]);
+  console.log("previelegesFetched", previelegesFetched);
+  const [userSettings, setUserSettings] = useState([]);
+  useEffect(() => {
+    if (previelegesFetched) {
+      setUserSettings(previelegesFetched);
+    }
+  }, [previelegesFetched]);
+  console.log("user settings check", userSettings);
 
   const [activeTab, setActiveTab] = useState("company");
   const [isLoading, setIsLoading] = useState(true);
@@ -138,6 +135,7 @@ export default function Settings() {
     if (sessionData && sessionData.user) {
       setUserData(sessionData.user);
     }
+    console.log(sessionData.user);
     setPayrollSettings({
       salary_calculation: sessionData.user?.salary_calculation
         ? sessionData.user?.salary_calculation
@@ -201,6 +199,9 @@ export default function Settings() {
         "notification settings on handle save ",
         notificationSettings
       );
+      await updatePrevielges(userSettings);
+      await updateUser({ ...payrollSettings, id: sessionData.user.id });
+      await updateUser({ ...notificationSettings, id: sessionData.user.id });
       // Call the RTK Query mutation
       const result = await updateCompany(formData).unwrap();
 
@@ -228,6 +229,13 @@ export default function Settings() {
       description: `${holiday} has been removed from holidays.`,
     });
   };
+  function formatSnakeCase(str: string): string {
+    return str
+      .trim() // remove leading/trailing spaces
+      .split("_") // split by underscore
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1)) // capitalize first letter
+      .join(" "); // join with space
+  }
 
   const handleAddHoliday = () => {
     if (!newHoliday.trim()) {
@@ -263,7 +271,7 @@ export default function Settings() {
       description: `${newHoliday} has been added to holidays.`,
     });
   };
-
+  console.log("user settings", userSettings);
   const handleRemovePermission = (role: string, permission: string) => {
     const updatedSettings = userSettings.map((setting) => {
       if (setting.role === role) {
@@ -712,25 +720,27 @@ export default function Settings() {
                           </div>
 
                           <div className="flex flex-wrap gap-2 border border-gray-200 min-h-10 p-2 rounded-lg w-full mb-3">
-                            {user.permissions.map((permission, idx) => (
-                              <div
-                                key={`${index}-${idx}`}
-                                className="inline-flex items-center gap-1.5 px-3 h-7 bg-gray-100 rounded-md text-sm border border-gray-300"
-                              >
-                                {permission}
-                                <button
-                                  className="text-red-500 hover:text-gray-600"
-                                  onClick={() =>
-                                    handleRemovePermission(
-                                      user.role,
-                                      permission
-                                    )
-                                  }
+                            {user.permissions.map(
+                              (permission: any, idx: any) => (
+                                <div
+                                  key={`${index}-${idx}`}
+                                  className="inline-flex items-center gap-1.5 px-3 h-7 bg-gray-100 rounded-md text-sm border border-gray-300"
                                 >
-                                  <X className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            ))}
+                                  {formatSnakeCase(permission)}
+                                  <button
+                                    className="text-red-500 hover:text-gray-600"
+                                    onClick={() =>
+                                      handleRemovePermission(
+                                        user.role,
+                                        permission
+                                      )
+                                    }
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )
+                            )}
                           </div>
 
                           {selectedRole === user.role && (
