@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-const today = new Date();
+import { useState, useEffect, useCallback } from "react";
 import {
   Users,
   Clock,
@@ -26,6 +25,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  type TooltipProps,
 } from "recharts";
 import {
   useGetEmployeesQuery,
@@ -33,80 +33,73 @@ import {
 } from "@/lib/redux/employeeSlice";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useGetDailyAttendanceMonthlyQuery } from "@/lib/redux/attendanceSlice";
+import { useSessionQuery } from "@/lib/redux/authSlice";
 
 export default function Dashboard() {
-  // const { data: tradesFetched } = useGetTradesQuery()
-  // console.log(tradesFetched)
-  const {
-    data: employees = [],
-    isLoading: isLoading2,
-    refetch,
-  } = useGetEmployeesQuery();
+  const today = new Date();
   const { toast } = useToast();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // User state
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
   });
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [dashboardData, setDashboardData] = useState({
-    totalEmployees: 120,
-    attendanceToday: "92%",
-    lateArrivals: 8,
-    totalPayroll: "$25,000",
-    employeeChange: "2.5%",
-    attendanceChange: "3.2%",
-    lateArrivalsChange: "1",
-    payrollChange: "2.5%",
+  // Redux query hooks with proper options for keeping data fresh
+  const {
+    data: sessionData = { user: {} },
+    isLoading: isSessionLoading,
+    refetch: refetchSession,
+  } = useSessionQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    pollingInterval: 300000, // Poll every 5 minutes
   });
 
-  const { data: payrollData } = useGetMonthlyStatsQuery();
-  // console.log(payrollData);
+  const {
+    data: employees = [],
+    isLoading: isEmployeesLoading,
+    refetch: refetchEmployees,
+    isFetching: isEmployeesFetching,
+  } = useGetEmployeesQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    pollingInterval: 300000, // Poll every 5 minutes
+  });
 
-  const { data: attendanceData } = useGetDailyAttendanceMonthlyQuery();
+  const {
+    data: payrollData = [],
+    isLoading: isPayrollLoading,
+    refetch: refetchPayroll,
+    isFetching: isPayrollFetching,
+  } = useGetMonthlyStatsQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    pollingInterval: 300000, // Poll every 5 minutes
+  });
 
-  type Trade = {
-    id: number;
-    name: string;
-    location: string;
-    dailyRate: number;
-    icon: string;
-  };
+  const {
+    data: attendanceData = [],
+    isLoading: isAttendanceLoading,
+    refetch: refetchAttendance,
+    isFetching: isAttendanceFetching,
+  } = useGetDailyAttendanceMonthlyQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    pollingInterval: 300000, // Poll every 5 minutes
+  });
 
-  const trades: Trade[] = [
-    {
-      id: 1,
-      name: "Electricians",
-      location: "Main Office",
-      dailyRate: 120,
-      icon: "⚡",
-    },
-    {
-      id: 2,
-      name: "Technicians",
-      location: "Site A",
-      dailyRate: 100,
-      icon: "🔧",
-    },
-    {
-      id: 3,
-      name: "HR & Admin",
-      location: "Site B",
-      dailyRate: 90,
-      icon: "👨‍💼",
-    },
-    {
-      id: 4,
-      name: "Supervisors",
-      location: "Site C",
-      dailyRate: 120,
-      icon: "👷",
-    },
-  ];
+  // Combined loading state
+  const isLoading =
+    isSessionLoading ||
+    isEmployeesLoading ||
+    isPayrollLoading ||
+    isAttendanceLoading;
+  const isFetching =
+    isEmployeesFetching || isPayrollFetching || isAttendanceFetching;
 
+  // Filters state
   const [filters, setFilters] = useState({
     trade: "",
     location: "",
@@ -114,42 +107,8 @@ export default function Dashboard() {
     search: "",
   });
 
-  // Fetch dashboard data
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setIsLoading(true);
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        // In a real implementation, this would be:
-        // const response = await fetch('/api/dashboard');
-        // const data = await response.json();
-        // setDashboardData(data.summary);
-        // setPayrollData(data.payrollData);
-        // setAttendanceData(data.attendanceData);
-        // setEmployeeData(data.employeeData);
-
-        setIsLoading(false);
-        // toast({
-        //   title: "Dashboard Loaded",
-        //   description: "Dashboard data has been loaded successfully.",
-        // });
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard data. Please try again.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, [toast]);
-
-  const handleRefreshData = async () => {
+  // Refresh all data sources
+  const handleRefreshData = useCallback(async () => {
     try {
       setIsRefreshing(true);
       toast({
@@ -157,10 +116,14 @@ export default function Dashboard() {
         description: "Fetching the latest dashboard data...",
       });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Refresh all data sources concurrently
+      await Promise.all([
+        refetchSession(),
+        refetchEmployees(),
+        refetchPayroll(),
+        refetchAttendance(),
+      ]);
 
-      // In a real implementation, this would fetch fresh data from the API
       setIsRefreshing(false);
       toast({
         title: "Data Refreshed",
@@ -175,7 +138,29 @@ export default function Dashboard() {
       });
       setIsRefreshing(false);
     }
-  };
+  }, [
+    refetchSession,
+    refetchEmployees,
+    refetchPayroll,
+    refetchAttendance,
+    toast,
+  ]);
+
+  // Auto-refresh data when component mounts
+  useEffect(() => {
+    // Initial data load is handled by the RTK Query hooks
+    // This effect can be used for additional setup if needed
+
+    // Set up an interval to check if data needs refreshing
+    const intervalId = setInterval(() => {
+      // Only refresh if not already refreshing or fetching
+      if (!isRefreshing && !isFetching) {
+        handleRefreshData();
+      }
+    }, 900000); // Check every 15 minutes
+
+    return () => clearInterval(intervalId);
+  }, [handleRefreshData, isRefreshing, isFetching]);
 
   const handleFilterChange = (type: string, value: string) => {
     setFilters((prev) => ({ ...prev, [type]: value }));
@@ -186,25 +171,21 @@ export default function Dashboard() {
     active,
     payload,
     label,
-  }: {
-    active?: boolean;
-    payload?: any;
-    label?: string;
-  }) => {
+  }: TooltipProps<number, string>) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border rounded-md shadow-md">
           <p className="text-sm font-medium mb-1">
-            {label},{today.getFullYear()}
+            {label}, {today.getFullYear()}
           </p>
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm">Planned Cost</span>
             <span className="text-sm font-medium">
-              ${payload[0].value.toLocaleString()}
+              ${payload[0].value?.toLocaleString()}
             </span>
             <span className="text-sm">Actual Cost</span>
             <span className="text-sm font-medium">
-              ${payload[1].value.toLocaleString()}
+              ${payload[1].value?.toLocaleString()}
             </span>
           </div>
         </div>
@@ -212,30 +193,25 @@ export default function Dashboard() {
     }
     return null;
   };
+
   const shortMonth = today.toLocaleString("default", { month: "short" });
-  console.log(shortMonth); // e.g., "Apr"
 
   // Custom tooltip for attendance chart
   const AttendanceTooltip = ({
     active,
     payload,
     label,
-  }: {
-    active?: boolean;
-    payload?: any;
-    label?: string;
-  }) => {
+  }: TooltipProps<number, string>) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border rounded-md shadow-md">
           <p className="text-sm font-medium mb-1">
-            {shortMonth},{label},{today.getFullYear()}
+            {shortMonth}, {label}, {today.getFullYear()}
           </p>
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm">Attendance</span>
             <span className="text-sm font-medium">
-              {" "}
-              {payload[0].value.toLocaleString()}%
+              {payload[0].value?.toLocaleString()}%
             </span>
           </div>
         </div>
@@ -260,23 +236,14 @@ export default function Dashboard() {
       </div>
     );
   }
-  let latenessDifference = 0;
 
-  let attendancePercentage = 0;
-  let totalActualPayroll = 0;
-  let presentPresentChange = 0;
-  let numberOfLateYesterday = 0;
-  let newHires = 0;
-  let newHirePercentage = 0;
-  let numberOfPresent = 0;
-  let numberOfPresentYesterday = 0;
-  let totalDailyActuallPayroll = 0;
-  let numberOfLateArrivals = 0;
+  // Data processing functions
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
     return date.toLocaleDateString();
   };
+
   const getCurrentDate = () => {
     const today = new Date();
     const day = today.getDate();
@@ -284,6 +251,7 @@ export default function Dashboard() {
     const year = today.getFullYear();
     return `${month}/${day}/${year}`;
   };
+
   const getYesterdayDate = () => {
     const today = new Date();
     const day = today.getDate() - 1;
@@ -291,109 +259,162 @@ export default function Dashboard() {
     const year = today.getFullYear();
     return `${month}/${day}/${year}`;
   };
-  const employeesByTrade: { [key: string]: any[] } = {};
 
-  employees.map((employee: any) => {
-    // Grouping by trade
-    const trade = employee.trade_position.trade_name;
-    if (!employeesByTrade[trade]) {
-      employeesByTrade[trade] = [];
-    }
-    employeesByTrade[trade].push(employee);
+  // Process employee data
+  const processEmployeeData = () => {
+    let latenessDifference = 0;
+    let attendancePercentage = 0;
+    let totalActualPayroll = 0;
+    let presentPresentChange = 0;
+    let numberOfLateYesterday = 0;
+    let newHires = 0;
+    let newHirePercentage = 0;
+    let numberOfPresent = 0;
+    let numberOfPresentYesterday = 0;
+    let totalDailyActuallPayroll = 0;
+    let numberOfLateArrivals = 0;
+    const employeesByTrade: { [key: string]: any[] } = {};
 
-    // Other logic
-    if (formatDate(employee.created_date) === getCurrentDate()) {
-      newHires += 1;
-    }
-
-    totalActualPayroll += Number(employee.totalActualPayroll);
-    totalDailyActuallPayroll += Number(employee.daily_rate);
-
-    employee.attendance.map((attendance: any) => {
-      if (formatDate(attendance.date) === getCurrentDate()) {
-        if (
-          attendance.status === "present" ||
-          attendance.status === "Present"
-        ) {
-          numberOfPresent += 1;
-        }
-        if (attendance.status === "late" || attendance.status === "Late") {
-          numberOfLateArrivals += 1;
-        }
+    // Process each employee
+    employees.forEach((employee: any) => {
+      // Grouping by trade
+      const trade = employee.trade_position.trade_name;
+      if (!employeesByTrade[trade]) {
+        employeesByTrade[trade] = [];
       }
-      console.log(
-        "date check",
-        formatDate(attendance.date) === getYesterdayDate(),
-        "date",
-        formatDate(attendance.date)
-      );
-      if (formatDate(attendance.date) === getYesterdayDate()) {
-        if (
-          attendance.status === "present" ||
-          attendance.status === "Present"
-        ) {
-          numberOfPresentYesterday += 1;
-        }
-        console.log("number of present yesterday", numberOfPresentYesterday);
-        if (attendance.status === "late" || attendance.status === "Late") {
-          numberOfLateYesterday += 1;
-        }
+      employeesByTrade[trade].push(employee);
+
+      // Count new hires
+      if (formatDate(employee.created_date) === getCurrentDate()) {
+        newHires += 1;
+      }
+
+      // Calculate payroll
+      totalActualPayroll += Number(employee.totalActualPayroll) || 0;
+      if (sessionData.user.salary_calculation === "monthly rate") {
+        totalDailyActuallPayroll += Number(employee.monthly_rate) || 0;
+      } else {
+        totalDailyActuallPayroll += Number(employee.daily_rate) || 0;
+      }
+
+      // Process attendance data
+      if (Array.isArray(employee.attendance)) {
+        employee.attendance.forEach((attendance: any) => {
+          if (formatDate(attendance.date) === getCurrentDate()) {
+            if (attendance.status?.toLowerCase() === "present") {
+              numberOfPresent += 1;
+            }
+            if (attendance.status?.toLowerCase() === "late") {
+              numberOfLateArrivals += 1;
+            }
+          }
+
+          if (formatDate(attendance.date) === getYesterdayDate()) {
+            if (attendance.status?.toLowerCase() === "present") {
+              numberOfPresentYesterday += 1;
+            }
+            if (attendance.status?.toLowerCase() === "late") {
+              numberOfLateYesterday += 1;
+            }
+          }
+        });
       }
     });
-  });
-  // console.log(employeesByTrade);
-  const tradeStatistics: {
-    [key: string]: {
-      planned_budget: number;
-      actual_cost: number;
-      difference: number;
-    };
-  } = {};
 
-  Object.entries(employeesByTrade).forEach(([trade, employeeArray]) => {
-    let totalPlanned = 0;
-    let totalActual = 0;
+    // Calculate trade statistics
+    const tradeStatistics: {
+      [key: string]: {
+        planned_budget: number;
+        actual_cost: number;
+        difference: number;
+      };
+    } = {};
 
-    employeeArray.forEach((employee: any) => {
-      console.log(employee);
-      totalPlanned += Number(employee.totalPlannedBytrade);
-      totalActual += Number(employee.totalActualPayroll);
+    Object.entries(employeesByTrade).forEach(([trade, employeeArray]) => {
+      let totalPlanned = 0;
+      let totalActual = 0;
+
+      employeeArray.forEach((employee: any) => {
+        totalPlanned += Number(employee.totalPlannedBytrade) || 0;
+        totalActual += Number(employee.totalActualPayroll) || 0;
+      });
+
+      const difference = totalPlanned - totalActual;
+
+      tradeStatistics[trade] = {
+        planned_budget: totalPlanned,
+        actual_cost: totalActual,
+        difference: difference,
+      };
     });
 
-    const difference = totalPlanned - totalActual;
+    // Calculate statistics
+    latenessDifference = numberOfLateArrivals - numberOfLateYesterday;
 
-    tradeStatistics[trade] = {
-      planned_budget: totalPlanned,
-      actual_cost: totalActual,
-      difference: difference,
+    // Calculate percentage change in attendance with safeguards against division by zero
+    if (numberOfPresent > 0 && numberOfPresentYesterday > 0) {
+      presentPresentChange =
+        ((numberOfPresent - numberOfPresentYesterday) / numberOfPresent) * 100;
+    } else if (numberOfPresentYesterday > 0) {
+      presentPresentChange =
+        ((numberOfPresent - numberOfPresentYesterday) /
+          numberOfPresentYesterday) *
+        100;
+    } else {
+      presentPresentChange = 0;
+    }
+
+    // Calculate new hire percentage with safeguard against division by zero
+    newHirePercentage =
+      employees.length > 0 ? (newHires / employees.length) * 100 : 0;
+
+    // Calculate attendance percentage with safeguard against division by zero
+    attendancePercentage =
+      employees.length > 0 ? (numberOfPresent / employees.length) * 100 : 0;
+
+    // Calculate payroll percentage with safeguards against division by zero and invalid results
+    let payrollPercentage = 0;
+    if (totalActualPayroll > 0) {
+      payrollPercentage =
+        ((totalActualPayroll - totalDailyActuallPayroll) / totalActualPayroll) *
+        100;
+
+      // Handle edge cases
+      if (!isFinite(payrollPercentage) || isNaN(payrollPercentage)) {
+        payrollPercentage = 0;
+      }
+    }
+
+    return {
+      employeesByTrade,
+      tradeStatistics,
+      latenessDifference,
+      attendancePercentage,
+      totalActualPayroll,
+      presentPresentChange,
+      newHires,
+      newHirePercentage,
+      numberOfPresent,
+      numberOfLateArrivals,
+      payrollPercentage,
     };
-  });
-  // console.log(tradeStatistics);
-  latenessDifference = numberOfLateArrivals - numberOfLateYesterday;
-  presentPresentChange =
-    ((numberOfPresent - numberOfPresentYesterday) / numberOfPresent) * 100;
-  if (numberOfPresent === 0) {
-    presentPresentChange =
-      ((numberOfPresent - numberOfPresentYesterday) /
-        numberOfPresentYesterday) *
-      100;
-  }
+  };
 
-  newHirePercentage = Number((newHires / employees.length) * 100);
-  attendancePercentage = Number((numberOfPresent / employees.length) * 100);
-  let payrollPercentage =
-    ((totalActualPayroll - totalDailyActuallPayroll) / totalActualPayroll) *
-    100;
+  // Process data
+  const {
+    employeesByTrade,
+    tradeStatistics,
+    latenessDifference,
+    attendancePercentage,
+    totalActualPayroll,
+    presentPresentChange,
+    newHires,
+    newHirePercentage,
+    numberOfPresent,
+    numberOfLateArrivals,
+    payrollPercentage,
+  } = processEmployeeData();
 
-  if (payrollPercentage === Number.NEGATIVE_INFINITY) {
-    payrollPercentage = 0;
-  }
-  if (payrollPercentage === Number.POSITIVE_INFINITY) {
-    payrollPercentage = 0;
-  }
-  if (Number.isNaN(presentPresentChange)) {
-    presentPresentChange = 0;
-  }
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
@@ -406,46 +427,18 @@ export default function Dashboard() {
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-2xl font-bold">Dashboard</h1>
               <div className="flex gap-2">
-                {/* <Select
-                  onValueChange={(value) => handleFilterChange("trade", value)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select by Trade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {trades.map((trade) => (
-                      <SelectItem key={trade.id} value={trade.name}>
-                        {trade.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  onValueChange={(value) =>
-                    handleFilterChange("location", value)
-                  }
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select by location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {trades.map((trade) => (
-                      <SelectItem key={trade.id} value={trade.location}>
-                        {trade.location}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select> */}
                 <Button
                   variant="outline"
                   className="gap-2 h-10 rounded-full"
                   onClick={handleRefreshData}
-                  disabled={isRefreshing}
+                  disabled={isRefreshing || isFetching}
                 >
                   <RefreshCw
-                    className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                    className={`h-4 w-4 ${
+                      isRefreshing || isFetching ? "animate-spin" : ""
+                    }`}
                   />
-                  {isRefreshing ? "Refreshing..." : "Refresh"}
+                  {isRefreshing || isFetching ? "Refreshing..." : "Refresh"}
                 </Button>
               </div>
             </div>
@@ -456,14 +449,14 @@ export default function Dashboard() {
                 value={employees.length}
                 icon={Users}
                 change={{
-                  value: `${newHirePercentage}%`,
+                  value: `${newHirePercentage.toFixed(1)}%`,
                   type: newHires >= 0 ? "increase" : "decrease",
                   text: `+${newHires} new hires today`,
                 }}
               />
               <StatCard
                 title="Attendance Today"
-                value={`%${attendancePercentage.toString()}`}
+                value={`${attendancePercentage.toFixed(1)}%`}
                 icon={Clock}
                 iconBackground="bg-blue-700"
                 change={{
@@ -479,7 +472,7 @@ export default function Dashboard() {
                 iconBackground="bg-red-600"
                 change={{
                   value: `${latenessDifference}`,
-                  type: latenessDifference >= 0 ? "increase" : "decrease",
+                  type: latenessDifference <= 0 ? "increase" : "decrease",
                   text: "from Yesterday",
                 }}
               />
@@ -489,7 +482,7 @@ export default function Dashboard() {
                 icon={DollarSign}
                 iconBackground="bg-green-600"
                 change={{
-                  value: `${payrollPercentage.toFixed(1)}`,
+                  value: `${payrollPercentage.toFixed(1)}%`,
                   type: payrollPercentage >= 0 ? "increase" : "decrease",
                   text: "planned vs actual change",
                 }}
@@ -504,7 +497,6 @@ export default function Dashboard() {
                     <h3 className="font-medium">Total Actual Payroll Cost</h3>
                     <div className="flex items-center gap-2 border rounded-full px-3 py-1.5 text-sm">
                       <span>This Year</span>
-                      {/* <ChevronDown className="h-4 w-4" /> */}
                     </div>
                   </div>
                   <div className="text-3xl font-bold mb-6">
@@ -565,55 +557,6 @@ export default function Dashboard() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={payrollData}
-                      margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-                      barGap={0}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="#EEEEEE"
-                        strokeWidth={1}
-                      />
-                      <XAxis
-                        dataKey="month"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: "#888888" }}
-                        dy={10}
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: "#888888" }}
-                        tickFormatter={(value) => `$${value / 1000}K`}
-                        domain={["auto", "auto"]}
-                        allowDataOverflow={false}
-                      />
-                      <Tooltip
-                        content={(props) => <PayrollTooltip {...props} />}
-                        cursor={false}
-                      />
-                      <Bar
-                        dataKey="planned"
-                        fill="#FFA500"
-                        barSize={20}
-                        radius={[0, 0, 0, 0]}
-                        name="Planned Cost"
-                        isAnimationActive={false}
-                      />
-                      <Bar
-                        dataKey="cost"
-                        fill="#1D4ED8"
-                        barSize={20}
-                        radius={[0, 0, 0, 0]}
-                        name="Actual Cost"
-                        isAnimationActive={false}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
                 </div>
               </div>
 
@@ -624,11 +567,10 @@ export default function Dashboard() {
                     <h3 className="font-medium">Total Attendance</h3>
                     <div className="flex items-center gap-2 border rounded-full px-3 py-1.5 text-sm">
                       <span>This Month</span>
-                      {/* <ChevronDown className="h-4 w-4" /> */}
                     </div>
                   </div>
                   <div className="text-3xl font-bold mb-6">
-                    {attendancePercentage}%{" "}
+                    {attendancePercentage.toFixed(1)}%{" "}
                     <span className="text-sm font-medium text-muted-foreground">
                       (Today)
                     </span>
@@ -689,57 +631,12 @@ export default function Dashboard() {
             <div className="bg-white rounded-lg border">
               <div className="p-4 flex justify-between items-center">
                 <h3 className="font-medium">Budget vs Actual Report</h3>
-                {/* <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search trade/position..."
-                      className="pl-9 pr-4 py-2 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary"
-                      onChange={(e) =>
-                        handleFilterChange("search", e.target.value)
-                      }
-                    />
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9"
-                    onClick={() => {}}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M2 4H14M2 8H14M2 12H14"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </Button>
-                </div> */}
               </div>
 
               <div className="border-t">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
-                      {/* <th className="w-12 p-4">
-                        <Checkbox
-                          onChange={() => {
-                            toast({
-                              title: "Select All",
-                              description: "All items have been selected",
-                            });
-                          }}
-                        />
-                      </th> */}
                       <th className="text-left p-4 font-medium text-sm text-gray-500">
                         Trade/Position
                       </th>
@@ -757,29 +654,13 @@ export default function Dashboard() {
                   </thead>
                   <tbody>
                     {Object.entries(employeesByTrade).map(
-                      (
-                        [trade, employeeArray]: [
-                          trade: any,
-                          employeeArray: any
-                        ],
-                        index
-                      ) => (
+                      ([trade, employeeArray], index) => (
                         <tr key={index} className="border-b">
-                          {/* <td className="p-4">
-                            <Checkbox
-                              onChange={() => {
-                                toast({
-                                  title: "Item Selected",
-                                  description: `${trade} has been selected`,
-                                });
-                              }}
-                            />
-                          </td> */}
                           <td className="p-4">
                             <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8">
                                 <AvatarImage
-                                  src={trade.avatar || "/placeholder.svg"}
+                                  src={"/placeholder.svg"}
                                   alt={trade}
                                 />
                                 <AvatarFallback>
@@ -796,7 +677,6 @@ export default function Dashboard() {
                             ].planned_budget.toLocaleString()}
                           </td>
                           <td className="p-4">
-                            {" "}
                             $
                             {tradeStatistics[
                               trade
@@ -806,50 +686,34 @@ export default function Dashboard() {
                             <div className="flex items-center gap-1">
                               <div
                                 className={`h-5 w-5 rounded-full flex items-center justify-center ${
-                                  Number.parseFloat(
-                                    tradeStatistics[trade].difference
-                                      .toString()
-                                      .replace(/[^0-9.-]+/g, "")
-                                  ) > 0
+                                  tradeStatistics[trade].difference > 0
                                     ? "bg-green-100"
                                     : "bg-red-100"
                                 }`}
                               >
                                 <span
                                   className={`text-xs ${
-                                    Number.parseFloat(
-                                      tradeStatistics[trade].difference
-                                        .toLocaleString()
-                                        .toString()
-                                        .replace(/[^0-9.-]+/g, "")
-                                    ) > 0
+                                    tradeStatistics[trade].difference > 0
                                       ? "text-green-600"
                                       : "text-red-600"
                                   }`}
                                 >
-                                  {Number.parseFloat(
-                                    tradeStatistics[trade].difference
-                                      .toLocaleString()
-                                      .toString()
-                                      .replace(/[^0-9.-]+/g, "")
-                                  ) > 0
+                                  {tradeStatistics[trade].difference > 0
                                     ? "+"
                                     : ""}
                                 </span>
                               </div>
                               <span
                                 className={`${
-                                  Number.parseFloat(
-                                    tradeStatistics[trade].difference
-                                      .toLocaleString()
-                                      .toString()
-                                      .replace(/[^0-9.-]+/g, "")
-                                  ) > 0
+                                  tradeStatistics[trade].difference > 0
                                     ? "text-green-600"
                                     : "text-red-600"
                                 }`}
                               >
-                                {tradeStatistics[trade].difference.toString()}
+                                $
+                                {Math.abs(
+                                  tradeStatistics[trade].difference
+                                ).toLocaleString()}
                               </span>
                             </div>
                           </td>

@@ -189,9 +189,6 @@ export function Sidebar({ user }: SidebarProps) {
                 {userData.current_role}
               </span>
             </div>
-            <button>
-              <ChevronDown className="h-4 w-4 text-gray-400" />
-            </button>
           </div>
         )}
       </div>
