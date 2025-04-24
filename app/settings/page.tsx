@@ -102,7 +102,7 @@ export default function Settings() {
 
   const [payrollSettings, setPayrollSettings] = useState({
     salary_calculation: "daily rate",
-    currency: "USD",
+    currency: "USD1",
     payslip_format: "PDF",
   });
 
@@ -143,7 +143,9 @@ export default function Settings() {
       payslip_format: sessionData.user?.payslip_format
         ? sessionData.user?.payslip_format
         : "PDF",
-      currency: sessionData.user?.currency ? sessionData.user?.currency : "USD",
+      currency: sessionData.user?.currency
+        ? sessionData.user?.currency
+        : "USD1",
     });
     setNotificationSettings({
       send_email_alerts: sessionData.user?.send_email_alerts
@@ -174,7 +176,20 @@ export default function Settings() {
 
     setIsLoading(false);
   }, [sessionData]);
+  const splitCurrencyValue = (str: string | undefined | null) => {
+    if (!str) return null; // return early if str is undefined or null
+    const match = str.match(/^([A-Z]+)([\d.]+)$/);
+    if (!match) return null;
+    return {
+      currency: match[1],
+      value: match[2],
+    };
+  };
 
+  const currencyVaue = Number(
+    splitCurrencyValue(sessionData.user.currency)?.value
+  );
+  // console.log("user currency", sessionData.user.currency);
   const handleSaveSettings = async () => {
     try {
       // Create a FormData object to handle file upload
@@ -840,8 +855,17 @@ export default function Settings() {
                               <SelectValue placeholder="Select" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="USD">USD</SelectItem>
-                              <SelectItem value="FRW">FRW</SelectItem>
+                              <SelectItem value="USD1">USD</SelectItem>
+                              <SelectItem value="RWF1251.00">RWF</SelectItem>
+                              <SelectItem value="EUR0.9200">EUR</SelectItem>
+                              <SelectItem value="GBP0.7508">GBP</SelectItem>
+                              <SelectItem value="JPY142.7850">JPY</SelectItem>
+                              <SelectItem value="CNY7.2893">CNY</SelectItem>
+                              <SelectItem value="INR85.36">INR</SelectItem>
+                              <SelectItem value="ZAR18.7066">ZAR</SelectItem>
+                              <SelectItem value="KES129.3550">KES</SelectItem>
+                              <SelectItem value="UGX3664.42">UGX</SelectItem>
+                              <SelectItem value="TZS2673.02">TZS</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>

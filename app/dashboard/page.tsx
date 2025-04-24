@@ -58,6 +58,20 @@ export default function Dashboard() {
     refetchOnReconnect: true,
     pollingInterval: 300000, // Poll every 5 minutes
   });
+  const splitCurrencyValue = (str: string | undefined | null) => {
+    if (!str) return null; // return early if str is undefined or null
+    const match = str.match(/^([A-Z]+)([\d.]+)$/);
+    if (!match) return null;
+    return {
+      currency: match[1],
+      value: match[2],
+    };
+  };
+
+  const currencyValue = Number(
+    splitCurrencyValue(sessionData.user.currency)?.value
+  );
+  const currencyShort = splitCurrencyValue(sessionData.user.currency)?.currency;
 
   const {
     data: employees = [],
@@ -181,11 +195,19 @@ export default function Dashboard() {
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm">Planned Cost</span>
             <span className="text-sm font-medium">
-              ${payload[0].value?.toLocaleString()}
+              {currencyShort}
+              {(payload[0].value
+                ? payload[0].value
+                : 1 * currencyValue
+              ).toLocaleString()}
             </span>
             <span className="text-sm">Actual Cost</span>
             <span className="text-sm font-medium">
-              ${payload[1].value?.toLocaleString()}
+              {currencyShort}
+              {(payload[1].value
+                ? payload[1].value
+                : 1 * currencyValue
+              ).toLocaleString()}
             </span>
           </div>
         </div>
@@ -478,7 +500,9 @@ export default function Dashboard() {
               />
               <StatCard
                 title="Total Actual Payroll"
-                value={`$${totalActualPayroll.toLocaleString()}`}
+                value={`${currencyShort}${(
+                  totalActualPayroll * currencyValue
+                ).toLocaleString()}`}
                 icon={DollarSign}
                 iconBackground="bg-green-600"
                 change={{
@@ -500,7 +524,8 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="text-3xl font-bold mb-6">
-                    ${totalActualPayroll.toLocaleString()}
+                    {currencyShort}
+                    {(totalActualPayroll * currencyValue).toLocaleString()}
                   </div>
                 </div>
 
@@ -671,48 +696,58 @@ export default function Dashboard() {
                             </div>
                           </td>
                           <td className="p-4">
-                            $
-                            {tradeStatistics[
-                              trade
-                            ].planned_budget.toLocaleString()}
+                            {currencyShort}
+                            {(
+                              tradeStatistics[trade].planned_budget *
+                              currencyValue
+                            ).toLocaleString()}
                           </td>
                           <td className="p-4">
-                            $
-                            {tradeStatistics[
-                              trade
-                            ].actual_cost.toLocaleString()}
+                            {currencyShort}
+                            {(
+                              tradeStatistics[trade].actual_cost * currencyValue
+                            ).toLocaleString()}
                           </td>
                           <td className="p-4">
                             <div className="flex items-center gap-1">
                               <div
                                 className={`h-5 w-5 rounded-full flex items-center justify-center ${
-                                  tradeStatistics[trade].difference > 0
+                                  tradeStatistics[trade].difference *
+                                    currencyValue >
+                                  0
                                     ? "bg-green-100"
                                     : "bg-red-100"
                                 }`}
                               >
                                 <span
                                   className={`text-xs ${
-                                    tradeStatistics[trade].difference > 0
+                                    tradeStatistics[trade].difference *
+                                      currencyValue >
+                                    0
                                       ? "text-green-600"
                                       : "text-red-600"
                                   }`}
                                 >
-                                  {tradeStatistics[trade].difference > 0
+                                  {tradeStatistics[trade].difference *
+                                    currencyValue >
+                                  0
                                     ? "+"
                                     : ""}
                                 </span>
                               </div>
                               <span
                                 className={`${
-                                  tradeStatistics[trade].difference > 0
+                                  tradeStatistics[trade].difference *
+                                    currencyValue >
+                                  0
                                     ? "text-green-600"
                                     : "text-red-600"
                                 }`}
                               >
-                                $
+                                {currencyShort}
                                 {Math.abs(
-                                  tradeStatistics[trade].difference
+                                  tradeStatistics[trade].difference *
+                                    currencyValue
                                 ).toLocaleString()}
                               </span>
                             </div>
