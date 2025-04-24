@@ -41,11 +41,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useGetProjectsQuery } from "@/lib/redux/projectSlice";
 import {
-  useDeleteTradeMutation,
   useEditTradeMutation,
   useGetTradesQuery,
   useUnassignTradeProjectIdMutation,
 } from "@/lib/redux/tradePositionSlice";
+import { useSessionQuery } from "@/lib/redux/authSlice";
+
+// Define types for better type safety
 interface Trade {
   id: number;
   role: string;
@@ -65,14 +67,49 @@ interface Project {
 }
 
 export default function BudgetPlanning() {
+  // Enhanced refetching configuration for session data
+  const {
+    data: sessionData = { user: {} },
+    isLoading: isSessionLoading,
+    isError,
+    error,
+    refetch: refetchSession,
+  } = useSessionQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    pollingInterval: 60000, // Poll every minute to keep session data fresh
+    skip: false,
+  });
+
+  // Improved refetching for trades and projects
+  const {
+    data: tradesFetched = [],
+    refetch: refetchTrades,
+    isFetching: isTradesFetching,
+  } = useGetTradesQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    pollingInterval: 30000, // Poll every 30 seconds
+  });
+
+  const {
+    data: fetchedData = [],
+    refetch: refetchProjects,
+    isFetching: isProjectsFetching,
+  } = useGetProjectsQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    pollingInterval: 30000, // Poll every 30 seconds
+  });
+
   const [unassignProject] = useUnassignTradeProjectIdMutation();
-
-  const { data: tradesFetched = [], refetch: refetchTrades } =
-    useGetTradesQuery();
-  const { data: fetchedData = [], refetch: refetchProjects } =
-    useGetProjectsQuery();
-
+  const [updateTrade, { isLoading: isUpdating }] = useEditTradeMutation();
   const { toast } = useToast();
+
+  // State management
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
@@ -94,6 +131,7 @@ export default function BudgetPlanning() {
 
   const chartRef = useRef<HTMLDivElement>(null);
 
+  // Form state for adding and editing trades
   const [newTrade, setNewTrade] = useState({
     id: "",
     workDays: "22",
@@ -109,14 +147,18 @@ export default function BudgetPlanning() {
     plannedSalary: "",
   });
 
-  const [updateTrade, { isLoading: isUpdating }] = useEditTradeMutation();
-
+  // Use effect for refetch coordination
   useEffect(() => {
-    const fetchBudgetData = async () => {
+    // Refetch all data when the component mounts
+    const fetchAllData = async () => {
       try {
         setIsLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
+        // Parallel refetching for better performance
+        await Promise.all([
+          refetchSession(),
+          refetchTrades(),
+          refetchProjects(),
+        ]);
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching budget data:", error);
@@ -129,9 +171,75 @@ export default function BudgetPlanning() {
       }
     };
 
-    fetchBudgetData();
-  }, [toast]);
+    fetchAllData();
 
+    // Set up an interval to periodically refetch all data
+    const intervalId = setInterval(() => {
+      Promise.all([refetchSession(), refetchTrades(), refetchProjects()]).catch(
+        (error) => {
+          console.error("Error in periodic data refresh:", error);
+        }
+      );
+    }, 60000); // Refresh all data every minute
+
+    // Clean up interval on component unmount
+    return () => clearInterval(intervalId);
+  }, [refetchSession, refetchTrades, refetchProjects, toast]);
+
+  // Add a new useEffect to handle derived data updates
+  useEffect(() => {
+    // This effect runs whenever tradesFetched or fetchedData changes
+    // It ensures that derived calculations are updated without requiring a reload
+
+    // Recalculate totals when trade data changes
+    let newTotalPlannedCost = 0;
+    let newTotalActualCost = 0;
+
+    if (tradesFetched && tradesFetched.length > 0) {
+      tradesFetched.forEach((trade: any) => {
+        newTotalActualCost += trade.actual_cost || 0;
+        newTotalPlannedCost += trade.planned_costs || 0;
+      });
+    }
+
+    // Update Y-axis scale for charts when data changes
+    const newYAxisLabels = calculateYAxisScale(tradesFetched);
+
+    // No need to set state here as the component will re-render with the new calculations
+    // when tradesFetched changes
+
+    // Log updates for debugging
+    console.log("Data dependencies updated:", {
+      tradesCount: tradesFetched?.length || 0,
+      projectsCount: fetchedData?.length || 0,
+      totalPlannedCost: newTotalPlannedCost,
+      totalActualCost: newTotalActualCost,
+    });
+  }, [tradesFetched, fetchedData]);
+
+  // Add visibility change event listener to refetch when tab becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        // User has switched back to this tab, refresh data
+        Promise.all([
+          refetchSession(),
+          refetchTrades(),
+          refetchProjects(),
+        ]).catch((error) => {
+          console.error("Error refreshing data on visibility change:", error);
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refetchSession, refetchTrades, refetchProjects]);
+
+  // Handle adding a trade with improved error handling
   const handleAddTrade = async () => {
     try {
       if (
@@ -149,16 +257,50 @@ export default function BudgetPlanning() {
       }
 
       setIsSaving(true);
-      await updateTrade({
+
+      // Prepare the trade data
+      const tradeData = {
         id: newTrade.id,
         projectId: newTrade.projectId,
         work_days: Number.parseInt(newTrade.workDays),
-        daily_planned_cost: Number.parseFloat(
+        [sessionData.user.salary_calculation === "monthly rate"
+          ? "monthly_planned_cost"
+          : "daily_planned_cost"]: Number.parseFloat(
           newTrade.plannedSalary
         ).toString(),
-      }).unwrap();
+      };
 
-      await Promise.all([refetchTrades(), refetchProjects()]);
+      // Optimistically update UI before the API call completes
+      // This is a simplified example - in a real app, you'd update the Redux store
+      // or use a more sophisticated state management approach
+
+      // Make the actual API call
+      await updateTrade(tradeData).unwrap();
+
+      // Reset form
+      setNewTrade({
+        id: "",
+        workDays: "22",
+        plannedSalary: "",
+        projectId: "",
+      });
+
+      // Enhanced refetching with retry logic
+      const refetchWithRetry = async (retries = 3) => {
+        try {
+          // Use Promise.all to ensure all data is fetched in parallel
+          await Promise.all([refetchTrades(), refetchProjects()]);
+        } catch (error) {
+          if (retries > 0) {
+            console.log(`Retrying refetch, ${retries} attempts left`);
+            setTimeout(() => refetchWithRetry(retries - 1), 1000);
+          } else {
+            throw error;
+          }
+        }
+      };
+
+      await refetchWithRetry();
 
       setShowAddTrade(false);
       setIsSaving(false);
@@ -175,9 +317,15 @@ export default function BudgetPlanning() {
         variant: "destructive",
       });
       setIsSaving(false);
+
+      // Try to recover by refreshing data
+      Promise.all([refetchTrades(), refetchProjects()]).catch((err) => {
+        console.error("Error refreshing data after failed add:", err);
+      });
     }
   };
 
+  // Handle editing a trade with improved error handling
   const handleEditTrade = async () => {
     try {
       if (
@@ -199,12 +347,28 @@ export default function BudgetPlanning() {
       await updateTrade({
         id: editTrade.id,
         work_days: Number.parseInt(editTrade.workDays),
-        daily_planned_cost: Number.parseFloat(
+        [sessionData.user.salary_calculation === "monthly rate"
+          ? "monthly_planned_cost"
+          : "daily_planned_cost"]: Number.parseFloat(
           editTrade.plannedSalary
         ).toString(),
       }).unwrap();
 
-      await Promise.all([refetchTrades(), refetchProjects()]);
+      // Enhanced refetching with retry logic
+      const refetchWithRetry = async (retries = 3) => {
+        try {
+          await Promise.all([refetchTrades(), refetchProjects()]);
+        } catch (error) {
+          if (retries > 0) {
+            console.log(`Retrying refetch, ${retries} attempts left`);
+            setTimeout(() => refetchWithRetry(retries - 1), 1000);
+          } else {
+            throw error;
+          }
+        }
+      };
+
+      await refetchWithRetry();
 
       setShowEditTrade(false);
       setIsSaving(false);
@@ -221,17 +385,30 @@ export default function BudgetPlanning() {
         variant: "destructive",
       });
       setIsSaving(false);
+
+      // Try to recover by refreshing data
+      Promise.all([refetchTrades(), refetchProjects()]).catch((err) => {
+        console.error("Error refreshing data after failed update:", err);
+      });
     }
   };
 
-  const handleTradeAction = (action: string, trade: any, projectId: number) => {
+  // Handle trade actions (edit/delete) with improved error handling
+  const handleTradeAction = async (
+    action: string,
+    trade: any,
+    projectId: number
+  ) => {
     if (action === "edit") {
       setEditTrade({
         id: trade.id,
         role: trade.trade_name,
         employeesNumber: trade.employees.length.toString(),
         workDays: trade.work_days ? trade.work_days.toString() : "22",
-        plannedSalary: trade.daily_planned_cost.toString(),
+        plannedSalary:
+          sessionData.user.salary_calculation === "monthly rate"
+            ? trade.monthly_planned_cost.toString()
+            : trade.daily_planned_cost.toString(),
       });
       setSelectedTrade(trade);
       setShowEditTrade(true);
@@ -240,37 +417,55 @@ export default function BudgetPlanning() {
         description: `Editing ${trade.trade_name}.`,
       });
     } else if (action === "delete") {
-      unassignProject(trade.id)
-        .unwrap()
-        .then(async () => {
-          await Promise.all([refetchTrades(), refetchProjects()]);
+      try {
+        await unassignProject(trade.id).unwrap();
 
-          toast({
-            title: "Trade Deleted",
-            description: `${trade.trade_name} has been deleted successfully.`,
-          });
-        })
-        .catch((error) => {
-          console.error("Error deleting trade:", error);
-          toast({
-            title: "Error",
-            description: "Failed to delete trade. Please try again.",
-            variant: "destructive",
-          });
+        // Enhanced refetching with retry logic
+        const refetchWithRetry = async (retries = 3) => {
+          try {
+            await Promise.all([refetchTrades(), refetchProjects()]);
+          } catch (error) {
+            if (retries > 0) {
+              console.log(`Retrying refetch, ${retries} attempts left`);
+              setTimeout(() => refetchWithRetry(retries - 1), 1000);
+            } else {
+              throw error;
+            }
+          }
+        };
+
+        await refetchWithRetry();
+
+        toast({
+          title: "Trade Deleted",
+          description: `${trade.trade_name} has been deleted successfully.`,
         });
+      } catch (error) {
+        console.error("Error deleting trade:", error);
+        toast({
+          title: "Error",
+          description: "Failed to delete trade. Please try again.",
+          variant: "destructive",
+        });
+
+        // Try to recover by refreshing data
+        Promise.all([refetchTrades(), refetchProjects()]).catch((err) => {
+          console.error("Error refreshing data after failed delete:", err);
+        });
+      }
     }
   };
 
+  // Toggle project expansion
   const toggleProjectExpansion = (projectId: number) => {
-    setProjects(
-      projects.map((project) =>
-        project.id === projectId
-          ? { ...project, isExpanded: !project.isExpanded }
-          : project
-      )
+    setExpandedProjectIds((prev) =>
+      prev.includes(projectId)
+        ? prev.filter((id) => id !== projectId)
+        : [...prev, projectId]
     );
   };
 
+  // Get icon for role
   const getIconForRole = (role: string) => {
     switch (role) {
       case "Electricians":
@@ -286,6 +481,7 @@ export default function BudgetPlanning() {
     }
   };
 
+  // Filter projects based on search term
   const filteredProjects = projects.filter((project) => {
     if (!searchTerm) return true;
 
@@ -297,49 +493,25 @@ export default function BudgetPlanning() {
     );
   });
 
-  const totalPlannedCost = projects.reduce(
-    (sum, project) =>
-      sum + project.trades.reduce((s, trade) => s + trade.plannedSalary, 0),
-    0
-  );
+  // Calculate Y axis scale for chart
+  const calculateYAxisScale = (data: any[]) => {
+    if (!data || data.length === 0) return [0, 10000, 20000, 30000];
 
-  const totalActualCost = projects.reduce(
-    (sum, project) =>
-      sum + project.trades.reduce((s, trade) => s + (trade.actualCost || 0), 0),
-    0
-  );
-
-  const allTrades = Array.from(
-    new Set(projects.flatMap((p) => p.trades.map((t) => t.role)))
-  );
-
-  const tradeData = allTrades.map((role) => {
-    const plannedCost = projects.reduce(
-      (sum, project) =>
-        sum +
-        project.trades
-          .filter((t) => t.role === role)
-          .reduce((s, t) => s + t.plannedSalary, 0),
-      0
+    const maxValue = Math.max(
+      ...data.map((t: any) =>
+        Math.max(t.planned_costs || 0, t.actual_cost || 0)
+      )
     );
 
-    const actualCost = projects.reduce(
-      (sum, project) =>
-        sum +
-        project.trades
-          .filter((t) => t.role === role)
-          .reduce((s, t) => s + (t.actualCost || 0), 0),
-      0
+    const steps = 5;
+    const stepValue = maxValue / steps;
+    const yAxisValues = Array.from({ length: steps + 1 }, (_, i) =>
+      Math.round(stepValue * i)
     );
+    return yAxisValues;
+  };
 
-    return {
-      role,
-      plannedCost,
-      actualCost,
-      difference: actualCost - plannedCost,
-    };
-  });
-
+  // Handle exporting report
   const handleExportReport = async () => {
     try {
       setIsExporting(true);
@@ -360,6 +532,7 @@ export default function BudgetPlanning() {
     }
   };
 
+  // Handle time filter change
   const handleTimeFilterChange = (value: string) => {
     setTimeFilter(value);
     toast({
@@ -368,36 +541,24 @@ export default function BudgetPlanning() {
     });
   };
 
+  // Handle search change
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-    if (value) {
-      // toast({
-      //   title: "Search Applied",
-      //   description: `Searching for "${value}".`,
-      // })
-    }
   };
 
-  const calculateYAxisScale = (data: any[]) => {
-    if (!data || data.length === 0) return [0, 10000, 20000, 30000];
+  // Calculate totals
+  let total_planned_cost = 0;
+  let total_actual_cost = 0;
+  if (tradesFetched && tradesFetched.length > 0) {
+    tradesFetched.forEach((trade: any) => {
+      total_actual_cost += trade.actual_cost || 0;
+      total_planned_cost += trade.planned_costs || 0;
+    });
+  }
 
-    const maxValue = Math.max(
-      ...data.map((t: any) =>
-        Math.max(t.planned_costs || 0, t.actual_cost || 0)
-      )
-    );
-    console.log("max value", maxValue);
+  const yAxisLabels = calculateYAxisScale(tradesFetched);
 
-    const steps = 5;
-    const stepValue = maxValue / steps;
-    console.log("step value", stepValue);
-    const yAxisValues = Array.from({ length: steps + 1 }, (_, i) =>
-      Math.round(stepValue * i)
-    );
-    console.log(yAxisValues);
-    return yAxisValues;
-  };
-
+  // Loading state
   if (isLoading) {
     return (
       <div className="flex h-screen bg-gray-50">
@@ -415,17 +576,9 @@ export default function BudgetPlanning() {
     );
   }
 
-  let total_planned_cost = 0;
-  let total_actual_cost = 0;
-  if (tradesFetched && tradesFetched.length > 0) {
-    tradesFetched.forEach((trade: any) => {
-      total_actual_cost += trade.actual_cost || 0;
-      total_planned_cost += trade.planned_costs || 0;
-    });
-  }
+  // Display refreshing indicator when fetching
+  const isRefreshing = isTradesFetching || isProjectsFetching;
 
-  const yAxisLabels = calculateYAxisScale(tradesFetched);
-  console.log("yAxisLabels", yAxisLabels);
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
@@ -434,9 +587,17 @@ export default function BudgetPlanning() {
         <DashboardHeader />
         <main className="flex-1 overflow-y-auto p-6">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">
-              Budget Planning & Cost Comparison
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">
+                Budget Planning & Cost Comparison
+              </h1>
+              {isRefreshing && (
+                <div className="flex items-center gap-1 text-sm text-gray-500">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>Refreshing data...</span>
+                </div>
+              )}
+            </div>
 
             <div className="flex gap-2">
               <Button
@@ -479,24 +640,12 @@ export default function BudgetPlanning() {
                 <TabsTrigger
                   value="plan"
                   className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
-                  onClick={() => {
-                    // toast({
-                    //   title: "Tab Changed",
-                    //   description: "Viewing Plan Budget tab.",
-                    // });
-                  }}
                 >
                   Plan Budget
                 </TabsTrigger>
                 <TabsTrigger
                   value="costs"
                   className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
-                  onClick={() => {
-                    // toast({
-                    //   title: "Tab Changed",
-                    //   description: "Viewing Costs Trend tab.",
-                    // });
-                  }}
                 >
                   Costs Trend
                 </TabsTrigger>
@@ -506,22 +655,7 @@ export default function BudgetPlanning() {
             {/* Plan Budget Tab */}
             <TabsContent value="plan" className="p-0 mt-0">
               <div className="flex justify-between items-center mb-4">
-                <div className="relative">
-                  {/* <Select
-                    value={timeFilter}
-                    onValueChange={handleTimeFilterChange}
-                  >
-                    <SelectTrigger className="w-[180px] bg-white">
-                      <SelectValue placeholder="This Month" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="This Month">This Month</SelectItem>
-                      <SelectItem value="Last Month">Last Month</SelectItem>
-                      <SelectItem value="This Quarter">This Quarter</SelectItem>
-                      <SelectItem value="This Year">This Year</SelectItem>
-                    </SelectContent>
-                  </Select> */}
-                </div>
+                <div className="relative">{/* Time filter select */}</div>
 
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -535,6 +669,7 @@ export default function BudgetPlanning() {
                 </div>
               </div>
 
+              {/* Projects list */}
               {fetchedData && fetchedData.length > 0 ? (
                 fetchedData.map((project: any) => {
                   return (
@@ -622,6 +757,7 @@ export default function BudgetPlanning() {
                                             <AvatarImage
                                               src={
                                                 trade.avatar ||
+                                                "/placeholder.svg" ||
                                                 "/placeholder.svg"
                                               }
                                               alt={trade.trade_name}
@@ -645,7 +781,15 @@ export default function BudgetPlanning() {
                                           : "unspecified"}
                                       </td>
                                       <td className="px-4 py-3">
-                                        ${trade.daily_planned_cost}/day
+                                        $
+                                        {sessionData.user.salary_calculation ===
+                                        "monthly rate"
+                                          ? `${
+                                              trade.monthly_planned_cost
+                                                ? trade.monthly_planned_cost
+                                                : 0
+                                            }/month`
+                                          : `${trade.daily_planned_cost}/day`}
                                       </td>
                                       <td className="px-4 py-3">
                                         <DropdownMenu>
@@ -709,6 +853,7 @@ export default function BudgetPlanning() {
               )}
             </TabsContent>
 
+            {/* Costs Trend Tab */}
             <TabsContent value="costs" className="p-0 mt-0">
               <div className="bg-white rounded-lg border p-6">
                 <div className="flex justify-between items-start mb-8">
@@ -765,35 +910,6 @@ export default function BudgetPlanning() {
                         ))}
                       </SelectContent>
                     </Select>
-
-                    {/* <div className="flex gap-2">
-                      <div className="relative">
-                        <Input
-                          type="date"
-                          className="w-[150px]"
-                          placeholder="From Date"
-                          onChange={() => {
-                            toast({
-                              title: "Date Range Changed",
-                              description: "Date range filter applied.",
-                            });
-                          }}
-                        />
-                      </div>
-                      <div className="relative">
-                        <Input
-                          type="date"
-                          className="w-[150px]"
-                          placeholder="To Date"
-                          onChange={() => {
-                            toast({
-                              title: "Date Range Changed",
-                              description: "Date range filter applied.",
-                            });
-                          }}
-                        />
-                      </div>
-                    </div> */}
                   </div>
                 </div>
 
@@ -1014,6 +1130,7 @@ export default function BudgetPlanning() {
         </main>
       </div>
 
+      {/* Add Trade Sheet */}
       <Sheet open={showAddTrade} onOpenChange={setShowAddTrade}>
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
@@ -1084,7 +1201,10 @@ export default function BudgetPlanning() {
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">
-                      Planned Salary
+                      Planned Salary{" "}
+                      {sessionData.user.salary_calculation === "monthly rate"
+                        ? "(Monthly)"
+                        : "(Daily)"}
                     </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2">
@@ -1125,6 +1245,7 @@ export default function BudgetPlanning() {
         </SheetContent>
       </Sheet>
 
+      {/* Edit Trade Sheet */}
       <Sheet open={showEditTrade} onOpenChange={setShowEditTrade}>
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
@@ -1150,7 +1271,10 @@ export default function BudgetPlanning() {
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">
-                      Planned Salary
+                      Planned Salary{" "}
+                      {sessionData.user.salary_calculation === "monthly rate"
+                        ? "(Monthly)"
+                        : "(Daily)"}
                     </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2">
