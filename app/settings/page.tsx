@@ -266,6 +266,7 @@ export default function Settings() {
     try {
       // Compare current settings with original data to find changes
       if (JSON.stringify(previelegesFetched) !== JSON.stringify(userSettings)) {
+        console.log("saved settings", userSettings);
         await updatePrevielges(userSettings);
 
         toast({

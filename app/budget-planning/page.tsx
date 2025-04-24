@@ -67,6 +67,19 @@ interface Project {
 }
 
 export default function BudgetPlanning() {
+  const [permissions, setPermissions] = useState({
+    approve_attendance: false,
+    approve_leaves: true,
+    full_access: false,
+    generate_reports: null,
+    id: "",
+    manage_employees: null,
+    manage_payroll: false,
+    mark_attendance: true,
+    role: "",
+    view_payslip: false,
+    view_reports: false,
+  });
   // Enhanced refetching configuration for session data
   const {
     data: sessionData = { user: {} },
@@ -81,6 +94,21 @@ export default function BudgetPlanning() {
     pollingInterval: 60000, // Poll every minute to keep session data fresh
     skip: false,
   });
+  useEffect(() => {
+    if (sessionData?.user?.settings && sessionData.user.current_role) {
+      const userPermission = sessionData.user.settings.find(
+        (setting: any) =>
+          setting.role.toLowerCase() ===
+          sessionData.user.current_role.toLowerCase()
+      );
+
+      if (userPermission) {
+        setPermissions(userPermission);
+      }
+    }
+  }, [sessionData.user.settings, sessionData.user.current_role]);
+  console.log("permissions", permissions);
+
   const splitCurrencyValue = (str: string | undefined | null) => {
     if (!str) return null; // return early if str is undefined or null
     const match = str.match(/^([A-Z]+)([\d.]+)$/);
@@ -618,24 +646,26 @@ export default function BudgetPlanning() {
             </div>
 
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="gap-2 h-12 rounded-full"
-                onClick={handleExportReport}
-                disabled={isExporting}
-              >
-                {isExporting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Exporting...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4" />
-                    Export Report
-                  </>
-                )}
-              </Button>
+              {(permissions.full_access || permissions.generate_reports) && (
+                <Button
+                  variant="outline"
+                  className="gap-2 h-12 rounded-full"
+                  onClick={handleExportReport}
+                  disabled={isExporting}
+                >
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4" />
+                      Export Report
+                    </>
+                  )}
+                </Button>
+              )}
               <Button
                 onClick={() => {
                   setShowAddTrade(true);

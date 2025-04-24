@@ -65,6 +65,20 @@ export interface NewEmployee {
 const projects = ["Metro Bridge", "Mall Construction"];
 
 export default function EmployeeManagement() {
+  const [permissions, setPermissions] = useState({
+    approve_attendance: false,
+    approve_leaves: true,
+    full_access: false,
+    generate_reports: null,
+    id: "",
+    manage_employees: null,
+    manage_payroll: false,
+    mark_attendance: true,
+    role: "",
+    view_payslip: false,
+    view_reports: false,
+  });
+
   const { toast } = useToast();
 
   // Better RTK Query configuration for real-time data
@@ -79,6 +93,20 @@ export default function EmployeeManagement() {
     refetchOnReconnect: true,
     skip: false,
   });
+  useEffect(() => {
+    if (sessionData?.user?.settings && sessionData.user.current_role) {
+      const userPermission = sessionData.user.settings.find(
+        (setting: any) =>
+          setting.role.toLowerCase() ===
+          sessionData.user.current_role.toLowerCase()
+      );
+
+      if (userPermission) {
+        setPermissions(userPermission);
+      }
+    }
+  }, [sessionData.user.settings, sessionData.user.current_role]);
+  console.log("permissions", permissions);
   const splitCurrencyValue = (str: string | undefined | null) => {
     if (!str) return null; // return early if str is undefined or null
     const match = str.match(/^([A-Z]+)([\d.]+)$/);
@@ -599,17 +627,21 @@ export default function EmployeeManagement() {
             <h1 className="text-2xl font-bold">Employee Management</h1>
 
             <div className="flex gap-2">
-              <Button variant="outline" className="gap-2 h-12 rounded-full">
-                <Upload className="h-4 w-4" />
-                Upload CSV
-              </Button>
-              <Button
-                onClick={() => setShowAddEmployee(true)}
-                className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full"
-              >
-                <Plus className="h-4 w-4" />
-                Add New Employee
-              </Button>
+              {(permissions.generate_reports || permissions.full_access) && (
+                <Button variant="outline" className="gap-2 h-12 rounded-full">
+                  <Upload className="h-4 w-4" />
+                  Upload CSV
+                </Button>
+              )}
+              {(permissions.full_access || permissions.manage_employees) && (
+                <Button
+                  onClick={() => setShowAddEmployee(true)}
+                  className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add New Employee
+                </Button>
+              )}
               <Button
                 onClick={refreshAllData}
                 variant="outline"
@@ -771,29 +803,34 @@ export default function EmployeeManagement() {
                           {employee.company?.company_name || "N/A"}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {!employee._isOptimistic && !employee._isUpdating && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleEditEmployee(employee)}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteEmployee(employee)}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
+                          {(permissions.full_access ||
+                            permissions.manage_employees) &&
+                            !employee._isOptimistic &&
+                            !employee._isUpdating && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleEditEmployee(employee)}
+                                  >
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      handleDeleteEmployee(employee)
+                                    }
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                         </td>
                       </tr>
                     ))}

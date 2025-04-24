@@ -71,6 +71,19 @@ export default function AttendancePayroll() {
     refetchOnReconnect: true,
     skip: false,
   });
+  useEffect(() => {
+    if (sessionData?.user?.settings && sessionData.user.current_role) {
+      const userPermission = sessionData.user.settings.find(
+        (setting: any) =>
+          setting.role.toLowerCase() ===
+          sessionData.user.current_role.toLowerCase()
+      );
+
+      if (userPermission) {
+        setPermissions(userPermission);
+      }
+    }
+  }, [sessionData.user.settings, sessionData.user.current_role]);
   const splitCurrencyValue = (str: string | undefined | null) => {
     if (!str) return null; // return early if str is undefined or null
     const match = str.match(/^([A-Z]+)([\d.]+)$/);
@@ -146,23 +159,34 @@ export default function AttendancePayroll() {
     status: "Present" | "Absent" | "Late"
   ) => {
     try {
-      // Use RTK Query mutation instead of fetch
-      await updateAttendance({
-        employeeId,
-        status,
-        date: getCurrentDate(),
-        time: "today",
-      }).unwrap();
+      if (
+        permissions.approve_attendance ||
+        permissions.full_access ||
+        permissions.mark_attendance
+      ) {
+        // Use RTK Query mutation instead of fetch
+        await updateAttendance({
+          employeeId,
+          status,
+          date: getCurrentDate(),
+          time: "today",
+        }).unwrap();
+        setOpenAttendanceDropdown(null);
 
-      setOpenAttendanceDropdown(null);
+        // Add refetch here to update data
+        await refetch();
 
-      // Add refetch here to update data
-      await refetch();
-
-      toast({
-        title: "Attendance Updated",
-        description: `Employee attendance has been marked as ${status}.`,
-      });
+        toast({
+          title: "Attendance Updated",
+          description: `Employee attendance has been marked as ${status}.`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "you do not have previelege to make attendance",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Error updating attendance:", error);
       toast({
@@ -201,19 +225,7 @@ export default function AttendancePayroll() {
       setIsGeneratingPayslips(false);
     }
   };
-  useEffect(() => {
-    if (sessionData?.user?.settings && sessionData.user.current_role) {
-      const userPermission = sessionData.user.settings.find(
-        (setting: any) =>
-          setting.role.toLowerCase() ===
-          sessionData.user.current_role.toLowerCase()
-      );
 
-      if (userPermission) {
-        setPermissions(userPermission);
-      }
-    }
-  }, [sessionData.user.settings, sessionData.user.current_role]);
   console.log("permissions", permissions);
   // Generate payroll report using fetch
   const handleGenerateReport = async () => {
@@ -937,28 +949,42 @@ export default function AttendancePayroll() {
                                                 variant="outline"
                                                 className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
                                                 onClick={() => {
-                                                  updateAttendance({
-                                                    employeeId: employee.id,
-                                                    status: "Late",
-                                                    date: day.date,
-                                                  })
-                                                    .unwrap()
-                                                    .then(() => {
-                                                      toast({
-                                                        title:
-                                                          "Attendance Updated",
-                                                        description: `Marked as Late for ${day.day} ${currentMonth}`,
-                                                      });
-                                                      refetch();
+                                                  if (
+                                                    permissions.approve_attendance ||
+                                                    permissions.full_access ||
+                                                    permissions.mark_attendance
+                                                  ) {
+                                                    updateAttendance({
+                                                      employeeId: employee.id,
+                                                      status: "Late",
+                                                      date: day.date,
                                                     })
-                                                    .catch((error) => {
-                                                      toast({
-                                                        title: "Error",
-                                                        description:
-                                                          "Failed to update attendance status.",
-                                                        variant: "destructive",
+                                                      .unwrap()
+                                                      .then(() => {
+                                                        toast({
+                                                          title:
+                                                            "Attendance Updated",
+                                                          description: `Marked as Late for ${day.day} ${currentMonth}`,
+                                                        });
+                                                        refetch();
+                                                      })
+                                                      .catch((error) => {
+                                                        toast({
+                                                          title: "Error",
+                                                          description:
+                                                            "Failed to update attendance status.",
+                                                          variant:
+                                                            "destructive",
+                                                        });
                                                       });
+                                                  } else {
+                                                    toast({
+                                                      title: "Error",
+                                                      description:
+                                                        "you do not have previelege to make attendance",
+                                                      variant: "destructive",
                                                     });
+                                                  }
                                                 }}
                                               >
                                                 late
@@ -969,28 +995,42 @@ export default function AttendancePayroll() {
                                                 variant="outline"
                                                 className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
                                                 onClick={() => {
-                                                  updateAttendance({
-                                                    employeeId: employee.id,
-                                                    status: "Absent",
-                                                    date: day.date,
-                                                  })
-                                                    .unwrap()
-                                                    .then(() => {
-                                                      toast({
-                                                        title:
-                                                          "Attendance Updated",
-                                                        description: `Marked as Absent for ${day.day} ${currentMonth}`,
-                                                      });
-                                                      refetch();
+                                                  if (
+                                                    permissions.approve_attendance ||
+                                                    permissions.full_access ||
+                                                    permissions.mark_attendance
+                                                  ) {
+                                                    updateAttendance({
+                                                      employeeId: employee.id,
+                                                      status: "Absent",
+                                                      date: day.date,
                                                     })
-                                                    .catch((error) => {
-                                                      toast({
-                                                        title: "Error",
-                                                        description:
-                                                          "Failed to update attendance status.",
-                                                        variant: "destructive",
+                                                      .unwrap()
+                                                      .then(() => {
+                                                        toast({
+                                                          title:
+                                                            "Attendance Updated",
+                                                          description: `Marked as Absent for ${day.day} ${currentMonth}`,
+                                                        });
+                                                        refetch();
+                                                      })
+                                                      .catch((error) => {
+                                                        toast({
+                                                          title: "Error",
+                                                          description:
+                                                            "Failed to update attendance status.",
+                                                          variant:
+                                                            "destructive",
+                                                        });
                                                       });
+                                                  } else {
+                                                    toast({
+                                                      title: "Error",
+                                                      description:
+                                                        "you do not have previelege to make attendance",
+                                                      variant: "destructive",
                                                     });
+                                                  }
                                                 }}
                                               >
                                                 Absent
@@ -1001,28 +1041,42 @@ export default function AttendancePayroll() {
                                                 variant="outline"
                                                 className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
                                                 onClick={() => {
-                                                  updateAttendance({
-                                                    employeeId: employee.id,
-                                                    status: "Present",
-                                                    date: day.date,
-                                                  })
-                                                    .unwrap()
-                                                    .then(() => {
-                                                      toast({
-                                                        title:
-                                                          "Attendance Updated",
-                                                        description: `Marked as Present for ${day.day} ${currentMonth}`,
-                                                      });
-                                                      refetch();
+                                                  if (
+                                                    permissions.approve_attendance ||
+                                                    permissions.full_access ||
+                                                    permissions.mark_attendance
+                                                  ) {
+                                                    updateAttendance({
+                                                      employeeId: employee.id,
+                                                      status: "Present",
+                                                      date: day.date,
                                                     })
-                                                    .catch((error) => {
-                                                      toast({
-                                                        title: "Error",
-                                                        description:
-                                                          "Failed to update attendance status.",
-                                                        variant: "destructive",
+                                                      .unwrap()
+                                                      .then(() => {
+                                                        toast({
+                                                          title:
+                                                            "Attendance Updated",
+                                                          description: `Marked as Present for ${day.day} ${currentMonth}`,
+                                                        });
+                                                        refetch();
+                                                      })
+                                                      .catch((error) => {
+                                                        toast({
+                                                          title: "Error",
+                                                          description:
+                                                            "Failed to update attendance status.",
+                                                          variant:
+                                                            "destructive",
+                                                        });
                                                       });
+                                                  } else {
+                                                    toast({
+                                                      title: "Error",
+                                                      description:
+                                                        "you do not have previelege to make attendance",
+                                                      variant: "destructive",
                                                     });
+                                                  }
                                                 }}
                                               >
                                                 Present
