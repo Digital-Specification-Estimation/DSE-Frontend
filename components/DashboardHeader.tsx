@@ -20,7 +20,7 @@ import { userApi } from "@/lib/redux/userSlice";
 const SOCKET_SERVER_URL =
   process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:4000";
 const DashboardHeader = () => {
-  console.log(userApi.endpoints);
+  // console.log(userApi.endpoints);
   const dispatch = useDispatch();
   const { data: pastNotifications } = useGetNotificationsQuery();
   const notifications = useSelector(

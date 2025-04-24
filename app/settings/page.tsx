@@ -81,7 +81,7 @@ export default function Settings() {
     avatar: "/placeholder.svg?height=40&width=40",
   });
   console.log("previelegesFetched", previelegesFetched);
-  const [userSettings, setUserSettings] = useState([]);
+  const [userSettings, setUserSettings] = useState<any[]>([]);
   useEffect(() => {
     if (previelegesFetched) {
       setUserSettings(previelegesFetched);
@@ -190,40 +190,236 @@ export default function Settings() {
     splitCurrencyValue(sessionData.user.currency)?.value
   );
   // console.log("user currency", sessionData.user.currency);
-  const handleSaveSettings = async () => {
+  // Remove the existing handleSaveSettings function and replace with these separate functions:
+
+  const handleSaveCompanySettings = async () => {
     try {
       // Create a FormData object to handle file upload
       const formData = new FormData();
 
-      // Add all company settings to the FormData
+      // Add company ID
       formData.append("id", companyId);
-      formData.append("company_name", companySettings.companyName);
-      formData.append("business_type", companySettings.businessType);
-      companySettings.holidays.forEach((holiday: any) => {
-        formData.append("holidays", holiday);
-      });
-      formData.append("standard_work_hours", companySettings.workHours);
-      formData.append("weekly_work_limit", companySettings.weeklyWorkLimit);
-      formData.append("overtime_rate", companySettings.overtimeRate);
+
+      // Only add modified fields to the FormData
+      if (companyData.company_name !== companySettings.companyName) {
+        formData.append("company_name", companySettings.companyName);
+      }
+
+      if (companyData.business_type !== companySettings.businessType) {
+        formData.append("business_type", companySettings.businessType);
+      }
+
+      // For arrays like holidays, check if they've changed
+      if (
+        JSON.stringify(companyData.holidays) !==
+        JSON.stringify(companySettings.holidays)
+      ) {
+        companySettings.holidays.forEach((holiday: any) => {
+          formData.append("holidays", holiday);
+        });
+      }
+
+      if (companyData.standard_work_hours !== companySettings.workHours) {
+        formData.append("standard_work_hours", companySettings.workHours);
+      }
+
+      if (companyData.weekly_work_limit !== companySettings.weeklyWorkLimit) {
+        formData.append("weekly_work_limit", companySettings.weeklyWorkLimit);
+      }
+
+      if (companyData.overtime_rate !== companySettings.overtimeRate) {
+        formData.append("overtime_rate", companySettings.overtimeRate);
+      }
 
       // Add the logo file if it exists
       if (logoFile) {
         formData.append("image", logoFile);
       }
-      console.log(
-        "notification settings on handle save ",
-        notificationSettings
-      );
-      await updatePrevielges(userSettings);
-      await updateUser({ ...payrollSettings, id: sessionData.user.id });
-      await updateUser({ ...notificationSettings, id: sessionData.user.id });
-      // Call the RTK Query mutation
-      const result = await updateCompany(formData).unwrap();
 
+      // Only make the API call if there are changes
+      if ([...formData.entries()].length > 1) {
+        // More than just the ID
+        // Call the RTK Query mutation
+        const result = await updateCompany(formData).unwrap();
+
+        toast({
+          title: "Company Settings Saved",
+          description: "Your company settings have been updated successfully.",
+        });
+      } else {
+        toast({
+          title: "No Changes",
+          description: "No changes were detected in company settings.",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving company settings:", error);
       toast({
-        title: "Settings Saved",
-        description: "Your settings have been updated successfully.",
+        title: "Error",
+        description: "Failed to save company settings. Please try again.",
+        variant: "destructive",
       });
+    }
+  };
+
+  const handleSaveUserSettings = async () => {
+    try {
+      // Compare current settings with original data to find changes
+      if (JSON.stringify(previelegesFetched) !== JSON.stringify(userSettings)) {
+        await updatePrevielges(userSettings);
+
+        toast({
+          title: "User Settings Saved",
+          description: "Your user settings have been updated successfully.",
+        });
+      } else {
+        toast({
+          title: "No Changes",
+          description: "No changes were detected in user settings.",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving user settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save user settings. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSavePayrollSettings = async () => {
+    try {
+      // Create an object to hold only the modified fields
+      const updatedFields: any = { id: sessionData.user.id };
+      let hasChanges = false;
+
+      // Check each field for changes
+      if (
+        sessionData.user.salary_calculation !==
+        payrollSettings.salary_calculation
+      ) {
+        updatedFields.salary_calculation = payrollSettings.salary_calculation;
+        hasChanges = true;
+      }
+
+      if (sessionData.user.currency !== payrollSettings.currency) {
+        updatedFields.currency = payrollSettings.currency;
+        hasChanges = true;
+      }
+
+      if (sessionData.user.payslip_format !== payrollSettings.payslip_format) {
+        updatedFields.payslip_format = payrollSettings.payslip_format;
+        hasChanges = true;
+      }
+
+      if (hasChanges) {
+        await updateUser(updatedFields);
+        toast({
+          title: "Payroll Settings Saved",
+          description: "Your payroll settings have been updated successfully.",
+        });
+      } else {
+        toast({
+          title: "No Changes",
+          description: "No changes were detected in payroll settings.",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving payroll settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save payroll settings. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveNotificationSettings = async () => {
+    try {
+      // Create an object to hold only the modified fields
+      const updatedFields: any = { id: sessionData.user.id };
+      let hasChanges = false;
+
+      // Check each notification setting for changes
+      if (
+        sessionData.user.send_email_alerts !==
+        notificationSettings.send_email_alerts
+      ) {
+        updatedFields.send_email_alerts =
+          notificationSettings.send_email_alerts;
+        hasChanges = true;
+      }
+
+      if (
+        sessionData.user.remind_approvals !==
+        notificationSettings.remind_approvals
+      ) {
+        updatedFields.remind_approvals = notificationSettings.remind_approvals;
+        hasChanges = true;
+      }
+
+      if (
+        sessionData.user.deadline_notify !==
+        notificationSettings.deadline_notify
+      ) {
+        updatedFields.deadline_notify = notificationSettings.deadline_notify;
+        hasChanges = true;
+      }
+
+      if (hasChanges) {
+        await updateUser(updatedFields);
+        toast({
+          title: "Notification Settings Saved",
+          description:
+            "Your notification settings have been updated successfully.",
+        });
+      } else {
+        toast({
+          title: "No Changes",
+          description: "No changes were detected in notification settings.",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving notification settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save notification settings. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Create a new function to save all settings based on the active tab
+  const handleSaveSettings = async () => {
+    try {
+      switch (activeTab) {
+        case "company":
+          await handleSaveCompanySettings();
+          break;
+        case "user":
+          await handleSaveUserSettings();
+          break;
+        case "payroll":
+          await handleSavePayrollSettings();
+          break;
+        case "notifications":
+          await handleSaveNotificationSettings();
+          break;
+        default:
+          // Save all settings if no specific tab is active
+          await Promise.all([
+            handleSaveCompanySettings(),
+            handleSaveUserSettings(),
+            handleSavePayrollSettings(),
+            handleSaveNotificationSettings(),
+          ]);
+
+          toast({
+            title: "All Settings Saved",
+            description: "All your settings have been updated successfully.",
+          });
+      }
     } catch (error) {
       console.error("Error saving settings:", error);
       toast({
@@ -288,7 +484,7 @@ export default function Settings() {
   };
   console.log("user settings", userSettings);
   const handleRemovePermission = (role: string, permission: string) => {
-    const updatedSettings = userSettings.map((setting) => {
+    const updatedSettings = userSettings.map((setting: any) => {
       if (setting.role === role) {
         return {
           ...setting,
@@ -459,7 +655,7 @@ export default function Settings() {
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      Save Change
+                      Save All Changes
                     </>
                   )}
                 </button>
@@ -695,6 +891,25 @@ export default function Settings() {
                         </div>
                       </div>
                     </div>
+                    <div className="flex justify-end mt-6">
+                      <button
+                        className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm flex items-center gap-2"
+                        onClick={handleSaveCompanySettings}
+                        disabled={isUpdating}
+                      >
+                        {isUpdating ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            Save Company Settings
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -789,6 +1004,25 @@ export default function Settings() {
                           )}
                         </div>
                       ))}
+                    </div>
+                    <div className="flex justify-end mt-6">
+                      <button
+                        className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm flex items-center gap-2"
+                        onClick={handleSaveUserSettings}
+                        disabled={isUpdating}
+                      >
+                        {isUpdating ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            Save User Settings
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -893,6 +1127,25 @@ export default function Settings() {
                         </div>
                       </div>
                     </div>
+                    <div className="flex justify-end mt-6">
+                      <button
+                        className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm flex items-center gap-2"
+                        onClick={handleSavePayrollSettings}
+                        disabled={isUpdating}
+                      >
+                        {isUpdating ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            Save Payroll Settings
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -974,6 +1227,25 @@ export default function Settings() {
                           <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
                         </label>
                       </div>
+                    </div>
+                    <div className="flex justify-end mt-6">
+                      <button
+                        className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm flex items-center gap-2"
+                        onClick={handleSaveNotificationSettings}
+                        disabled={isUpdating}
+                      >
+                        {isUpdating ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            Save Notification Settings
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 )}

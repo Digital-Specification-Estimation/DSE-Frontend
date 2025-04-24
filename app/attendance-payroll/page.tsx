@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Search,
   RefreshCw,
@@ -47,6 +47,19 @@ const projects = ["Metro Bridge", "Mall Construction"];
 const dailyRates = ["$100", "$120", "$140", "$200"];
 
 export default function AttendancePayroll() {
+  const [permissions, setPermissions] = useState({
+    approve_attendance: false,
+    approve_leaves: true,
+    full_access: false,
+    generate_reports: null,
+    id: "",
+    manage_employees: null,
+    manage_payroll: false,
+    mark_attendance: true,
+    role: "",
+    view_payslip: false,
+    view_reports: false,
+  });
   const {
     data: sessionData = { user: {} },
     isLoading: isSessionLoading,
@@ -188,7 +201,20 @@ export default function AttendancePayroll() {
       setIsGeneratingPayslips(false);
     }
   };
-  console.log(employees);
+  useEffect(() => {
+    if (sessionData?.user?.settings && sessionData.user.current_role) {
+      const userPermission = sessionData.user.settings.find(
+        (setting: any) =>
+          setting.role.toLowerCase() ===
+          sessionData.user.current_role.toLowerCase()
+      );
+
+      if (userPermission) {
+        setPermissions(userPermission);
+      }
+    }
+  }, [sessionData.user.settings, sessionData.user.current_role]);
+  console.log("permissions", permissions);
   // Generate payroll report using fetch
   const handleGenerateReport = async () => {
     try {
@@ -338,18 +364,20 @@ export default function AttendancePayroll() {
                 )}
                 {isGeneratingReport ? "Generating..." : "View Payroll Report"}
               </Button>
-              <Button
-                className="bg-orange-500 hover:bg-orange-600 gap-2 flex items-center h-14 rounded-full"
-                onClick={handleGeneratePayslips}
-                disabled={isGeneratingPayslips}
-              >
-                {isGeneratingPayslips ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <FileCheck className="h-5 w-5" />
-                )}
-                {isGeneratingPayslips ? "Generating..." : "Generate Payslips"}
-              </Button>
+              {(permissions.full_access || permissions.view_payslip) && (
+                <Button
+                  className="bg-orange-500 hover:bg-orange-600 gap-2 flex items-center h-14 rounded-full"
+                  onClick={handleGeneratePayslips}
+                  disabled={isGeneratingPayslips}
+                >
+                  {isGeneratingPayslips ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileCheck className="h-5 w-5" />
+                  )}
+                  {isGeneratingPayslips ? "Generating..." : "Generate Payslips"}
+                </Button>
+              )}
             </div>
           </div>
 

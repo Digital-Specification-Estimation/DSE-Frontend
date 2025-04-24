@@ -36,6 +36,19 @@ import { useGetDailyAttendanceMonthlyQuery } from "@/lib/redux/attendanceSlice";
 import { useSessionQuery } from "@/lib/redux/authSlice";
 
 export default function Dashboard() {
+  const [permissions, setPermissions] = useState({
+    approve_attendance: false,
+    approve_leaves: true,
+    full_access: false,
+    generate_reports: null,
+    id: "",
+    manage_employees: null,
+    manage_payroll: false,
+    mark_attendance: true,
+    role: "",
+    view_payslip: false,
+    view_reports: false,
+  });
   const today = new Date();
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -49,7 +62,7 @@ export default function Dashboard() {
 
   // Redux query hooks with proper options for keeping data fresh
   const {
-    data: sessionData = { user: {} },
+    data: sessionData = { user: { settings: [] } },
     isLoading: isSessionLoading,
     refetch: refetchSession,
   } = useSessionQuery(undefined, {
@@ -58,6 +71,7 @@ export default function Dashboard() {
     refetchOnReconnect: true,
     pollingInterval: 300000, // Poll every 5 minutes
   });
+
   const splitCurrencyValue = (str: string | undefined | null) => {
     if (!str) return null; // return early if str is undefined or null
     const match = str.match(/^([A-Z]+)([\d.]+)$/);
@@ -175,6 +189,21 @@ export default function Dashboard() {
 
     return () => clearInterval(intervalId);
   }, [handleRefreshData, isRefreshing, isFetching]);
+
+  // Set permissions based on user role
+  useEffect(() => {
+    if (sessionData?.user?.settings && sessionData.user.current_role) {
+      const userPermission = sessionData.user.settings.find(
+        (setting: any) =>
+          setting.role.toLowerCase() ===
+          sessionData.user.current_role.toLowerCase()
+      );
+
+      if (userPermission) {
+        setPermissions(userPermission);
+      }
+    }
+  }, [sessionData.user.settings, sessionData.user.current_role]);
 
   const handleFilterChange = (type: string, value: string) => {
     setFilters((prev) => ({ ...prev, [type]: value }));
@@ -434,7 +463,7 @@ export default function Dashboard() {
     numberOfLateArrivals,
     payrollPercentage,
   } = processEmployeeData();
-
+  console.log("permissions", permissions);
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
