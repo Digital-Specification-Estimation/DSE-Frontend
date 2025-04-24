@@ -46,6 +46,7 @@ import {
 import { employeeSlice } from "@/lib/redux/employeeSlice";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionQuery } from "@/lib/redux/authSlice";
+import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
 
 export interface NewEmployee {
   username: string;
@@ -68,7 +69,7 @@ export default function EmployeeManagement() {
     isLoading: isSessionLoading,
     isError,
     // error,
-    // refetch,
+    refetch: sessionRefetch,
     // isFetching,
   } = useSessionQuery(undefined, {
     refetchOnMountOrArgChange: true,
@@ -76,6 +77,7 @@ export default function EmployeeManagement() {
     refetchOnReconnect: true,
     skip: false,
   });
+  const { data: tradesFetched, refetch: refetchTrades } = useGetTradesQuery();
   console.log(sessionData.user.salary_calculation);
   const { toast } = useToast();
   const [trades, setTrades] = useState([]);
@@ -99,25 +101,8 @@ export default function EmployeeManagement() {
 
   useEffect(() => {
     // Define the async function inside useEffect
-    const getTrades = async () => {
-      setIsLoadingTrades(true);
-      try {
-        const response = await fetch(
-          "http://localhost:4000/trade-position/trades"
-        );
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-        const data = await response.json();
-        setTrades(data);
-        setTradesError(null);
-      } catch (error) {
-        console.error("Failed to fetch trades:", error);
-        setTradesError("Failed to load trades. Please refresh the page.");
-      } finally {
-        setIsLoadingTrades(false);
-      }
-    };
+
+    setTrades(tradesFetched);
 
     const getCompanies = async () => {
       setIsLoadingCompanies(true);
@@ -136,13 +121,12 @@ export default function EmployeeManagement() {
         setIsLoadingCompanies(false);
       }
     };
-
-    getTrades();
+    refetchTrades();
     getCompanies();
 
     // Set up an interval to refresh data every 5 minutes
     const intervalId = setInterval(() => {
-      getTrades();
+      refetchTrades();
       getCompanies();
     }, 5 * 60 * 1000);
 
@@ -341,6 +325,7 @@ export default function EmployeeManagement() {
 
       // Explicitly refetch to ensure data is up to date
       refetch();
+      sessionRefetch();
 
       // Show success notification
       toast({

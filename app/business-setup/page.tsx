@@ -156,6 +156,8 @@ function LocationForm({
 function TradeForm({
   onClose,
   refetchTrades,
+  currencyShort,
+  currencyValue,
   sessionData,
 }: {
   onClose: () => void;
@@ -289,7 +291,9 @@ function TradeForm({
             : "Daily Rate"}
         </label>
         <div className="relative">
-          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
+            {currencyShort}
+          </p>{" "}
           <Input
             placeholder="Enter rate"
             type="decimal"
@@ -774,6 +778,8 @@ function EditTradeForm({
   trade,
   onClose,
   refetchTrades,
+  currencyShort,
+  currencyValue,
   sessionData,
 }: {
   trade: any;
@@ -901,15 +907,17 @@ function EditTradeForm({
             : "Daily Rate"}
         </label>
         <div className="relative">
-          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
+            {currencyShort}
+          </p>
           <Input
             placeholder="Enter rate"
             type="decimal"
             className="pl-10"
             value={
               sessionData?.user?.salary_calculation === "monthly rate"
-                ? editedTrade.monthly_planned_cost
-                : editedTrade.daily_planned_cost
+                ? editedTrade.monthly_planned_cost * currencyValue
+                : editedTrade.daily_planned_cost * currencyValue
             }
             onChange={(e) =>
               sessionData?.user?.salary_calculation === "monthly rate"
@@ -1232,7 +1240,21 @@ export default function BusinessSetup() {
     refetchOnReconnect: true,
     skip: false,
   });
-  console.log("user", sessionData.user.salary_calculation);
+  const splitCurrencyValue = (str: string | undefined | null) => {
+    if (!str) return null; // return early if str is undefined or null
+    const match = str.match(/^([A-Z]+)([\d.]+)$/);
+    if (!match) return null;
+    return {
+      currency: match[1],
+      value: match[2],
+    };
+  };
+
+  const currencyValue = Number(
+    splitCurrencyValue(sessionData.user.currency)?.value
+  );
+  const currencyShort = splitCurrencyValue(sessionData.user.currency)?.currency;
+
   const { toast } = useToast();
   const [user] = useState({
     name: "Kristin Watson",
@@ -1458,7 +1480,7 @@ export default function BusinessSetup() {
                             "monthly rate"
                               ? "Monthly"
                               : "Daily"
-                          } Rate ($)`,
+                          } Rate (${currencyShort})`,
                         ]}
                         data={trades}
                         isLoading={isLoadingTrades}
@@ -1484,11 +1506,19 @@ export default function BusinessSetup() {
                             </td>
                             <td className="px-4 py-3">{trade.location_name}</td>
                             <td className="px-4 py-3">
-                              $
+                              {currencyShort}
                               {sessionData?.user?.salary_calculation ===
                               "monthly rate"
-                                ? trade.monthly_planned_cost
-                                : trade.daily_planned_cost}
+                                ? (
+                                    (trade.monthly_planned_cost
+                                      ? trade.monthly_planned_cost
+                                      : 1) * currencyValue
+                                  ).toLocaleString()
+                                : (
+                                    (trade.daily_planned_cost
+                                      ? trade.daily_planned_cost
+                                      : 1) * currencyValue
+                                  ).toLocaleString()}
                             </td>
                           </>
                         )}
@@ -1590,6 +1620,8 @@ export default function BusinessSetup() {
           <TradeForm
             onClose={() => setShowAddTrade(false)}
             refetchTrades={refetchTrades}
+            currencyShort={currencyShort}
+            currencyValue={currencyValue}
             sessionData={sessionData}
           />
         </DialogContent>
@@ -1651,6 +1683,8 @@ export default function BusinessSetup() {
               trade={selectedItem}
               onClose={() => setShowEditTrade(false)}
               refetchTrades={refetchTrades}
+              currencyShort={currencyShort}
+              currencyValue={currencyValue}
               sessionData={sessionData}
             />
           )}

@@ -81,6 +81,20 @@ export default function BudgetPlanning() {
     pollingInterval: 60000, // Poll every minute to keep session data fresh
     skip: false,
   });
+  const splitCurrencyValue = (str: string | undefined | null) => {
+    if (!str) return null; // return early if str is undefined or null
+    const match = str.match(/^([A-Z]+)([\d.]+)$/);
+    if (!match) return null;
+    return {
+      currency: match[1],
+      value: match[2],
+    };
+  };
+
+  const currencyValue = Number(
+    splitCurrencyValue(sessionData.user.currency)?.value
+  );
+  const currencyShort = splitCurrencyValue(sessionData.user.currency)?.currency;
 
   // Improved refetching for trades and projects
   const {
@@ -407,8 +421,8 @@ export default function BudgetPlanning() {
         workDays: trade.work_days ? trade.work_days.toString() : "22",
         plannedSalary:
           sessionData.user.salary_calculation === "monthly rate"
-            ? trade.monthly_planned_cost.toString()
-            : trade.daily_planned_cost.toString(),
+            ? (trade.monthly_planned_cost * currencyValue).toString()
+            : (trade.daily_planned_cost * currencyValue).toString(),
       });
       setSelectedTrade(trade);
       setShowEditTrade(true);
@@ -708,7 +722,10 @@ export default function BudgetPlanning() {
                             {project.project_name}
                           </span>
                           <span className="text-sm bg-gray-100 px-2 py-0.5 rounded-full">
-                            ${project.budget}
+                            {currencyShort}
+                            {project.budget * currencyValue
+                              ? project.budget * currencyValue
+                              : " "}
                           </span>
                         </div>
                         <div className="ml-auto">
@@ -736,7 +753,7 @@ export default function BudgetPlanning() {
                                   Work Days
                                 </th>
                                 <th className="px-4 py-3 text-left">
-                                  Planned Salary ($)
+                                  Planned Salary ({currencyShort})
                                 </th>
                                 <th className="w-10 px-4 py-3 text-left"></th>
                               </tr>
@@ -781,14 +798,14 @@ export default function BudgetPlanning() {
                                           : "unspecified"}
                                       </td>
                                       <td className="px-4 py-3">
-                                        $
+                                        {currencyShort}
                                         {sessionData.user.salary_calculation ===
                                         "monthly rate"
-                                          ? `${
-                                              trade.monthly_planned_cost
+                                          ? `${(
+                                              (trade.monthly_planned_cost
                                                 ? trade.monthly_planned_cost
-                                                : 0
-                                            }/month`
+                                                : 0) * currencyValue
+                                            ).toLocaleString()}/month`
                                           : `${trade.daily_planned_cost}/day`}
                                       </td>
                                       <td className="px-4 py-3">
@@ -873,11 +890,13 @@ export default function BudgetPlanning() {
                       </div>
                     </div>
                     <div className="flex gap-8">
-                      <div className="text-3xl font-bold">
-                        ${total_planned_cost.toLocaleString()}
+                      <div className="text-xl font-bold">
+                        {currencyShort}
+                        {(total_planned_cost * currencyValue).toLocaleString()}
                       </div>
-                      <div className="text-3xl font-bold">
-                        ${total_actual_cost.toLocaleString()}
+                      <div className="text-xl font-bold">
+                        {currencyShort}
+                        {(total_actual_cost * currencyValue).toLocaleString()}
                       </div>
                     </div>
                   </div>
@@ -916,7 +935,10 @@ export default function BudgetPlanning() {
                 <div className="h-80 relative mb-8" ref={chartRef}>
                   <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-sm text-gray-500">
                     {[...yAxisLabels].reverse().map((value, index) => (
-                      <div key={index}>${value.toFixed(0)}</div>
+                      <div key={index}>
+                        {currencyShort}
+                        {(value * currencyValue).toFixed(0)}
+                      </div>
                     ))}
                   </div>
 
@@ -925,22 +947,30 @@ export default function BudgetPlanning() {
                       tradesFetched.map((trade: any, index: number) => {
                         const maxValue = Math.max(
                           ...tradesFetched.map((t: any) =>
-                            Math.max(t.planned_costs || 0, t.actual_cost || 0)
+                            Math.max(
+                              t.planned_costs * currencyValue || 0,
+                              t.actual_cost * currencyValue || 0
+                            )
                           )
                         );
 
                         const maxHeight = 289;
                         const plannedHeight = maxValue
-                          ? ((trade.planned_costs || 0) / maxValue) * maxHeight
+                          ? ((trade.planned_costs * currencyValue || 0) /
+                              maxValue) *
+                            maxHeight
                           : 0;
                         const actualHeight = maxValue
-                          ? ((trade.actual_cost || 0) / maxValue) * maxHeight
+                          ? ((trade.actual_cost * currencyValue || 0) /
+                              maxValue) *
+                            maxHeight
                           : 0;
 
                         const showTooltip = trade.trade_name === "HR & Admin";
 
                         const difference =
-                          (trade.actual_cost || 0) - (trade.planned_costs || 0);
+                          (trade.actual_cost * currencyValue || 0) -
+                          (trade.planned_costs * currencyValue || 0);
 
                         return (
                           <div
@@ -1003,28 +1033,33 @@ export default function BudgetPlanning() {
                                 <div className="text-sm">
                                   Planned Cost{" "}
                                   <span className="font-bold">
-                                    $
+                                    {currencyShort}
                                     {(
-                                      trade.planned_costs || 0
+                                      trade.planned_costs * currencyValue || 0
                                     ).toLocaleString()}
                                   </span>
                                 </div>
                                 <div className="text-sm">
                                   Actual Cost{" "}
                                   <span className="font-bold">
-                                    ${(trade.actual_cost || 0).toLocaleString()}
+                                    {currencyShort}
+                                    {(
+                                      trade.actual_cost * currencyValue || 0
+                                    ).toLocaleString()}
                                   </span>
                                 </div>
                                 <div
                                   className={`text-xs ${
-                                    difference > 0
+                                    difference * currencyValue > 0
                                       ? "text-red-600"
                                       : "text-green-600"
                                   }`}
                                 >
-                                  {difference > 0 ? "+" : ""}$
-                                  {difference.toLocaleString()}{" "}
-                                  {difference > 0
+                                  {difference * currencyValue > 0 ? "+" : ""}$
+                                  {(
+                                    difference * currencyValue
+                                  ).toLocaleString()}{" "}
+                                  {difference * currencyValue > 0
                                     ? "over budget"
                                     : "under budget"}
                                 </div>
@@ -1054,14 +1089,21 @@ export default function BudgetPlanning() {
                         <th className="px-4 py-3 text-left">
                           <div className="flex items-center gap-2">
                             <div className="h-3 w-3 rounded-full bg-orange-500"></div>
-                            Planned Budget ($
-                            {total_planned_cost.toLocaleString()})
+                            Planned Budget ({currencyShort}
+                            {(
+                              total_planned_cost * currencyValue
+                            ).toLocaleString()}
+                            )
                           </div>
                         </th>
                         <th className="px-4 py-3 text-left">
                           <div className="flex items-center gap-2">
                             <div className="h-3 w-3 rounded-full bg-blue-700"></div>
-                            Actual Cost (${total_actual_cost.toLocaleString()})
+                            Actual Cost ($
+                            {(
+                              total_actual_cost * currencyValue
+                            ).toLocaleString()}
+                            )
                           </div>
                         </th>
                         <th className="px-4 py-3 text-left">Difference</th>
@@ -1072,7 +1114,8 @@ export default function BudgetPlanning() {
                       {tradesFetched && tradesFetched.length > 0 ? (
                         tradesFetched.map((data: any) => {
                           const difference =
-                            (data.actual_cost || 0) - (data.planned_costs || 0);
+                            (data.actual_cost * currencyValue || 0) -
+                            (data.planned_costs * currencyValue || 0);
                           return (
                             <tr
                               key={data.id}
@@ -1095,10 +1138,16 @@ export default function BudgetPlanning() {
                                 </div>
                               </td>
                               <td className="px-4 py-3">
-                                ${(data.planned_costs || 0).toLocaleString()}
+                                {currencyShort}
+                                {(
+                                  data.planned_costs * currencyValue || 0
+                                ).toLocaleString()}
                               </td>
                               <td className="px-4 py-3">
-                                ${(data.actual_cost || 0).toLocaleString()}
+                                {currencyShort}
+                                {(
+                                  data.actual_cost * currencyValue || 0
+                                ).toLocaleString()}
                               </td>
                               <td className="px-4 py-3">
                                 {difference > 0 ? (
@@ -1207,12 +1256,12 @@ export default function BudgetPlanning() {
                         : "(Daily)"}
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2">
-                        $
-                      </span>
+                      <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-700">
+                        {currencyShort}
+                      </p>{" "}
                       <Input
                         type="number"
-                        className="pl-7"
+                        className="pl-[40px]"
                         value={newTrade.plannedSalary}
                         onChange={(e) =>
                           setNewTrade({
@@ -1277,12 +1326,12 @@ export default function BudgetPlanning() {
                         : "(Daily)"}
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2">
-                        $
-                      </span>
+                      <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-700">
+                        {currencyShort}
+                      </p>{" "}
                       <Input
                         type="number"
-                        className="pl-7"
+                        className="pl-[40px]"
                         value={editTrade.plannedSalary}
                         onChange={(e) =>
                           setEditTrade({

@@ -196,17 +196,15 @@ export default function Dashboard() {
             <span className="text-sm">Planned Cost</span>
             <span className="text-sm font-medium">
               {currencyShort}
-              {(payload[0].value
-                ? payload[0].value
-                : 1 * currencyValue
+              {(
+                (payload[0].value ? payload[0].value : 1) * currencyValue
               ).toLocaleString()}
             </span>
             <span className="text-sm">Actual Cost</span>
             <span className="text-sm font-medium">
               {currencyShort}
-              {(payload[1].value
-                ? payload[1].value
-                : 1 * currencyValue
+              {(
+                (payload[1].value ? payload[1].value : 1) * currencyValue
               ).toLocaleString()}
             </span>
           </div>
@@ -553,8 +551,10 @@ export default function Dashboard() {
                         <YAxis
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fontSize: 12, fill: "#888888" }}
-                          tickFormatter={(value) => `$${value / 1000}K`}
+                          tick={{ fontSize: 9, fill: "#888888" }}
+                          tickFormatter={(value) =>
+                            `${currencyShort}${(value * currencyValue) / 1000}K`
+                          }
                           domain={["auto", "auto"]}
                           allowDataOverflow={false}
                         />
