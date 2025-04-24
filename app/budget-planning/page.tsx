@@ -158,7 +158,7 @@ export default function BudgetPlanning() {
     role: "",
     employeesNumber: "",
     workDays: "",
-    plannedSalary: "",
+    plannedSalary: 0,
   });
 
   // Use effect for refetch coordination
@@ -279,8 +279,8 @@ export default function BudgetPlanning() {
         work_days: Number.parseInt(newTrade.workDays),
         [sessionData.user.salary_calculation === "monthly rate"
           ? "monthly_planned_cost"
-          : "daily_planned_cost"]: Number.parseFloat(
-          newTrade.plannedSalary
+          : "daily_planned_cost"]: (
+          Number(newTrade.plannedSalary) / currencyValue
         ).toString(),
       };
 
@@ -363,8 +363,8 @@ export default function BudgetPlanning() {
         work_days: Number.parseInt(editTrade.workDays),
         [sessionData.user.salary_calculation === "monthly rate"
           ? "monthly_planned_cost"
-          : "daily_planned_cost"]: Number.parseFloat(
-          editTrade.plannedSalary
+          : "daily_planned_cost"]: Number(
+          Number(editTrade.plannedSalary) / currencyValue
         ).toString(),
       }).unwrap();
 
@@ -421,8 +421,12 @@ export default function BudgetPlanning() {
         workDays: trade.work_days ? trade.work_days.toString() : "22",
         plannedSalary:
           sessionData.user.salary_calculation === "monthly rate"
-            ? (trade.monthly_planned_cost * currencyValue).toString()
-            : (trade.daily_planned_cost * currencyValue).toString(),
+            ? trade.monthly_planned_cost
+              ? trade.monthly_planned_cost * currencyValue
+              : 0
+            : trade.daily_planned_cost
+            ? trade.daily_planned_cost * currencyValue
+            : 0,
       });
       setSelectedTrade(trade);
       setShowEditTrade(true);
@@ -806,7 +810,11 @@ export default function BudgetPlanning() {
                                                 ? trade.monthly_planned_cost
                                                 : 0) * currencyValue
                                             ).toLocaleString()}/month`
-                                          : `${trade.daily_planned_cost}/day`}
+                                          : `${(
+                                              (trade.daily_planned_cost
+                                                ? trade.daily_planned_cost
+                                                : 0) * currencyValue
+                                            ).toLocaleString()}/day`}
                                       </td>
                                       <td className="px-4 py-3">
                                         <DropdownMenu>

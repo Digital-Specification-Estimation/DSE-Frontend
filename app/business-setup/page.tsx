@@ -213,10 +213,14 @@ function TradeForm({
 
       // Set either monthly_planned_cost or daily_planned_cost based on salary calculation type
       if (sessionData?.user?.salary_calculation === "monthly rate") {
-        newTradeToAdd.monthly_planned_cost = newTrade.monthly_planned_cost;
+        newTradeToAdd.monthly_planned_cost = (
+          Number(newTrade.monthly_planned_cost) / currencyValue
+        ).toString();
         // newTradeToAdd.daily_planned_cost = 0; // Set default value for the other field
       } else {
-        newTradeToAdd.daily_planned_cost = newTrade.daily_planned_cost;
+        newTradeToAdd.daily_planned_cost = (
+          Number(newTrade.daily_planned_cost) / currencyValue
+        ).toString();
         // newTradeToAdd.monthly_planned_cost = 0; // Set default value for the other field
       }
 
@@ -790,8 +794,8 @@ function EditTradeForm({
   const { toast } = useToast();
   const [editedTrade, setEditedTrade] = useState({
     location_name: trade.location_name,
-    monthly_planned_cost: trade.monthly_planned_cost?.toString() || "",
-    daily_planned_cost: trade.daily_planned_cost?.toString() || "",
+    monthly_planned_cost: trade.monthly_planned_cost * currencyValue || 0,
+    daily_planned_cost: trade.daily_planned_cost * currencyValue || 0,
     trade_name: trade.trade_name,
   });
 
@@ -839,10 +843,14 @@ function EditTradeForm({
 
       // Set either monthly_planned_cost or daily_planned_cost based on salary calculation type
       if (sessionData?.user?.salary_calculation === "monthly rate") {
-        tradeToUpdate.monthly_planned_cost = editedTrade.monthly_planned_cost;
+        tradeToUpdate.monthly_planned_cost = (
+          editedTrade.monthly_planned_cost / currencyValue
+        ).toString();
         // tradeToUpdate.daily_planned_cost = 0; // Set default value for the other field
       } else {
-        tradeToUpdate.daily_planned_cost = editedTrade.daily_planned_cost;
+        tradeToUpdate.daily_planned_cost = (
+          editedTrade.daily_planned_cost / currencyValue
+        ).toLocaleString();
         // tradeToUpdate.monthly_planned_cost = 0; // Set default value for the other field
       }
 
@@ -916,8 +924,8 @@ function EditTradeForm({
             className="pl-10"
             value={
               sessionData?.user?.salary_calculation === "monthly rate"
-                ? editedTrade.monthly_planned_cost * currencyValue
-                : editedTrade.daily_planned_cost * currencyValue
+                ? editedTrade.monthly_planned_cost
+                : editedTrade.daily_planned_cost
             }
             onChange={(e) =>
               sessionData?.user?.salary_calculation === "monthly rate"

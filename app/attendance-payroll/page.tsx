@@ -31,6 +31,7 @@ import { Loader2 } from "lucide-react";
 import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
 import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
 import { useEditUserStatusMutation } from "@/lib/redux/attendanceSlice";
+import { useSessionQuery } from "@/lib/redux/authSlice";
 
 // API endpoints
 const API_ENDPOINTS = {
@@ -46,6 +47,31 @@ const projects = ["Metro Bridge", "Mall Construction"];
 const dailyRates = ["$100", "$120", "$140", "$200"];
 
 export default function AttendancePayroll() {
+  const {
+    data: sessionData = { user: {} },
+    isLoading: isSessionLoading,
+    isError: isSessionError,
+    refetch: sessionRefetch,
+  } = useSessionQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    skip: false,
+  });
+  const splitCurrencyValue = (str: string | undefined | null) => {
+    if (!str) return null; // return early if str is undefined or null
+    const match = str.match(/^([A-Z]+)([\d.]+)$/);
+    if (!match) return null;
+    return {
+      currency: match[1],
+      value: match[2],
+    };
+  };
+
+  const currencyValue = Number(
+    splitCurrencyValue(sessionData.user.currency)?.value
+  );
+  const currencyShort = splitCurrencyValue(sessionData.user.currency)?.currency;
   const { toast } = useToast();
   const [user] = useState({
     name: "Kristin Watson",
@@ -509,7 +535,8 @@ export default function AttendancePayroll() {
                           Total Budget Baseline
                         </div>
                         <div className="text-xl font-bold">
-                          ${totalBaseline.toLocaleString()}
+                          {currencyShort}
+                          {(totalBaseline * currencyValue).toLocaleString()}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4 flex-1">
@@ -517,7 +544,10 @@ export default function AttendancePayroll() {
                           Total Actual Payroll
                         </div>
                         <div className="text-xl font-bold">
-                          ${totalActualPayroll.toLocaleString()}
+                          {currencyShort}
+                          {(
+                            totalActualPayroll * currencyValue
+                          ).toLocaleString()}
                         </div>
                       </div>
                     </div>
@@ -1013,7 +1043,8 @@ export default function AttendancePayroll() {
                           Total Budget Baseline
                         </div>
                         <div className="text-xl font-bold">
-                          ${totalBaseline.toLocaleString()}
+                          {currencyShort}
+                          {(totalBaseline * currencyValue).toLocaleString()}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
@@ -1021,7 +1052,10 @@ export default function AttendancePayroll() {
                           Total Actual Payroll
                         </div>
                         <div className="text-xl font-bold">
-                          ${totalActualPayroll.toLocaleString()}
+                          {currencyShort}
+                          {(
+                            totalActualPayroll * currencyValue
+                          ).toLocaleString()}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
@@ -1029,7 +1063,10 @@ export default function AttendancePayroll() {
                           Daily Actual Payroll
                         </div>
                         <div className="text-xl font-bold">
-                          ${totalDailyActuallPayroll.toLocaleString()}
+                          {currencyShort}
+                          {(
+                            totalDailyActuallPayroll * currencyValue
+                          ).toLocaleString()}
                         </div>
                       </div>
                     </div>
@@ -1096,16 +1133,25 @@ export default function AttendancePayroll() {
                               </div>
                             </td>
                             <td className="px-4 py-3 border-r">
-                              ${employee.daily_rate.toLocaleString()}
+                              {currencyShort}
+                              {(
+                                employee.daily_rate * currencyValue
+                              ).toLocaleString()}
                             </td>
                             <td className="px-4 py-3 border-r">
                               {employee.days_worked}
                             </td>
                             <td className="px-4 py-3 border-r">
-                              ${employee.budget_baseline?.toLocaleString()}
+                              {currencyShort}
+                              {(
+                                employee.budget_baseline * currencyValue
+                              )?.toLocaleString()}
                             </td>
                             <td className="px-4 py-3 border-r">
-                              ${employee.totalActualPayroll?.toLocaleString()}
+                              {currencyShort}
+                              {(
+                                employee.totalActualPayroll * currencyValue
+                              )?.toLocaleString()}
                             </td>
                             <td className="px-4 py-3 border-r">
                               {employee.plannedVsActual?.includes(

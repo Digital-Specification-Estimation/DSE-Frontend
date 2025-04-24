@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+
 import { useEffect, useState } from "react";
 import {
   Search,
@@ -12,6 +13,7 @@ import {
   Trash2,
   MoreHorizontal,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
@@ -59,38 +61,259 @@ export interface NewEmployee {
   company_id?: string;
 }
 
-// Sample data for projects and daily rates
+// Sample data for projects
 const projects = ["Metro Bridge", "Mall Construction"];
-const dailyRates = ["$100", "$120", "$140", "$200"];
 
 export default function EmployeeManagement() {
+  const { toast } = useToast();
+
+  // Better RTK Query configuration for real-time data
   const {
     data: sessionData = { user: {} },
     isLoading: isSessionLoading,
-    isError,
-    // error,
+    isError: isSessionError,
     refetch: sessionRefetch,
-    // isFetching,
   } = useSessionQuery(undefined, {
     refetchOnMountOrArgChange: true,
     refetchOnFocus: true,
     refetchOnReconnect: true,
     skip: false,
   });
-  const { data: tradesFetched, refetch: refetchTrades } = useGetTradesQuery();
-  console.log(sessionData.user.salary_calculation);
-  const { toast } = useToast();
-  const [trades, setTrades] = useState([]);
+  const splitCurrencyValue = (str: string | undefined | null) => {
+    if (!str) return null; // return early if str is undefined or null
+    const match = str.match(/^([A-Z]+)([\d.]+)$/);
+    if (!match) return null;
+    return {
+      currency: match[1],
+      value: match[2],
+    };
+  };
+
+  const currencyValue = Number(
+    splitCurrencyValue(sessionData.user.currency)?.value
+  );
+  const currencyShort = splitCurrencyValue(sessionData.user.currency)?.currency;
+
+  // Improved trades fetch with proper error handling
+  const {
+    data: tradesFetched = [],
+    isLoading: isTradesLoading,
+    isError: isTradesError,
+    refetch: refetchTrades,
+  } = useGetTradesQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  });
+
+  // State for companies data
   const [companies, setCompanies] = useState([]);
-  const [tradesError, setTradesError] = useState<string | null>(null);
   const [companiesError, setCompaniesError] = useState<string | null>(null);
-  const [isLoadingTrades, setIsLoadingTrades] = useState(true);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
 
-  // State for edit and delete modals
+  // State for modals
+  const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [showEditEmployee, setShowEditEmployee] = useState(false);
   const [showDeleteEmployee, setShowDeleteEmployee] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [filters, setFilters] = useState({
+    trade: "",
+    project: "",
+    dailyRate: "",
+    search: "",
+  });
+
+  // Enhanced employees fetch with better caching strategy and error handling
+  const {
+    data: employees = [],
+    isLoading: isEmployeesLoading,
+    error: employeesError,
+    refetch: refetchEmployees,
+    isFetching: isEmployeesFetching,
+  } = useGetEmployeesQuery(undefined, {
+    pollingInterval: 30000, // Poll every 30 seconds for more real-time data
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    // Skip fetch if session isn't loaded yet to prevent unnecessary requests
+    skip: isSessionLoading,
+  });
+
+  // Using keepUnusedDataFor option in RTK Query would be ideal to keep data for longer
+  // but can't do it inline, would need to be in the API slice configuration
+
+  // Improved mutations with better optimistic updates
+  const [addEmployee, { isLoading: isAdding }] = useAddEmployeeMutation({
+    onQueryStarted: async (newEmployeeData, { dispatch, queryFulfilled }) => {
+      // Optimistic update - add temporary employee to the list with a realistic ID
+      const tempId = `temp-${Date.now()}`;
+      const patchResult = dispatch(
+        employeeSlice.util.updateQueryData(
+          "getEmployees",
+          undefined,
+          (draft) => {
+            draft.push({
+              id: tempId,
+              username: newEmployeeData.username,
+              trade_position_id: newEmployeeData.trade_position_id,
+              trade_position: {
+                trade_name:
+                  tradesFetched.find(
+                    (t: any) => t.id === newEmployeeData.trade_position_id
+                  )?.trade_name || "Loading...",
+              },
+              daily_rate: newEmployeeData.daily_rate || "0",
+              monthly_rate: newEmployeeData.monthly_rate || "0",
+              contract_finish_date: newEmployeeData.contract_finish_date || "",
+              days_projection: newEmployeeData.days_projection || 0,
+              budget_baseline: newEmployeeData.budget_baseline || "0",
+              company_id: newEmployeeData.company_id,
+              company: {
+                company_name:
+                  companies.find(
+                    (c: any) => c.id === newEmployeeData.company_id
+                  )?.company_name || "Loading...",
+              },
+              _isOptimistic: true, // Flag to mark this is an optimistic entry
+            });
+          }
+        )
+      );
+
+      try {
+        const result = await queryFulfilled;
+        // Success - update the optimistic entry with the real data
+        dispatch(
+          employeeSlice.util.updateQueryData(
+            "getEmployees",
+            undefined,
+            (draft) => {
+              const index = draft.findIndex((item) => item.id === tempId);
+              if (index !== -1) {
+                draft[index] = result.data;
+              }
+            }
+          )
+        );
+      } catch (error) {
+        // If the mutation fails, undo the optimistic update
+        patchResult.undo();
+        toast({
+          title: "Error",
+          description: "Failed to add employee. Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  // Enhanced update mutation with optimistic update
+  const [updateEmployee, { isLoading: isUpdating }] = useEditEmployeeMutation({
+    onQueryStarted: async (
+      updatedEmployeeData,
+      { dispatch, queryFulfilled }
+    ) => {
+      // Optimistic update
+      const patchResult = dispatch(
+        employeeSlice.util.updateQueryData(
+          "getEmployees",
+          undefined,
+          (draft) => {
+            const index = draft.findIndex(
+              (e) => e.id === updatedEmployeeData.id
+            );
+            if (index !== -1) {
+              // Save the original data for rollback if needed
+              const originalData = { ...draft[index] };
+
+              // Update with new data
+              draft[index] = {
+                ...draft[index],
+                ...updatedEmployeeData,
+                trade_position: {
+                  trade_name:
+                    tradesFetched.find(
+                      (t: any) => t.id === updatedEmployeeData.trade_position_id
+                    )?.trade_name || draft[index].trade_position?.trade_name,
+                },
+                company: {
+                  company_name:
+                    companies.find(
+                      (c: any) => c.id === updatedEmployeeData.company_id
+                    )?.company_name || draft[index].company?.company_name,
+                },
+                _isUpdating: true, // Flag for UI feedback
+              };
+            }
+          }
+        )
+      );
+
+      try {
+        await queryFulfilled;
+        // Update successful - clean up the flag
+        dispatch(
+          employeeSlice.util.updateQueryData(
+            "getEmployees",
+            undefined,
+            (draft) => {
+              const index = draft.findIndex(
+                (e) => e.id === updatedEmployeeData.id
+              );
+              if (index !== -1 && draft[index]._isUpdating) {
+                const { _isUpdating, ...rest } = draft[index];
+                draft[index] = rest;
+              }
+            }
+          )
+        );
+      } catch (error) {
+        // Update failed - undo changes
+        patchResult.undo();
+        toast({
+          title: "Error",
+          description: "Failed to update employee. Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  // Enhanced delete mutation with optimistic update
+  const [deleteEmployee, { isLoading: isDeleting }] = useDeleteEmployeeMutation(
+    {
+      onQueryStarted: async (id, { dispatch, queryFulfilled }) => {
+        // Save the employee data for possible rollback
+        let employeeToDelete;
+        const patchResult = dispatch(
+          employeeSlice.util.updateQueryData(
+            "getEmployees",
+            undefined,
+            (draft) => {
+              const index = draft.findIndex((e) => e.id === id);
+              if (index !== -1) {
+                employeeToDelete = { ...draft[index] };
+                draft.splice(index, 1);
+              }
+            }
+          )
+        );
+
+        try {
+          await queryFulfilled;
+          // Successful delete - no need to do anything else
+        } catch (error) {
+          // Delete failed - restore the employee
+          patchResult.undo();
+          toast({
+            title: "Error",
+            description: "Failed to delete employee. Please try again.",
+            variant: "destructive",
+          });
+        }
+      },
+    }
+  );
 
   // Helper function to determine if we're using monthly rate
   const isMonthlyRate = sessionData.user?.salary_calculation === "monthly rate";
@@ -98,111 +321,6 @@ export default function EmployeeManagement() {
   // Helper function to get the appropriate rate field name
   const getRateFieldName = () =>
     isMonthlyRate ? "monthly_rate" : "daily_rate";
-
-  useEffect(() => {
-    // Define the async function inside useEffect
-
-    setTrades(tradesFetched);
-
-    const getCompanies = async () => {
-      setIsLoadingCompanies(true);
-      try {
-        const response = await fetch("http://localhost:4000/company/companies");
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-        const data = await response.json();
-        setCompanies(data);
-        setCompaniesError(null);
-      } catch (error) {
-        console.error("Failed to fetch companies:", error);
-        setCompaniesError("Failed to load companies. Please refresh the page.");
-      } finally {
-        setIsLoadingCompanies(false);
-      }
-    };
-    refetchTrades();
-    getCompanies();
-
-    // Set up an interval to refresh data every 5 minutes
-    const intervalId = setInterval(() => {
-      refetchTrades();
-      getCompanies();
-    }, 5 * 60 * 1000);
-
-    // Clean up the interval on component unmount
-    return () => clearInterval(intervalId);
-  }, []);
-  console.log(trades, companies);
-  const [user] = useState({
-    name: "Kristin Watson",
-    role: "Personal Account",
-    avatar: "/placeholder.svg?height=40&width=40",
-  });
-
-  // RTK Query hooks
-  const {
-    data: employees = [],
-    isLoading,
-    error,
-    refetch,
-    isFetching,
-  } = useGetEmployeesQuery(undefined, {
-    pollingInterval: 60000, // Auto-refresh every 60 seconds
-    refetchOnFocus: true, // Refetch when the browser window regains focus
-    refetchOnReconnect: true, // Refetch when internet connection is restored
-  });
-  console.log(employees);
-  const [addEmployee, { isLoading: isAdding }] = useAddEmployeeMutation({
-    // Optimistic update to immediately show the new employee
-    onQueryStarted: async (newEmployeeData, { dispatch, queryFulfilled }) => {
-      // Optimistic update - add temporary employee to the list
-      const patchResult = dispatch(
-        employeeSlice.util.updateQueryData(
-          "getEmployees",
-          undefined,
-          (draft) => {
-            draft.push({
-              id: "temp-" + Date.now(),
-              username: newEmployeeData.username,
-              trade_position: { trade_name: "Loading..." },
-              daily_rate: newEmployeeData.daily_rate || "0",
-              monthly_rate: newEmployeeData.monthly_rate || "0",
-              contract_finish_date: newEmployeeData.contract_finish_date || "",
-              days_projection: newEmployeeData.days_projection || 0,
-              budget_baseline: newEmployeeData.budget_baseline || "0",
-              company: { company_name: "Loading..." },
-              // Add other required fields with placeholder values
-            });
-          }
-        )
-      );
-
-      try {
-        // Wait for the actual API response
-        await queryFulfilled;
-        // Explicitly refetch to ensure data is up to date
-        refetch();
-      } catch {
-        // If the mutation fails, undo the optimistic update
-        patchResult.undo();
-      }
-    },
-  });
-
-  // Add update and delete mutations
-  const [updateEmployee, { isLoading: isUpdating }] = useEditEmployeeMutation();
-  const [deleteEmployee, { isLoading: isDeleting }] =
-    useDeleteEmployeeMutation();
-
-  const [showAddEmployee, setShowAddEmployee] = useState(false);
-  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
-  const [filters, setFilters] = useState({
-    trade: "",
-    project: "",
-    dailyRate: "",
-    search: "",
-  });
 
   const [newEmployee, setNewEmployee] = useState({
     username: "",
@@ -220,12 +338,48 @@ export default function EmployeeManagement() {
     id: "",
     username: "",
     trade_position_id: "",
-    daily_rate: "",
-    monthly_rate: "",
+    daily_rate: 0,
+    monthly_rate: 0,
     contract_finish_date: "",
     days_projection: "",
-    budget_baseline: "",
+    budget_baseline: 0,
     company_id: "",
+  });
+
+  // Improved companies fetch with automatic refreshing
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      setIsLoadingCompanies(true);
+      try {
+        const response = await fetch("http://localhost:4000/company/companies");
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        setCompanies(data);
+        setCompaniesError(null);
+      } catch (error) {
+        console.error("Failed to fetch companies:", error);
+        setCompaniesError("Failed to load companies. Please refresh the page.");
+      } finally {
+        setIsLoadingCompanies(false);
+      }
+    };
+
+    fetchCompanies();
+
+    // Set up a refresh interval - every 2 minutes
+    const companiesInterval = setInterval(fetchCompanies, 2 * 60 * 1000);
+
+    // Clean up function to clear the interval on component unmount
+    return () => clearInterval(companiesInterval);
+  }, []);
+
+  // User data state
+  const [user] = useState({
+    name: "Kristin Watson",
+    role: "Personal Account",
+    avatar: "/placeholder.svg?height=40&width=40",
   });
 
   // Format date for display
@@ -244,8 +398,8 @@ export default function EmployeeManagement() {
 
   // Format currency for display
   const formatCurrency = (amount: any) => {
-    if (!amount) return "$0";
-    return `$${Number.parseFloat(amount).toFixed(2)}`;
+    if (!amount) return "$0.00";
+    return `${currencyShort}${Number.parseFloat(amount).toLocaleString()}`;
   };
 
   // Filter employees based on selected filters
@@ -266,17 +420,30 @@ export default function EmployeeManagement() {
     return true;
   });
 
-  // Handle bulk selection
-  const handleSelectAll = (checked: boolean) => {
-    setSelectedEmployees(checked ? employees.map((e: any) => e.id) : []);
+  // Handle edit employee
+  const handleEditEmployee = (employee: any) => {
+    setSelectedEmployee(employee);
+    setEditedEmployee({
+      id: employee.id,
+      username: employee.username,
+      trade_position_id: employee.trade_position_id,
+      daily_rate: employee.daily_rate * currencyValue,
+      monthly_rate: employee.monthly_rate * currencyValue,
+      contract_finish_date: formatDateForInput(employee.contract_finish_date),
+      days_projection: employee.days_projection?.toString() || "",
+      budget_baseline: employee.budget_baseline * currencyValue,
+      company_id: employee.company_id,
+    });
+    setShowEditEmployee(true);
   };
 
-  const handleSelectEmployee = (id: string, checked: boolean) => {
-    setSelectedEmployees((prev) =>
-      checked ? [...prev, id] : prev.filter((employeeId) => employeeId !== id)
-    );
+  // Handle delete employee
+  const handleDeleteEmployee = (employee: any) => {
+    setSelectedEmployee(employee);
+    setShowDeleteEmployee(true);
   };
 
+  // Handle form submission for adding new employee
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -295,14 +462,19 @@ export default function EmployeeManagement() {
       const employeeToAdd: NewEmployee = {
         username: newEmployee.username,
         trade_position_id: newEmployee.trade_position_id || undefined,
-        [getRateFieldName()]: newEmployee[getRateFieldName()] || undefined,
+        [getRateFieldName()]:
+          (
+            Number(newEmployee[getRateFieldName()]) / currencyValue
+          ).toString() || undefined,
         contract_finish_date: newEmployee.contract_finish_date
           ? new Date(newEmployee.contract_finish_date).toISOString()
           : undefined,
         days_projection: newEmployee.days_projection
           ? Number.parseInt(newEmployee.days_projection)
           : undefined,
-        budget_baseline: newEmployee.budget_baseline || undefined,
+        budget_baseline:
+          (Number(newEmployee.budget_baseline) / currencyValue).toString() ||
+          undefined,
         company_id: newEmployee.company_id || undefined,
       };
 
@@ -323,10 +495,6 @@ export default function EmployeeManagement() {
 
       setShowAddEmployee(false);
 
-      // Explicitly refetch to ensure data is up to date
-      refetch();
-      sessionRefetch();
-
       // Show success notification
       toast({
         title: "Success",
@@ -334,35 +502,8 @@ export default function EmployeeManagement() {
       });
     } catch (error) {
       console.error("Failed to add employee:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add employee. Please try again.",
-        variant: "destructive",
-      });
+      // Error notification is handled in the mutation now
     }
-  };
-
-  // Handle edit employee
-  const handleEditEmployee = (employee: any) => {
-    setSelectedEmployee(employee);
-    setEditedEmployee({
-      id: employee.id,
-      username: employee.username,
-      trade_position_id: employee.trade_position_id,
-      daily_rate: employee.daily_rate,
-      monthly_rate: employee.monthly_rate,
-      contract_finish_date: formatDateForInput(employee.contract_finish_date),
-      days_projection: employee.days_projection?.toString() || "",
-      budget_baseline: employee.budget_baseline,
-      company_id: employee.company_id,
-    });
-    setShowEditEmployee(true);
-  };
-
-  // Handle delete employee
-  const handleDeleteEmployee = (employee: any) => {
-    setSelectedEmployee(employee);
-    setShowDeleteEmployee(true);
   };
 
   // Handle update employee submission
@@ -385,14 +526,18 @@ export default function EmployeeManagement() {
         id: editedEmployee.id,
         username: editedEmployee.username,
         trade_position_id: editedEmployee.trade_position_id || undefined,
-        [getRateFieldName()]: editedEmployee[getRateFieldName()] || undefined,
+        [getRateFieldName()]:
+          (editedEmployee[getRateFieldName()] / currencyValue).toString() ||
+          undefined,
         contract_finish_date: editedEmployee.contract_finish_date
           ? new Date(editedEmployee.contract_finish_date).toISOString()
           : undefined,
         days_projection: editedEmployee.days_projection
           ? Number.parseInt(editedEmployee.days_projection)
           : undefined,
-        budget_baseline: editedEmployee.budget_baseline || undefined,
+        budget_baseline:
+          (editedEmployee.budget_baseline / currencyValue).toString() ||
+          undefined,
         company_id: editedEmployee.company_id || undefined,
       };
 
@@ -402,9 +547,6 @@ export default function EmployeeManagement() {
       // Close the edit modal
       setShowEditEmployee(false);
 
-      // Refetch the employees to get the updated data
-      refetch();
-
       // Show success notification
       toast({
         title: "Success",
@@ -412,11 +554,7 @@ export default function EmployeeManagement() {
       });
     } catch (error) {
       console.error("Failed to update employee:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update employee. Please try again.",
-        variant: "destructive",
-      });
+      // Error notification is handled in the mutation now
     }
   };
 
@@ -431,9 +569,6 @@ export default function EmployeeManagement() {
       // Close the delete modal
       setShowDeleteEmployee(false);
 
-      // Refetch the employees to get the updated data
-      refetch();
-
       // Show success notification
       toast({
         title: "Success",
@@ -441,12 +576,15 @@ export default function EmployeeManagement() {
       });
     } catch (error) {
       console.error("Failed to delete employee:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete employee. Please try again.",
-        variant: "destructive",
-      });
+      // Error notification is handled in the mutation now
     }
+  };
+
+  // Refresh all data
+  const refreshAllData = () => {
+    refetchEmployees();
+    sessionRefetch();
+    refetchTrades();
   };
 
   return (
@@ -473,31 +611,19 @@ export default function EmployeeManagement() {
                 Add New Employee
               </Button>
               <Button
-                onClick={() => refetch()}
+                onClick={refreshAllData}
                 variant="outline"
                 className="gap-2 h-12 rounded-full"
-                disabled={isFetching}
+                disabled={
+                  isEmployeesFetching || isTradesLoading || isLoadingCompanies
+                }
               >
-                {isFetching ? (
+                {isEmployeesFetching ||
+                isTradesLoading ||
+                isLoadingCompanies ? (
                   <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
                 ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-4 w-4"
-                  >
-                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                    <path d="M21 3v5h-5" />
-                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                    <path d="M3 21v-5h5" />
-                  </svg>
+                  <RefreshCw className="h-4 w-4" />
                 )}
                 Refresh
               </Button>
@@ -507,65 +633,6 @@ export default function EmployeeManagement() {
           <div className="bg-white rounded-lg border">
             {/* Filters */}
             <div className="p-4 flex gap-4 rounded-lg">
-              {/* <Select
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, trade: value }))
-                }
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select by Trade" />
-                </SelectTrigger>
-                {isLoadingTrades && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Loading trades...
-                  </div>
-                )}
-                {tradesError && (
-                  <div className="text-xs text-red-500 mt-1">{tradesError}</div>
-                )}
-                <SelectContent>
-                  {trades.map((trade: any) => (
-                    <SelectItem key={trade.id} value={trade.trade_name}>
-                      {trade.trade_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, project: value }))
-                }
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select by Project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project} value={project}>
-                      {project}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, dailyRate: value }))
-                }
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select by Daily Rate" />
-                </SelectTrigger>
-                <SelectContent>
-                  {dailyRates.map((rate) => (
-                    <SelectItem key={rate} value={rate}>
-                      {rate}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select> */}
-
               <div className="relative w-64 ml-auto">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground " />
                 <Input
@@ -575,21 +642,26 @@ export default function EmployeeManagement() {
                   onChange={(e) =>
                     setFilters((prev) => ({ ...prev, search: e.target.value }))
                   }
+                  value={filters.search}
                 />
               </div>
             </div>
 
             {/* Table */}
             <div className="overflow-x-auto">
-              {isLoading ? (
+              {isEmployeesLoading ? (
                 <div className="p-8 text-center">
                   <div className="inline-block animate-spin h-8 w-8 border-4 border-current border-t-transparent rounded-full mb-4"></div>
                   <p>Loading employees...</p>
                 </div>
-              ) : error ? (
+              ) : employeesError ? (
                 <div className="p-8 text-center text-red-500">
                   <p className="mb-2">Error loading employees.</p>
-                  <Button variant="outline" size="sm" onClick={() => refetch()}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetchEmployees()}
+                  >
                     Try Again
                   </Button>
                 </div>
@@ -619,16 +691,7 @@ export default function EmployeeManagement() {
                 <table className="w-full text-[12px]">
                   <thead>
                     <tr className="border-t border-b text-sm text-muted-foreground">
-                      <th className="w-10 px-4 py-3 text-left">
-                        {/* <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300"
-                          checked={
-                            selectedEmployees.length === employees.length
-                          }
-                          onChange={(e) => handleSelectAll(e.target.checked)}
-                        /> */}
-                      </th>
+                      <th className="w-10 px-4 py-3 text-left"></th>
                       <th className="px-4 py-3 text-left text-[10px]">
                         Username
                       </th>
@@ -657,21 +720,11 @@ export default function EmployeeManagement() {
                     {filteredEmployees.map((employee: any) => (
                       <tr
                         key={employee.id}
-                        className="border-b hover:bg-gray-50"
+                        className={`border-b hover:bg-gray-50 ${
+                          employee._isOptimistic ? "opacity-70" : ""
+                        } ${employee._isUpdating ? "bg-yellow-50" : ""}`}
                       >
-                        <td className="px-4 py-3">
-                          {/* <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-gray-300"
-                            checked={selectedEmployees.includes(employee.id)}
-                            onChange={(e) =>
-                              handleSelectEmployee(
-                                employee.id,
-                                e.target.checked
-                              )
-                            }
-                          /> */}
-                        </td>
+                        <td className="px-4 py-3"></td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
@@ -681,6 +734,16 @@ export default function EmployeeManagement() {
                             </Avatar>
                             <span className="font-medium">
                               {employee.username}
+                              {employee._isOptimistic && (
+                                <span className="ml-1 text-[9px] text-orange-500">
+                                  (Adding...)
+                                </span>
+                              )}
+                              {employee._isUpdating && (
+                                <span className="ml-1 text-[9px] text-orange-500">
+                                  (Updating...)
+                                </span>
+                              )}
                             </span>
                           </div>
                         </td>
@@ -689,7 +752,8 @@ export default function EmployeeManagement() {
                         </td>
                         <td className="px-4 py-3">
                           {formatCurrency(
-                            employee[getRateFieldName()] || employee.daily_rate
+                            employee[getRateFieldName()] * currencyValue ||
+                              employee.daily_rate * currencyValue
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -699,33 +763,37 @@ export default function EmployeeManagement() {
                           {employee.days_projection || "N/A"}
                         </td>
                         <td className="px-4 py-3">
-                          {formatCurrency(employee.budget_baseline || "0")}
+                          {formatCurrency(
+                            employee.budget_baseline * currencyValue || "0"
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           {employee.company?.company_name || "N/A"}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => handleEditEmployee(employee)}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteEmployee(employee)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {!employee._isOptimistic && !employee._isUpdating && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleEditEmployee(employee)}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteEmployee(employee)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -734,7 +802,7 @@ export default function EmployeeManagement() {
               )}
             </div>
           </div>
-          {isFetching && !isLoading && (
+          {isEmployeesFetching && !isEmployeesLoading && (
             <div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg p-3 flex items-center gap-2 border z-10">
               <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
               <span className="text-sm">Refreshing data...</span>
@@ -812,18 +880,18 @@ export default function EmployeeManagement() {
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select Trade Position" />
                       </SelectTrigger>
-                      {isLoadingTrades && (
+                      {isTradesLoading && (
                         <div className="text-xs text-muted-foreground mt-1">
                           Loading trades...
                         </div>
                       )}
-                      {tradesError && (
+                      {isTradesError && (
                         <div className="text-xs text-red-500 mt-1">
-                          {tradesError}
+                          Failed to load trades
                         </div>
                       )}
                       <SelectContent>
-                        {trades.map((trade: any) => (
+                        {tradesFetched.map((trade: any) => (
                           <SelectItem key={trade.id} value={trade.id}>
                             {trade.trade_name}
                           </SelectItem>
@@ -840,15 +908,15 @@ export default function EmployeeManagement() {
                       {isMonthlyRate ? "Monthly Rate" : "Daily Rate"}
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        <DollarSign className="h-4 w-4 text-gray-400" />
-                      </div>
+                      <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
+                        {currencyShort}
+                      </p>{" "}
                       <input
                         id={getRateFieldName()}
                         name={getRateFieldName()}
-                        type="text"
+                        type="number"
                         placeholder="100.00"
-                        value={newEmployee[getRateFieldName()] || ""}
+                        value={newEmployee[getRateFieldName()] || 0}
                         onChange={(e) =>
                           setNewEmployee({
                             ...newEmployee,
@@ -917,13 +985,13 @@ export default function EmployeeManagement() {
                       Budget Baseline
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        <DollarSign className="h-4 w-4 text-gray-400" />
-                      </div>
+                      <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
+                        {currencyShort}
+                      </p>{" "}
                       <input
                         id="budget_baseline"
                         name="budget_baseline"
-                        type="text"
+                        type="number"
                         placeholder="1000.00"
                         value={newEmployee.budget_baseline}
                         onChange={(e) =>
@@ -988,7 +1056,14 @@ export default function EmployeeManagement() {
                 className="w-full bg-orange-500 hover:bg-orange-600"
                 disabled={isAdding}
               >
-                {isAdding ? "Adding..." : "Add Employee"}
+                {isAdding ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  "Add Employee"
+                )}
               </Button>
             </div>
           </form>
@@ -1048,7 +1123,7 @@ export default function EmployeeManagement() {
                   <SelectValue placeholder="Select Trade Position" />
                 </SelectTrigger>
                 <SelectContent>
-                  {trades.map((trade: any) => (
+                  {tradesFetched.map((trade: any) => (
                     <SelectItem key={trade.id} value={trade.id}>
                       {trade.trade_name}
                     </SelectItem>
@@ -1062,13 +1137,13 @@ export default function EmployeeManagement() {
                 {isMonthlyRate ? "Monthly Rate" : "Daily Rate"}
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                  <DollarSign className="h-4 w-4 text-gray-400" />
-                </div>
+                <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
+                  {currencyShort}
+                </p>{" "}
                 <input
                   id="edit-daily-rate"
                   name={getRateFieldName()}
-                  type="text"
+                  type="number"
                   placeholder="100.00"
                   value={editedEmployee[getRateFieldName()] || ""}
                   onChange={(e) =>
@@ -1139,13 +1214,13 @@ export default function EmployeeManagement() {
                 Budget Baseline
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                  <DollarSign className="h-4 w-4 text-gray-400" />
-                </div>
+                <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
+                  {currencyShort}
+                </p>{" "}
                 <input
                   id="edit-budget-baseline"
                   name="budget_baseline"
-                  type="text"
+                  type="number"
                   placeholder="1000.00"
                   value={editedEmployee.budget_baseline}
                   onChange={(e) =>
