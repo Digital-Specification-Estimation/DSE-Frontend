@@ -1364,7 +1364,7 @@ export default function BusinessSetup() {
               <h1 className="text-[22px] font-semibold text-gray-900">
                 Business Setup
               </h1>
-              <Button
+              {/* <Button
                 variant="outline"
                 size="sm"
                 onClick={handleRefresh}
@@ -1372,7 +1372,7 @@ export default function BusinessSetup() {
               >
                 <RefreshCw className="h-4 w-4" />
                 Refresh Data
-              </Button>
+              </Button> */}
             </div>
 
             <div className="flex gap-6">

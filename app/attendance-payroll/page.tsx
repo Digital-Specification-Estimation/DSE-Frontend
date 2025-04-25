@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Search,
   RefreshCw,
@@ -32,6 +32,7 @@ import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
 import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
 import { useEditUserStatusMutation } from "@/lib/redux/attendanceSlice";
 import { useSessionQuery } from "@/lib/redux/authSlice";
+import { useGetProjectsQuery } from "@/lib/redux/projectSlice";
 
 // API endpoints
 const API_ENDPOINTS = {
@@ -42,9 +43,6 @@ const API_ENDPOINTS = {
   GENERATE_PAYSLIPS: "/api/payroll/generate-payslips",
   PAYROLL_REPORT: "/api/payroll/report",
 };
-
-const projects = ["Metro Bridge", "Mall Construction"];
-const dailyRates = ["$100", "$120", "$140", "$200"];
 
 export default function AttendancePayroll() {
   const [permissions, setPermissions] = useState({
@@ -104,12 +102,9 @@ export default function AttendancePayroll() {
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
   });
-  const [trades, setTrades] = useState([
-    "Electrician",
-    "testing",
-    "Technician",
-    "Construction Worker",
-  ]);
+  const [trades, setTrades] = useState<string[]>([]);
+  const [projects, setProjects] = useState<string[]>([]);
+  const [dailyRates, setDailyRates] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("attendance");
   const [expandedEmployee, setExpandedEmployee] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -137,13 +132,93 @@ export default function AttendancePayroll() {
   });
 
   const [filters, setFilters] = useState({
-    trade: "Electrician",
-    project: "Metro Bridge",
+    trade: "",
+    project: "",
     dailyRate: "",
     startDate: "",
     endDate: "",
   });
   const [attendancePeriod, setAttendancePeriod] = useState("1week");
+
+  // Use RTK Query to fetch trades
+  const { data: tradesData = [], isLoading: isLoadingTrades } =
+    useGetTradesQuery(undefined, {
+      refetchOnMountOrArgChange: true,
+    });
+
+  // Create a new RTK Query hook for projects
+  const { data: projectsFetched = [], isLoading: isLoadingProjects } =
+    useGetProjectsQuery(undefined, {
+      refetchOnMountOrArgChange: true,
+    });
+
+  // Add this useEffect to populate trades, projects, and daily rates
+  useEffect(() => {
+    if (tradesData && tradesData.length > 0) {
+      const tradeNames = tradesData.map((trade: any) => trade.trade_name);
+      setTrades([...new Set(tradeNames)]);
+    }
+
+    if (projectsFetched && projectsFetched.length > 0) {
+      const projectNames = projectsFetched.map(
+        (project: any) => project.project_name
+      );
+      setProjects([...new Set(projectNames)]);
+    }
+  }, [tradesData, projectsFetched]);
+
+  // Add a separate useEffect for dailyRates that only runs when employees or currencyShort changes
+  useEffect(() => {
+    if (employees && employees.length > 0 && currencyShort) {
+      try {
+        const uniqueRates = [
+          ...new Set(
+            employees.map((employee: any) => {
+              const rate = employee?.daily_rate || 0;
+              return `${currencyShort || ""}${Math.round(rate)}`;
+            })
+          ),
+        ].sort((a, b) => {
+          const numA = Number.parseFloat(a.replace(/[^0-9.]/g, "")) || 0;
+          const numB = Number.parseFloat(b.replace(/[^0-9.]/g, "")) || 0;
+          return numA - numB;
+        });
+
+        // Only update if the rates have actually changed - deep comparison
+        if (JSON.stringify(uniqueRates) !== JSON.stringify(dailyRates)) {
+          setDailyRates(uniqueRates);
+        }
+      } catch (error) {
+        console.error("Error processing daily rates:", error);
+        // Fallback to empty array if there's an error
+        if (dailyRates.length === 0) {
+          setDailyRates([]);
+        }
+      }
+    }
+  }, [employees, currencyShort, dailyRates]);
+
+  // Add this useEffect to calculate totals
+  const totals = useMemo(() => {
+    let baseline = 0;
+    let actualPayroll = 0;
+    let daysWorked = 0;
+    let dailyActualPayroll = 0;
+
+    employees.forEach((employee: any) => {
+      baseline += Number(employee.budget_baseline || 0);
+      daysWorked += Number(employee.days_worked || 0);
+      actualPayroll += Number(employee.totalActualPayroll || 0);
+      dailyActualPayroll += Number(employee.daily_rate || 0);
+    });
+
+    return {
+      totalBaseline: baseline,
+      totalActualPayroll: actualPayroll,
+      totalDaysWorked: daysWorked,
+      totalDailyActuallPayroll: dailyActualPayroll,
+    };
+  }, [employees]);
 
   // useEffect(() => {
   // refetchTrades();
@@ -226,7 +301,7 @@ export default function AttendancePayroll() {
     }
   };
 
-  console.log("permissions", permissions);
+  // console.log("permissions", permissions);
   // Generate payroll report using fetch
   const handleGenerateReport = async () => {
     try {
@@ -276,16 +351,58 @@ export default function AttendancePayroll() {
     const year = today.getFullYear();
     return `${month}/${day}/${year}`;
   };
-  let totalBaseline = 0;
-  let totalActualPayroll = 0;
-  let totalDaysWorked = 0;
-  let totalDailyActuallPayroll = 0;
-  employees.map((employee: any) => {
-    totalBaseline += Number(employee.budget_baseline);
-    totalDaysWorked += Number(employee.days_worked);
-    totalActualPayroll += Number(employee.totalActualPayroll);
-    totalDailyActuallPayroll += Number(employee.daily_rate);
-  });
+
+  const filteredEmployees = useMemo(() => {
+    return employees.filter((employee: any) => {
+      if (!employee) return false;
+      if (
+        searchTerm &&
+        employee.username &&
+        !employee.username.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+        return false;
+      if (
+        filters.trade &&
+        filters.trade !== "all" &&
+        employee.trade_position?.trade_name !== filters.trade
+      )
+        return false;
+      if (
+        filters.project &&
+        filters.project !== "all" &&
+        employee.trade_position?.project?.project_name !== filters.project
+      )
+        return false;
+      if (filters.dailyRate && filters.dailyRate !== "all") {
+        const employeeRate = `${currencyShort}${Math.round(
+          employee.daily_rate || 0
+        )}`;
+        if (employeeRate !== filters.dailyRate) return false;
+      }
+      return true;
+    });
+  }, [employees, searchTerm, filters, currencyShort]);
+
+  // Add this after the filteredEmployees definition
+  const prevFiltersRef = React.useRef(filters);
+  const prevFilteredCountRef = React.useRef(filteredEmployees.length);
+
+  // Remove this useEffect entirely as it's causing a loop
+  // useEffect(() => {
+  //   // Only log if filters or count actually changed
+  //   if (
+  //     JSON.stringify(prevFiltersRef.current) !== JSON.stringify(filters) ||
+  //     prevFilteredCountRef.current !== filteredEmployees.length
+  //   ) {
+  //     console.log("Current filters:", filters);
+  //     console.log("Filtered employees count:", filteredEmployees.length);
+
+  //     // Update refs
+  //     prevFiltersRef.current = filters;
+  //     prevFilteredCountRef.current = filteredEmployees.length;
+  //   }
+  // }, [filters, filteredEmployees.length]);
+
   // Refresh data
   const handleRefreshData = async () => {
     try {
@@ -310,44 +427,48 @@ export default function AttendancePayroll() {
     }
   };
 
-  const filteredEmployees = employees.filter((employee: any) => {
-    if (
-      searchTerm &&
-      !employee.username.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-      return false;
-    if (
-      filters.trade &&
-      filters.trade !== "Electrician" &&
-      employee.trade_position.trade_name !== filters.trade
-    )
-      return false;
-    if (
-      filters.project &&
-      filters.project !== "Metro Bridge" &&
-      employee.assignedProject !== filters.project
-    )
-      return false;
-    if (filters.dailyRate && `$${employee.dailyRate}` !== filters.dailyRate)
-      return false;
-    return true;
-  });
+  const handleResetFilters = () => {
+    setFilters({
+      trade: "",
+      project: "",
+      dailyRate: "",
+      startDate: "",
+      endDate: "",
+    });
+    setSearchTerm("");
+  };
 
+  // 4. Add defensive checks to the getFilteredAttendance function
   const getFilteredAttendance = (attendance, period) => {
-    if (!attendance || !attendance.length) return [];
+    if (!attendance || !Array.isArray(attendance) || attendance.length === 0)
+      return [];
 
-    // Use array slicing based on selected period
-    switch (period) {
-      case "1week":
-        return attendance.slice(0, 7);
-      case "2weeks":
-        return attendance.slice(0, 14);
-      case "month":
-        return attendance;
-      default:
-        return attendance.slice(0, 7);
+    try {
+      // Use array slicing based on selected period
+      switch (period) {
+        case "1week":
+          return attendance.slice(0, 7);
+        case "2weeks":
+          return attendance.slice(0, 14);
+        case "month":
+          return attendance;
+        default:
+          return attendance.slice(0, 7);
+      }
+    } catch (error) {
+      console.error("Error filtering attendance:", error);
+      return [];
     }
   };
+
+  // 3. Add this useEffect cleanup function to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      // Clean up any pending state updates when component unmounts
+      setOpenAttendanceDropdown(null);
+      setExpandedEmployee(null);
+    };
+  }, []);
 
   return (
     <div className="flex h-screen bg-white">
@@ -474,14 +595,24 @@ export default function AttendancePayroll() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Electrician" />
+                  <SelectValue placeholder="Select Trade" />
                 </SelectTrigger>
                 <SelectContent>
-                  {trades.map((trade) => (
-                    <SelectItem key={trade} value={trade}>
-                      {trade}
-                    </SelectItem>
-                  ))}
+                  {isLoadingTrades ? (
+                    <div className="flex items-center justify-center p-2">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Loading trades...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <SelectItem value="all">All Trades</SelectItem>
+                      {trades.map((trade) => (
+                        <SelectItem key={trade} value={trade}>
+                          {trade}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
 
@@ -492,14 +623,24 @@ export default function AttendancePayroll() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Metro Bridge" />
+                  <SelectValue placeholder="Select Project" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project} value={project}>
-                      {project}
-                    </SelectItem>
-                  ))}
+                  {isLoadingProjects ? (
+                    <div className="flex items-center justify-center p-2">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Loading projects...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <SelectItem value="all">All Projects</SelectItem>
+                      {projects.map((project) => (
+                        <SelectItem key={project} value={project}>
+                          {project}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
 
@@ -513,6 +654,7 @@ export default function AttendancePayroll() {
                   <SelectValue placeholder="Select by Daily Rate" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Rates</SelectItem>
                   {dailyRates.map((rate) => (
                     <SelectItem key={rate} value={rate}>
                       {rate}
@@ -552,6 +694,27 @@ export default function AttendancePayroll() {
                   <SelectItem value="date3">Oct 31, 2025</SelectItem>
                 </SelectContent>
               </Select> */}
+              <Button
+                variant="outline"
+                className="gap-2 flex items-center border-red-500 text-red-500 h-10 rounded-full"
+                onClick={handleResetFilters}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 3h18v18H3z"></path>
+                  <path d="M15 9l-6 6m0-6l6 6"></path>
+                </svg>
+                Reset Filters
+              </Button>
             </div>
           )}
 
@@ -576,7 +739,9 @@ export default function AttendancePayroll() {
                         </div>
                         <div className="text-xl font-bold">
                           {currencyShort}
-                          {(totalBaseline * currencyValue).toLocaleString()}
+                          {(
+                            totals.totalBaseline * currencyValue
+                          ).toLocaleString()}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4 flex-1">
@@ -586,7 +751,7 @@ export default function AttendancePayroll() {
                         <div className="text-xl font-bold">
                           {currencyShort}
                           {(
-                            totalActualPayroll * currencyValue
+                            totals.totalActualPayroll * currencyValue
                           ).toLocaleString()}
                         </div>
                       </div>
@@ -692,19 +857,21 @@ export default function AttendancePayroll() {
                                 >
                                   <PopoverTrigger asChild>
                                     <div className="flex items-center gap-2 cursor-pointer">
-                                      {employee.attendance.map(
-                                        (attendance: any) => {
-                                          console.log(
-                                            `${formatDate(attendance.date)}` ===
-                                              getCurrentDate()
-                                          );
-                                          if (
-                                            formatDate(attendance.date) ===
-                                            getCurrentDate()
-                                          ) {
-                                            return (
+                                      {employee?.attendance &&
+                                      Array.isArray(employee.attendance)
+                                        ? employee.attendance
+                                            .filter(
+                                              (attendance: any) =>
+                                                attendance &&
+                                                formatDate(attendance.date) ===
+                                                  getCurrentDate()
+                                            )
+                                            .map((attendance: any) => (
                                               <Badge
-                                                key={attendance.id}
+                                                key={
+                                                  attendance.id ||
+                                                  Math.random().toString()
+                                                }
                                                 className={
                                                   attendance.status ===
                                                   "present"
@@ -717,13 +884,8 @@ export default function AttendancePayroll() {
                                               >
                                                 {attendance.status}
                                               </Badge>
-                                            );
-                                          }
-
-                                          return null; // avoids unnecessary empty fragments
-                                        }
-                                      )}
-
+                                            ))
+                                        : null}
                                       <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                     </div>
                                   </PopoverTrigger>
@@ -1117,7 +1279,7 @@ export default function AttendancePayroll() {
                           Total Days Worked
                         </div>
                         <div className="text-xl font-bold">
-                          {totalDaysWorked}
+                          {totals.totalDaysWorked}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
@@ -1126,7 +1288,9 @@ export default function AttendancePayroll() {
                         </div>
                         <div className="text-xl font-bold">
                           {currencyShort}
-                          {(totalBaseline * currencyValue).toLocaleString()}
+                          {(
+                            totals.totalBaseline * currencyValue
+                          ).toLocaleString()}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
@@ -1136,7 +1300,7 @@ export default function AttendancePayroll() {
                         <div className="text-xl font-bold">
                           {currencyShort}
                           {(
-                            totalActualPayroll * currencyValue
+                            totals.totalActualPayroll * currencyValue
                           ).toLocaleString()}
                         </div>
                       </div>
@@ -1147,7 +1311,7 @@ export default function AttendancePayroll() {
                         <div className="text-xl font-bold">
                           {currencyShort}
                           {(
-                            totalDailyActuallPayroll * currencyValue
+                            totals.totalDailyActuallPayroll * currencyValue
                           ).toLocaleString()}
                         </div>
                       </div>
@@ -1159,12 +1323,12 @@ export default function AttendancePayroll() {
                     <table className="w-full border rounded-md">
                       <thead>
                         <tr className="border-t border-b text-[10px] text-gray-500">
-                          <th className="w-10 px-4 py-3 text-left border-r">
+                          {/* <th className="w-10 px-4 py-3 text-left border-r">
                             <input
                               type="checkbox"
                               className="h-4 w-4 rounded border-gray-300"
                             />
-                          </th>
+                          </th> */}
                           <th className="px-4 py-3 text-left border-r">
                             Employee Name
                           </th>
@@ -1192,12 +1356,12 @@ export default function AttendancePayroll() {
                             key={employee.id}
                             className="border-b hover:bg-gray-50"
                           >
-                            <td className="px-4 py-3 border-r">
+                            {/* <td className="px-4 py-3 border-r">
                               <input
                                 type="checkbox"
                                 className="h-4 w-4 rounded border-gray-300"
                               />
-                            </td>
+                            </td> */}
                             <td className="px-4 py-3 border-r">
                               <div className="flex items-center gap-2">
                                 <Avatar className="h-8 w-8">
@@ -1297,12 +1461,6 @@ export default function AttendancePayroll() {
                   <table className="w-full border rounded-lg">
                     <thead>
                       <tr className="border-t border-b text-[10px] text-gray-500">
-                        <th className="w-10 px-4 py-3 text-left border-r">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-gray-300"
-                          />
-                        </th>
                         <th className="px-4 py-3 text-left border-r">
                           Employee Name
                         </th>
@@ -1324,12 +1482,6 @@ export default function AttendancePayroll() {
                           key={employee.id}
                           className="border-b hover:bg-gray-50"
                         >
-                          <td className="px-4 py-3 border-r">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-gray-300"
-                            />
-                          </td>
                           <td className="px-4 py-3 border-r">
                             <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8">

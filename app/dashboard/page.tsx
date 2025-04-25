@@ -34,6 +34,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useGetDailyAttendanceMonthlyQuery } from "@/lib/redux/attendanceSlice";
 import { useSessionQuery } from "@/lib/redux/authSlice";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Search, Filter } from "lucide-react";
 
 export default function Dashboard() {
   const [permissions, setPermissions] = useState({
@@ -206,7 +214,9 @@ export default function Dashboard() {
   }, [sessionData.user.settings, sessionData.user.current_role]);
 
   const handleFilterChange = (type: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [type]: value }));
+    // Convert "all" to empty string for filter logic
+    const filterValue = value === "all" ? "" : value;
+    setFilters((prev) => ({ ...prev, [type]: filterValue }));
   };
 
   // Custom tooltip for payroll chart
@@ -309,8 +319,59 @@ export default function Dashboard() {
     return `${month}/${day}/${year}`;
   };
 
-  // Process employee data
   const processEmployeeData = () => {
+    console.log("employees in filter", employees);
+
+    // Apply filters to employees
+    const filteredEmployees = employees.filter((employee: any) => {
+      console.log(
+        "check",
+        filters.search &&
+          !employee.username
+            ?.toLowerCase()
+            .includes(filters.search.toLowerCase())
+      );
+      // Search filter
+      if (
+        filters.search &&
+        !employee.username?.toLowerCase().includes(filters.search.toLowerCase())
+      ) {
+        return false;
+      }
+
+      // Trade filter
+      if (
+        filters.trade &&
+        employee.trade_position?.trade_name !== filters.trade
+      ) {
+        return false;
+      }
+
+      // Location filter
+      if (
+        filters.location &&
+        employee.trade_position.location_name !== filters.location
+      ) {
+        return false;
+      }
+
+      // Daily rate filter
+      if (filters.dailyRate) {
+        const rate = Number(employee.daily_rate) || 0;
+        if (filters.dailyRate === "low" && rate >= 100) {
+          return false;
+        }
+        if (filters.dailyRate === "medium" && (rate < 100 || rate > 200)) {
+          return false;
+        }
+        if (filters.dailyRate === "high" && rate <= 200) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
     let latenessDifference = 0;
     let attendancePercentage = 0;
     let totalActualPayroll = 0;
@@ -325,7 +386,7 @@ export default function Dashboard() {
     const employeesByTrade: { [key: string]: any[] } = {};
 
     // Process each employee
-    employees.forEach((employee: any) => {
+    filteredEmployees.forEach((employee: any) => {
       // Grouping by trade
       const trade = employee.trade_position.trade_name;
       if (!employeesByTrade[trade]) {
@@ -473,22 +534,140 @@ export default function Dashboard() {
 
         <main className="flex-1 overflow-y-auto p-6">
           <div className="mb-6">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold">Dashboard</h1>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="gap-2 h-10 rounded-full"
-                  onClick={handleRefreshData}
-                  disabled={isRefreshing || isFetching}
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${
-                      isRefreshing || isFetching ? "animate-spin" : ""
-                    }`}
-                  />
-                  {isRefreshing || isFetching ? "Refreshing..." : "Refresh"}
-                </Button>
+            <div className="flex flex-col gap-4 mb-6">
+              <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold">Dashboard</h1>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="gap-2 h-10 rounded-full"
+                    onClick={handleRefreshData}
+                    disabled={isRefreshing || isFetching}
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 ${
+                        isRefreshing || isFetching ? "animate-spin" : ""
+                      }`}
+                    />
+                    {isRefreshing || isFetching ? "Refreshing..." : "Refresh"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-lg border">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex items-center gap-2 flex-1">
+                    <Search className="h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search employees..."
+                      value={filters.search}
+                      onChange={(e) =>
+                        handleFilterChange("search", e.target.value)
+                      }
+                      className="flex-1"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Select
+                      value={filters.trade || "all"}
+                      onValueChange={(value) =>
+                        handleFilterChange("trade", value)
+                      }
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <div className="flex items-center gap-2">
+                          <Filter className="h-4 w-4" />
+                          <span>{filters.trade || "Trade"}</span>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Trades</SelectItem>
+                        {Object.keys(employeesByTrade).map((trade) => (
+                          <SelectItem key={trade} value={trade}>
+                            {trade}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={filters.location || "all"}
+                      onValueChange={(value) =>
+                        handleFilterChange("location", value)
+                      }
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <div className="flex items-center gap-2">
+                          <Filter className="h-4 w-4" />
+                          <span>{filters.location || "Location"}</span>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Locations</SelectItem>
+                        {Array.from(
+                          new Set(
+                            employees.map(
+                              (emp: any) => emp.trade_position.location_name
+                            )
+                          )
+                        )
+                          .filter(Boolean)
+                          .map((location: any) => (
+                            <SelectItem key={location} value={location}>
+                              {location}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={filters.dailyRate || "all"}
+                      onValueChange={(value) =>
+                        handleFilterChange("dailyRate", value)
+                      }
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <div className="flex items-center gap-2">
+                          <Filter className="h-4 w-4" />
+                          <span>{filters.dailyRate || "Daily Rate"}</span>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Rates</SelectItem>
+                        <SelectItem value="low">
+                          Low (&lt; {currencyShort}100)
+                        </SelectItem>
+                        <SelectItem value="medium">
+                          {currencyShort}100 - {currencyShort}200
+                        </SelectItem>
+                        <SelectItem value="high">
+                          High (&gt; {currencyShort}200)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {(filters.trade ||
+                      filters.location ||
+                      filters.dailyRate ||
+                      filters.search) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setFilters({
+                            trade: "",
+                            location: "",
+                            dailyRate: "",
+                            search: "",
+                          })
+                        }
+                        className="text-sm"
+                      >
+                        Clear Filters
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 

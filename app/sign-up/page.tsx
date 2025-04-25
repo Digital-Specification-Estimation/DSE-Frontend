@@ -514,16 +514,16 @@ export default function SignUp() {
             </button>
           </form>
 
-          <div className="relative">
+          {/* <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300"></div>
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="px-2 bg-white text-gray-500">Or</span>
             </div>
-          </div>
+          </div> */}
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* <div className="grid grid-cols-2 gap-3">
             <button
               className="flex items-center justify-center gap-2 py-2 px-4 border rounded-md hover:bg-gray-50"
               onClick={() => handleSocialSignUp("google")}
@@ -578,7 +578,7 @@ export default function SignUp() {
               </svg>
               <span className="text-sm font-medium">Sign in with Apple</span>
             </button>
-          </div>
+          </div> */}
 
           <div className="text-center text-sm">
             Already have an account?{" "}

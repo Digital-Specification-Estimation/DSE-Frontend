@@ -159,7 +159,7 @@ export default function BudgetPlanning() {
   });
 
   const [activeTab, setActiveTab] = useState("plan");
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
   const [showAddTrade, setShowAddTrade] = useState(false);
   const [showEditTrade, setShowEditTrade] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string>("");
@@ -531,7 +531,7 @@ export default function BudgetPlanning() {
   const filteredProjects = projects.filter((project) => {
     if (!searchTerm) return true;
 
-    if (project.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    if (project.project_name.toLowerCase().includes(searchTerm.toLowerCase()))
       return true;
 
     return project.trades.some((trade) =>
@@ -590,6 +590,7 @@ export default function BudgetPlanning() {
   // Handle search change
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
+    console.log("Search term updated:", value);
   };
 
   // Calculate totals
@@ -719,191 +720,229 @@ export default function BudgetPlanning() {
 
               {/* Projects list */}
               {fetchedData && fetchedData.length > 0 ? (
-                fetchedData.map((project: any) => {
-                  return (
-                    <div
-                      key={project.id}
-                      className="bg-white rounded-lg border mb-4"
-                    >
-                      <div
-                        className="flex items-center p-4 cursor-pointer"
-                        onClick={() => {
-                          setExpandedProjectIds((prev) =>
-                            prev.includes(project.id)
-                              ? prev.filter((id) => id !== project.id)
-                              : [...prev, project.id]
-                          );
-                        }}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 bg-gray-800 rounded-full flex items-center justify-center text-white">
-                            <svg
-                              className="h-4 w-4"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M3 9L12 5L21 9M3 9V17L12 21M3 9L12 13M12 21L21 17V9M12 21V13M21 9L12 13"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </div>
-                          <span className="font-medium">
-                            {project.project_name}
-                          </span>
-                          <span className="text-sm bg-gray-100 px-2 py-0.5 rounded-full">
-                            {currencyShort}
-                            {project.budget * currencyValue
-                              ? project.budget * currencyValue
-                              : " "}
-                          </span>
-                        </div>
-                        <div className="ml-auto">
-                          {expandedProjectIds.includes(project.id) ? (
-                            <ChevronUp className="h-5 w-5 text-gray-500" />
-                          ) : (
-                            <ChevronDown className="h-5 w-5 text-gray-500" />
-                          )}
-                        </div>
-                      </div>
+                fetchedData
+                  .filter((project: any) => {
+                    if (!searchTerm) return true;
 
-                      {project && expandedProjectIds.includes(project.id) && (
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead>
-                              <tr className="border-t border-b text-sm text-muted-foreground">
-                                <th className="px-4 py-3 text-left">SN</th>
-                                <th className="px-4 py-3 text-left">
-                                  Role/Trade
-                                </th>
-                                <th className="px-4 py-3 text-left">
-                                  Employees Number
-                                </th>
-                                <th className="px-4 py-3 text-left">
-                                  Work Days
-                                </th>
-                                <th className="px-4 py-3 text-left">
-                                  Planned Salary ({currencyShort})
-                                </th>
-                                <th className="w-10 px-4 py-3 text-left"></th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {project.trade_positions &&
-                              project.trade_positions.length !== 0 ? (
-                                project.trade_positions.map(
-                                  (trade: any, index: any) => (
-                                    <tr
-                                      key={trade.id}
-                                      className="border-b hover:bg-gray-50"
-                                    >
-                                      <td className="px-4 py-3">{index + 1}</td>
-                                      <td className="px-4 py-3">
-                                        <div className="flex items-center gap-2">
-                                          <Avatar className="h-8 w-8">
-                                            <AvatarImage
-                                              src={
-                                                trade.avatar ||
-                                                "/placeholder.svg" ||
-                                                "/placeholder.svg"
-                                              }
-                                              alt={trade.trade_name}
-                                            />
-                                            <AvatarFallback>
-                                              {trade.trade_name.charAt(0)}
-                                            </AvatarFallback>
-                                          </Avatar>
-                                          <span className="font-medium">
-                                            {trade.trade_name}
-                                          </span>
-                                        </div>
-                                      </td>
-                                      <td className="px-4 py-3">
-                                        {trade.employees &&
-                                          trade.employees.length}
-                                      </td>
-                                      <td className="px-4 py-3">
-                                        {trade.work_days
-                                          ? trade.work_days
-                                          : "unspecified"}
-                                      </td>
-                                      <td className="px-4 py-3">
-                                        {currencyShort}
-                                        {sessionData.user.salary_calculation ===
-                                        "monthly rate"
-                                          ? `${(
-                                              (trade.monthly_planned_cost
-                                                ? trade.monthly_planned_cost
-                                                : 0) * currencyValue
-                                            ).toLocaleString()}/month`
-                                          : `${(
-                                              (trade.daily_planned_cost
-                                                ? trade.daily_planned_cost
-                                                : 0) * currencyValue
-                                            ).toLocaleString()}/day`}
-                                      </td>
-                                      <td className="px-4 py-3">
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon">
-                                              <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end">
-                                            <DropdownMenuItem
-                                              onClick={() =>
-                                                handleTradeAction(
-                                                  "edit",
-                                                  trade,
-                                                  project.id
-                                                )
-                                              }
-                                            >
-                                              <Edit className="h-4 w-4 mr-2" />
-                                              Edit
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                              onClick={() =>
-                                                handleTradeAction(
-                                                  "delete",
-                                                  trade,
-                                                  project.id
-                                                )
-                                              }
-                                            >
-                                              <Trash2 className="h-4 w-4 mr-2" />
-                                              Delete
-                                            </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
-                                      </td>
-                                    </tr>
-                                  )
-                                )
-                              ) : (
-                                <tr>
-                                  <td
-                                    colSpan={6}
-                                    className="px-4 py-3 text-center"
-                                  >
-                                    No Trade found
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
+                    // Search in project name
+                    if (
+                      project.project_name
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase())
+                    )
+                      return true;
+
+                    // Search in trade positions
+                    if (
+                      project.trade_positions &&
+                      project.trade_positions.length > 0
+                    ) {
+                      return project.trade_positions.some((trade: any) =>
+                        trade.trade_name
+                          .toLowerCase()
+                          .includes(searchTerm.toLowerCase())
+                      );
+                    }
+
+                    return false;
+                  })
+                  .map((project: any) => {
+                    return (
+                      <div
+                        key={project.id}
+                        className="bg-white rounded-lg border mb-4"
+                      >
+                        <div
+                          className="flex items-center p-4 cursor-pointer"
+                          onClick={() => {
+                            setExpandedProjectIds((prev) =>
+                              prev.includes(project.id)
+                                ? prev.filter((id) => id !== project.id)
+                                : [...prev, project.id]
+                            );
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 bg-gray-800 rounded-full flex items-center justify-center text-white">
+                              <svg
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M3 9L12 5L21 9M3 9V17L12 21M3 9L12 13M12 21L21 17V9M12 21V13M21 9L12 13"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </div>
+                            <span className="font-medium">
+                              {project.project_name}
+                            </span>
+                            <span className="text-sm bg-gray-100 px-2 py-0.5 rounded-full">
+                              {currencyShort}
+                              {project.budget * currencyValue
+                                ? project.budget * currencyValue
+                                : " "}
+                            </span>
+                          </div>
+                          <div className="ml-auto">
+                            {expandedProjectIds.includes(project.id) ? (
+                              <ChevronUp className="h-5 w-5 text-gray-500" />
+                            ) : (
+                              <ChevronDown className="h-5 w-5 text-gray-500" />
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  );
-                })
+
+                        {project && expandedProjectIds.includes(project.id) && (
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead>
+                                <tr className="border-t border-b text-sm text-muted-foreground">
+                                  <th className="px-4 py-3 text-left">SN</th>
+                                  <th className="px-4 py-3 text-left">
+                                    Role/Trade
+                                  </th>
+                                  <th className="px-4 py-3 text-left">
+                                    Employees Number
+                                  </th>
+                                  <th className="px-4 py-3 text-left">
+                                    Work Days
+                                  </th>
+                                  <th className="px-4 py-3 text-left">
+                                    Planned Salary ({currencyShort})
+                                  </th>
+                                  <th className="w-10 px-4 py-3 text-left"></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {project.trade_positions &&
+                                project.trade_positions.length !== 0 ? (
+                                  project.trade_positions.map(
+                                    (trade: any, index: any) => (
+                                      <tr
+                                        key={trade.id}
+                                        className="border-b hover:bg-gray-50"
+                                      >
+                                        <td className="px-4 py-3">
+                                          {index + 1}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          <div className="flex items-center gap-2">
+                                            <Avatar className="h-8 w-8">
+                                              <AvatarImage
+                                                src={
+                                                  trade.avatar ||
+                                                  "/placeholder.svg" ||
+                                                  "/placeholder.svg" ||
+                                                  "/placeholder.svg"
+                                                }
+                                                alt={trade.trade_name}
+                                              />
+                                              <AvatarFallback>
+                                                {trade.trade_name.charAt(0)}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                            <span className="font-medium">
+                                              {trade.trade_name}
+                                            </span>
+                                          </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          {trade.employees &&
+                                            trade.employees.length}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          {trade.work_days
+                                            ? trade.work_days
+                                            : "unspecified"}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          {currencyShort}
+                                          {sessionData.user
+                                            .salary_calculation ===
+                                          "monthly rate"
+                                            ? `${(
+                                                (trade.monthly_planned_cost
+                                                  ? trade.monthly_planned_cost
+                                                  : 0) * currencyValue
+                                              ).toLocaleString()}/month`
+                                            : `${(
+                                                (trade.daily_planned_cost
+                                                  ? trade.daily_planned_cost
+                                                  : 0) * currencyValue
+                                              ).toLocaleString()}/day`}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                              >
+                                                <MoreHorizontal className="h-4 w-4" />
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                              <DropdownMenuItem
+                                                onClick={() =>
+                                                  handleTradeAction(
+                                                    "edit",
+                                                    trade,
+                                                    project.id
+                                                  )
+                                                }
+                                              >
+                                                <Edit className="h-4 w-4 mr-2" />
+                                                Edit
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem
+                                                onClick={() =>
+                                                  handleTradeAction(
+                                                    "delete",
+                                                    trade,
+                                                    project.id
+                                                  )
+                                                }
+                                              >
+                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                Delete
+                                              </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        </td>
+                                      </tr>
+                                    )
+                                  )
+                                ) : (
+                                  <tr>
+                                    <td
+                                      colSpan={6}
+                                      className="px-4 py-3 text-center"
+                                    >
+                                      No Trade found
+                                    </td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+              ) : searchTerm ? (
+                <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
+                  No projects found matching "{searchTerm}". Try a different
+                  search term.
+                </div>
               ) : (
                 <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
-                  No projects found matching your search criteria.
+                  No projects found.
                 </div>
               )}
             </TabsContent>

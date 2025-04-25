@@ -264,10 +264,26 @@ export default function Settings() {
 
   const handleSaveUserSettings = async () => {
     try {
-      // Compare current settings with original data to find changes
-      if (JSON.stringify(previelegesFetched) !== JSON.stringify(userSettings)) {
-        console.log("saved settings", userSettings);
-        await updatePrevielges(userSettings);
+      // Find only the modified roles by comparing with original data
+      const modifiedSettings = userSettings.filter((setting) => {
+        // Find the corresponding original setting
+        const originalSetting = previelegesFetched.find(
+          (orig) => orig.role === setting.role
+        );
+
+        // If not found or permissions are different, it's modified
+        if (!originalSetting) return true;
+
+        // Check if permissions array is different
+        return (
+          JSON.stringify(originalSetting.permissions) !==
+          JSON.stringify(setting.permissions)
+        );
+      });
+
+      if (modifiedSettings.length > 0) {
+        console.log("saving modified settings", modifiedSettings);
+        await updatePrevielges(modifiedSettings);
 
         toast({
           title: "User Settings Saved",
@@ -695,7 +711,7 @@ export default function Settings() {
                 >
                   Payroll & Attendance
                 </button>
-                <button
+                {/* <button
                   className={`w-full px-4 py-3 text-sm text-left transition-colors ${
                     activeTab === "notifications"
                       ? "bg-white text-gray-900 font-medium"
@@ -704,7 +720,7 @@ export default function Settings() {
                   onClick={() => handleTabChange("notifications")}
                 >
                   Notifications
-                </button>
+                </button> */}
               </div>
 
               <div className="flex-1">

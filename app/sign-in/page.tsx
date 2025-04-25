@@ -300,7 +300,7 @@ export default function SignIn() {
               )}
             </button>
           </form>
-
+          {/* 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300"></div>
@@ -365,7 +365,7 @@ export default function SignIn() {
               </svg>
               <span className="text-sm font-medium">Sign In with Apple</span>
             </button>
-          </div>
+          </div> */}
 
           <div className="text-center text-sm">
             Need an account?{" "}
