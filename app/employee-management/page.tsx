@@ -1042,7 +1042,7 @@ export default function EmployeeManagement() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <label htmlFor="company_id" className="text-sm font-medium">
                       Company
                     </label>
@@ -1075,7 +1075,7 @@ export default function EmployeeManagement() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </div> */}
 
                   <div className="text-sm">
                     Want to upload multiple employees? Use{" "}

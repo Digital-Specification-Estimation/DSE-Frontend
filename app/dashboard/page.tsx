@@ -710,7 +710,7 @@ export default function Dashboard() {
                 icon={Calendar}
                 iconBackground="bg-red-600"
                 change={{
-                  value: `${latenessDifference}`,
+                  value: `${latenessDifference.toFixed(1)}`,
                   type: latenessDifference <= 0 ? "increase" : "decrease",
                   text: "from Yesterday",
                 }}

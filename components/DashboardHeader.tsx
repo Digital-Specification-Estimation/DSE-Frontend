@@ -15,25 +15,22 @@ import {
   useGetNotificationsQuery,
 } from "@/lib/redux/notificationSlice";
 import type { RootState } from "@/lib/store";
-import { userApi } from "@/lib/redux/userSlice";
 
 const SOCKET_SERVER_URL =
   process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:4000";
+
 const DashboardHeader = () => {
-  // console.log(userApi.endpoints);
   const dispatch = useDispatch();
   const { data: pastNotifications } = useGetNotificationsQuery();
   const notifications = useSelector(
     (state: RootState) => state.notificationsState.notifications
   );
+
   const [notificationShow, setNotificationShow] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState("title");
 
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    // Only create the socket connection once
     if (!socketRef.current) {
       socketRef.current = io(SOCKET_SERVER_URL, { transports: ["websocket"] });
 
@@ -68,20 +65,22 @@ const DashboardHeader = () => {
       });
     }
 
-    // Clean up function
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
       }
     };
-  }, []); // Empty dependency array ensures this only runs once
+  }, []);
 
   useEffect(() => {
-    if (pastNotifications) {
-      dispatch(setNotifications(pastNotifications));
+    if (pastNotifications && pastNotifications.length > 0) {
+      // Only set notifications if the Redux state is empty
+      if (notifications.length === 0) {
+        dispatch(setNotifications(pastNotifications));
+      }
     }
-  }, [pastNotifications, dispatch]);
+  }, [pastNotifications, dispatch, notifications.length]);
 
   const unreadCount = notifications.filter(
     (n: NotificationType) => !n.read
@@ -89,8 +88,7 @@ const DashboardHeader = () => {
 
   const getDay = (dateString: string) => {
     const date = new Date(dateString);
-    const day = date.toLocaleDateString("en-US", { weekday: "long" });
-    return day;
+    return date.toLocaleDateString("en-US", { weekday: "long" });
   };
 
   const handleMarkAllAsRead = () => {
@@ -103,48 +101,6 @@ const DashboardHeader = () => {
 
   return (
     <div className="flex relative z-20 max-[1000px]:w-full items-end justify-end max-[1000px]:justify-around p-4 bg-white border-b">
-      {/* Search Bar */}
-      {/* <div className="flex items-center gap-4 max-[1000px]:ml-0 bg-gray-100 rounded-md w-[60%] px-4 py-2 relative"> */}
-      {/* Filter Button */}
-      {/* <div className="relative"> */}
-      {/* <div
-            className="flex items-center space-x-2 cursor-pointer"
-            onClick={() => setFilterOpen(!filterOpen)}
-          >
-            <IoFilterOutline className="text-gray-400" />
-            <p className="text-[14px] text-gray-400">{selectedFilter}</p>
-          </div> */}
-
-      {/* Filter Dropdown */}
-      {/* {filterOpen && (
-            <div className="absolute right-0 mt-2 w-40 bg-white shadow-md rounded-md border p-2">
-              {[
-                "title",
-                "skills",
-                "seniority_level",
-                "status",
-                "category",
-                "contactEmail",
-                "moneyPrize",
-                "Requirements",
-              ].map((filter) => (
-                <p
-                  key={filter}
-                  className="p-2 cursor-pointer hover:bg-gray-100 text-sm"
-                  onClick={() => {
-                    setSelectedFilter(filter);
-                    setFilterOpen(false);
-                  }}
-                >
-                  {filter}
-                </p>
-              ))}
-            </div>
-          )}
-        </div> */}
-      {/* </div> */}
-
-      {/* Right Section */}
       <div className="flex items-center space-x-4 relative">
         <div className="relative">
           <span
@@ -209,11 +165,6 @@ const DashboardHeader = () => {
             </div>
           )}
         </div>
-        {/* <img
-          src="/profile2.webp"
-          alt="User"
-          className="w-[40px] h-[40px] object-cover cursor-pointer rounded-full"
-        /> */}
       </div>
     </div>
   );

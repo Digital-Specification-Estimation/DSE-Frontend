@@ -348,10 +348,10 @@ function ProjectForm({
   refetchProjects: () => void;
 }) {
   const { toast } = useToast();
-  const [newProject, setNewProject] = useState<NewProject>({
+  const [newProject, setNewProject] = useState<any>({
     project_name: "",
     location_name: "",
-    currency: "USD",
+    // currency: "USD",
     start_date: "",
     end_date: "",
   });
@@ -384,7 +384,7 @@ function ProjectForm({
       setNewProject({
         project_name: "",
         location_name: "",
-        currency: "USD",
+        // currency: "USD",
         start_date: "",
         end_date: "",
       });
@@ -436,7 +436,7 @@ function ProjectForm({
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-2">
+      {/* <div className="space-y-2">
         <label className="text-sm font-medium">Select Currency</label>
         <Select
           value={newProject.currency}
@@ -453,7 +453,7 @@ function ProjectForm({
             <SelectItem value="GBP">GBP</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </div> */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium">Start Date</label>
@@ -1034,7 +1034,7 @@ function EditProjectForm({
   const [editedProject, setEditedProject] = useState<NewProject>({
     project_name: project.project_name,
     location_name: project.location_name,
-    currency: project.currency,
+    // currency: project.currency,
     start_date: project.start_date,
     end_date: project.end_date,
   });
@@ -1109,7 +1109,7 @@ function EditProjectForm({
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-2">
+      {/* <div className="space-y-2">
         <label className="text-sm font-medium">Select Currency</label>
         <Select
           value={editedProject.currency}
@@ -1126,7 +1126,7 @@ function EditProjectForm({
             <SelectItem value="GBP">GBP</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </div> */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium">Start Date</label>
@@ -1558,7 +1558,7 @@ export default function BusinessSetup() {
                         headers={[
                           "Project Name",
                           "Location Name",
-                          "Currency",
+                          // "Currency",
                           "Start Date",
                           "End Date",
                         ]}
@@ -1582,7 +1582,7 @@ export default function BusinessSetup() {
                             <td className="px-4 py-3">
                               {project.location_name}
                             </td>
-                            <td className="px-4 py-3">
+                            {/* <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <img
                                   src="/placeholder.svg?height=20&width=20"
@@ -1591,7 +1591,7 @@ export default function BusinessSetup() {
                                 />
                                 {project.currency}
                               </div>
-                            </td>
+                            </td> */}
                             <td className="px-4 py-3">{project.start_date}</td>
                             <td className="px-4 py-3">{project.end_date}</td>
                           </>
