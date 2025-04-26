@@ -89,11 +89,16 @@ export default function Dashboard() {
       value: match[2],
     };
   };
-
-  const currencyValue = Number(
-    splitCurrencyValue(sessionData.user.currency)?.value
+  const [currencyValue, setCurrencyValue] = useState<number | null>(null);
+  const [currencyShort, setCurrencyShort] = useState<string | null | undefined>(
+    null
   );
-  const currencyShort = splitCurrencyValue(sessionData.user.currency)?.currency;
+  useEffect(() => {
+    setCurrencyValue(
+      Number(splitCurrencyValue(sessionData.user.currency)?.value)
+    );
+    setCurrencyShort(splitCurrencyValue(sessionData.user.currency)?.currency);
+  }, []);
 
   const {
     data: employees = [],
@@ -206,6 +211,10 @@ export default function Dashboard() {
           setting.role.toLowerCase() ===
           sessionData.user.current_role.toLowerCase()
       );
+      setCurrencyValue(
+        Number(splitCurrencyValue(sessionData.user.currency)?.value)
+      );
+      setCurrencyShort(splitCurrencyValue(sessionData.user.currency)?.currency);
 
       if (userPermission) {
         setPermissions(userPermission);
@@ -524,6 +533,8 @@ export default function Dashboard() {
     numberOfLateArrivals,
     payrollPercentage,
   } = processEmployeeData();
+  console.log("currencyValue", currencyValue, "currencyShort", currencyShort);
+  console.log("sessionData", sessionData);
   console.log("permissions", permissions);
   return (
     <div className="flex h-screen bg-gray-50">
