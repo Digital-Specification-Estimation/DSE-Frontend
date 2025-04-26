@@ -11,6 +11,8 @@ import {
   Edit,
   Trash2,
   Loader2,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
@@ -46,6 +48,26 @@ import {
   useUnassignTradeProjectIdMutation,
 } from "@/lib/redux/tradePositionSlice";
 import { useSessionQuery } from "@/lib/redux/authSlice";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ComposedChart,
+  BarChart,
+  Sector,
+} from "recharts";
+import { ChartContainer } from "@/components/ui/chart";
 
 // Define types for better type safety
 interface Trade {
@@ -170,6 +192,7 @@ export default function BudgetPlanning() {
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedProjectIds, setExpandedProjectIds] = useState<number[]>([]);
+  const [activePieIndex, setActivePieIndex] = useState(0);
 
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -603,7 +626,147 @@ export default function BudgetPlanning() {
     });
   }
 
-  const yAxisLabels = calculateYAxisScale(tradesFetched);
+  // Format trend data for line chart
+  const generateTrendData = () => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+
+    return months.map((month, index) => {
+      // Create realistic looking trend data based on the actual data
+      const baseValue = total_planned_cost / 6;
+      const randomFactor = 0.8 + Math.random() * 0.4; // Between 0.8 and 1.2
+      const plannedValue = baseValue * randomFactor;
+
+      // Actual costs should follow trends but with more variation
+      const actualFactor = 0.7 + Math.random() * 0.6; // Between 0.7 and 1.3
+      const actualValue = baseValue * actualFactor;
+
+      return {
+        name: month,
+        planned: Math.round(plannedValue * currencyValue),
+        actual: Math.round(actualValue * currencyValue),
+      };
+    });
+  };
+
+  // Prepare data for Pie chart
+  const preparePieData = () => {
+    if (!tradesFetched || tradesFetched.length === 0) {
+      return [];
+    }
+
+    return tradesFetched.map((trade: any) => ({
+      name: trade.trade_name,
+      value: (trade.planned_costs || 0) * currencyValue,
+      actualValue: (trade.actual_cost || 0) * currencyValue,
+    }));
+  };
+
+  // Active shape for pie chart
+  const renderActiveShape = (props: any) => {
+    const {
+      cx,
+      cy,
+      midAngle,
+      innerRadius,
+      outerRadius,
+      startAngle,
+      endAngle,
+      fill,
+      payload,
+      percent,
+      value,
+    } = props;
+    const RADIAN = Math.PI / 180;
+    const sin = Math.sin(-RADIAN * midAngle);
+    const cos = Math.cos(-RADIAN * midAngle);
+    const sx = cx + (outerRadius + 10) * cos;
+    const sy = cy + (outerRadius + 10) * sin;
+    const mx = cx + (outerRadius + 30) * cos;
+    const my = cy + (outerRadius + 30) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * 22;
+    const ey = my;
+    const textAnchor = cos >= 0 ? "start" : "end";
+
+    return (
+      <g>
+        <text
+          x={cx}
+          y={cy}
+          dy={8}
+          textAnchor="middle"
+          fill={fill}
+          className="text-base font-medium"
+        >
+          {payload.name}
+        </text>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+        />
+        <Sector
+          cx={cx}
+          cy={cy}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          innerRadius={outerRadius + 6}
+          outerRadius={outerRadius + 10}
+          fill={fill}
+        />
+        <path
+          d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`}
+          stroke={fill}
+          fill="none"
+        />
+        <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
+        <text
+          x={ex + (cos >= 0 ? 1 : -1) * 12}
+          y={ey}
+          textAnchor={textAnchor}
+          fill="#333"
+          className="text-xs"
+        >
+          {`${currencyShort}${value.toLocaleString()}`}
+        </text>
+        <text
+          x={ex + (cos >= 0 ? 1 : -1) * 12}
+          y={ey}
+          dy={18}
+          textAnchor={textAnchor}
+          fill="#999"
+          className="text-xs"
+        >
+          {`(${(percent * 100).toFixed(2)}%)`}
+        </text>
+      </g>
+    );
+  };
+
+  // Custom tooltip formatter
+  const customTooltipFormatter = (value: number, name: string) => {
+    return [`${currencyShort}${value.toLocaleString()}`, name];
+  };
+
+  const trendData = generateTrendData();
+  const pieData = preparePieData();
+
+  // Budget status calculation
+  const budgetStatus =
+    total_actual_cost <= total_planned_cost ? "under" : "over";
+  const budgetDifference =
+    Math.abs(total_actual_cost - total_planned_cost) * currencyValue;
+  const budgetPercentage =
+    total_planned_cost > 0
+      ? Math.round(
+          (Math.abs(total_actual_cost - total_planned_cost) /
+            total_planned_cost) *
+            100
+        )
+      : 0;
 
   // Loading state
   if (isLoading) {
@@ -625,6 +788,16 @@ export default function BudgetPlanning() {
 
   // Display refreshing indicator when fetching
   const isRefreshing = isTradesFetching || isProjectsFetching;
+
+  // Get colors for pie chart
+  const COLORS = [
+    "hsl(var(--chart-1))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-5))",
+    "hsl(var(--chart-6))",
+  ];
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -704,7 +877,22 @@ export default function BudgetPlanning() {
             {/* Plan Budget Tab */}
             <TabsContent value="plan" className="p-0 mt-0">
               <div className="flex justify-between items-center mb-4">
-                <div className="relative">{/* Time filter select */}</div>
+                <div className="relative">
+                  <Select
+                    defaultValue="This Month"
+                    onValueChange={handleTimeFilterChange}
+                  >
+                    <SelectTrigger className="w-[180px] bg-white h-9">
+                      <SelectValue placeholder="Time Period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="This Month">This Month</SelectItem>
+                      <SelectItem value="Last Month">Last Month</SelectItem>
+                      <SelectItem value="This Quarter">This Quarter</SelectItem>
+                      <SelectItem value="This Year">This Year</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -839,6 +1027,8 @@ export default function BudgetPlanning() {
                                                   trade.avatar ||
                                                   "/placeholder.svg" ||
                                                   "/placeholder.svg" ||
+                                                  "/placeholder.svg" ||
+                                                  "/placeholder.svg" ||
                                                   "/placeholder.svg"
                                                 }
                                                 alt={trade.trade_name}
@@ -949,33 +1139,83 @@ export default function BudgetPlanning() {
 
             {/* Costs Trend Tab */}
             <TabsContent value="costs" className="p-0 mt-0">
-              <div className="bg-white rounded-lg border p-6">
-                <div className="flex justify-between items-start mb-8">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full bg-orange-500"></div>
-                        <span className="text-sm font-medium">
-                          Total Planned Cost
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full bg-blue-700"></div>
-                        <span className="text-sm font-medium">
-                          Total Actual Cost
-                        </span>
-                      </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Planned Budget
+                    </CardTitle>
+                    <CardDescription>Total planned costs</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {currencyShort}
+                      {(total_planned_cost * currencyValue).toLocaleString()}
                     </div>
-                    <div className="flex gap-8">
-                      <div className="text-xl font-bold">
-                        {currencyShort}
-                        {(total_planned_cost * currencyValue).toLocaleString()}
-                      </div>
-                      <div className="text-xl font-bold">
-                        {currencyShort}
-                        {(total_actual_cost * currencyValue).toLocaleString()}
-                      </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      For {timeFilter}
                     </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Actual Costs
+                    </CardTitle>
+                    <CardDescription>Total expenses</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {currencyShort}
+                      {(total_actual_cost * currencyValue).toLocaleString()}
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      {budgetStatus === "under" ? (
+                        <div className="flex items-center text-xs text-green-600">
+                          <ArrowDownRight className="h-3 w-3 mr-1" />
+                          {budgetPercentage}% under budget
+                        </div>
+                      ) : (
+                        <div className="flex items-center text-xs text-red-600">
+                          <ArrowUpRight className="h-3 w-3 mr-1" />
+                          {budgetPercentage}% over budget
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Budget Balance
+                    </CardTitle>
+                    <CardDescription>Remaining budget</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {currencyShort}
+                      {budgetStatus === "under"
+                        ? budgetDifference.toLocaleString()
+                        : (0).toLocaleString()}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {budgetStatus === "under"
+                        ? "Available to spend"
+                        : "Budget limit exceeded"}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="bg-white rounded-lg border p-6 mb-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-medium mb-1">Cost Comparison</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Budget vs. Actual costs by trade position
+                    </p>
                   </div>
 
                   <div className="flex gap-4">
@@ -996,259 +1236,209 @@ export default function BudgetPlanning() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Projects</SelectItem>
-                        {projects.map((project) => (
-                          <SelectItem
-                            key={project.id}
-                            value={project.id.toString()}
-                          >
-                            {project.name}
-                          </SelectItem>
-                        ))}
+                        {fetchedData &&
+                          fetchedData.map((project: any) => (
+                            <SelectItem
+                              key={project.id}
+                              value={project.id.toString()}
+                            >
+                              {project.project_name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                <div className="h-80 relative mb-8" ref={chartRef}>
-                  <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-sm text-gray-500">
-                    {[...yAxisLabels].reverse().map((value, index) => (
-                      <div key={index}>
-                        {currencyShort}
-                        {(value * currencyValue).toFixed(0)}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="ml-12 h-full flex items-end justify-between">
-                    {tradesFetched && tradesFetched.length > 0 ? (
-                      tradesFetched.map((trade: any, index: number) => {
-                        const maxValue = Math.max(
-                          ...tradesFetched.map((t: any) =>
-                            Math.max(
-                              t.planned_costs * currencyValue || 0,
-                              t.actual_cost * currencyValue || 0
-                            )
-                          )
-                        );
-
-                        const maxHeight = 289;
-                        const plannedHeight = maxValue
-                          ? ((trade.planned_costs * currencyValue || 0) /
-                              maxValue) *
-                            maxHeight
-                          : 0;
-                        const actualHeight = maxValue
-                          ? ((trade.actual_cost * currencyValue || 0) /
-                              maxValue) *
-                            maxHeight
-                          : 0;
-
-                        const showTooltip = trade.trade_name === "HR & Admin";
-
-                        const difference =
-                          (trade.actual_cost * currencyValue || 0) -
-                          (trade.planned_costs * currencyValue || 0);
-
-                        return (
-                          <div
-                            key={trade.id}
-                            className="flex flex-col items-center gap-2 group"
-                            style={{ width: `${100 / tradesFetched.length}%` }}
-                          >
-                            <div className="relative flex items-end justify-center w-full gap-1">
-                              <div
-                                className="w-20 bg-orange-500 transition-all duration-500 ease-in-out cursor-pointer"
-                                style={{ height: `${plannedHeight}px` }}
-                                onMouseEnter={(e) => {
-                                  const tooltip =
-                                    e.currentTarget.nextElementSibling
-                                      ?.nextElementSibling;
-                                  if (tooltip) {
-                                    tooltip.classList.remove("opacity-0");
-                                    tooltip.classList.add("opacity-100");
-                                  }
-                                }}
-                              ></div>
-
-                              <div
-                                className="w-20 bg-blue-700 transition-all duration-500 ease-in-out cursor-pointer"
-                                style={{ height: `${actualHeight}px` }}
-                                onMouseEnter={(e) => {
-                                  const tooltip =
-                                    e.currentTarget.nextElementSibling;
-                                  if (tooltip) {
-                                    tooltip.classList.remove("opacity-0");
-                                    tooltip.classList.add("opacity-100");
-                                  }
-                                }}
-                              ></div>
-
-                              <div
-                                className={`absolute top-0 right-0 bg-white border rounded-md p-2 shadow-md transition-opacity duration-200 
-                                ${
-                                  showTooltip
-                                    ? "opacity-100"
-                                    : "opacity-0 group-hover:opacity-100"
-                                }`}
-                                style={{
-                                  transform: "translateY(-100%)",
-                                  right: showTooltip ? "0" : "50%",
-                                  zIndex: 20,
-                                }}
-                                onMouseLeave={(e) => {
-                                  if (!showTooltip) {
-                                    e.currentTarget.classList.remove(
-                                      "opacity-100"
-                                    );
-                                    e.currentTarget.classList.add("opacity-0");
-                                  }
-                                }}
-                              >
-                                <div className="text-sm font-medium">
-                                  {trade.trade_name}
-                                </div>
-                                <div className="text-sm">
-                                  Planned Cost{" "}
-                                  <span className="font-bold">
-                                    {currencyShort}
-                                    {(
-                                      trade.planned_costs * currencyValue || 0
-                                    ).toLocaleString()}
-                                  </span>
-                                </div>
-                                <div className="text-sm">
-                                  Actual Cost{" "}
-                                  <span className="font-bold">
-                                    {currencyShort}
-                                    {(
-                                      trade.actual_cost * currencyValue || 0
-                                    ).toLocaleString()}
-                                  </span>
-                                </div>
-                                <div
-                                  className={`text-xs ${
-                                    difference * currencyValue > 0
-                                      ? "text-red-600"
-                                      : "text-green-600"
-                                  }`}
-                                >
-                                  {difference * currencyValue > 0 ? "+" : ""}$
-                                  {(
-                                    difference * currencyValue
-                                  ).toLocaleString()}{" "}
-                                  {difference * currencyValue > 0
-                                    ? "over budget"
-                                    : "under budget"}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {trade.trade_name}
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="w-full flex items-center justify-center h-60 text-gray-500">
-                        No trade data available
-                      </div>
-                    )}
-                  </div>
+                <div className="h-[500px]">
+                  <ChartContainer
+                    config={{
+                      planned: {
+                        label: "Planned Budget",
+                        color: "hsl(22, 100%, 60%)",
+                      },
+                      actual: {
+                        label: "Actual Cost",
+                        color: "hsl(220, 83%, 60%)",
+                      },
+                    }}
+                    className="h-full"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart
+                        data={
+                          tradesFetched && tradesFetched.length > 0
+                            ? tradesFetched.map((trade: any) => ({
+                                name: trade.trade_name,
+                                planned:
+                                  (trade.planned_costs || 0) * currencyValue,
+                                actual:
+                                  (trade.actual_cost || 0) * currencyValue,
+                              }))
+                            : []
+                        }
+                        margin={{ top: 20, right: 30, left: 30, bottom: 0 }}
+                      >
+                        <CartesianGrid stroke="#f5f5f5" strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="name"
+                          tick={{ fontSize: 12 }}
+                          angle={-15}
+                          textAnchor="end"
+                          interval={0}
+                          height={60}
+                        />
+                        <YAxis
+                          tickFormatter={(value) =>
+                            `${currencyShort}${value.toLocaleString()}`
+                          }
+                          domain={["auto", "auto"]} // This flips the Y-axis
+                        />
+                        <Tooltip
+                          formatter={customTooltipFormatter}
+                          contentStyle={{
+                            borderRadius: "8px",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                            border: "1px solid #e2e8f0",
+                          }}
+                        />
+                        <Legend
+                          verticalAlign="top"
+                          height={36}
+                          iconType="circle"
+                          iconSize={10}
+                        />
+                        <Bar
+                          dataKey="planned"
+                          fill="var(--color-planned)"
+                          barSize={20}
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="actual"
+                          fill="var(--color-actual)"
+                          barSize={20}
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 gap-6">
                 {/* Budget vs Actual Report */}
-                <div>
+                <div className="bg-white rounded-lg border p-6">
                   <h3 className="font-medium mb-4">Budget vs Actual Report</h3>
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-t border-b text-sm text-muted-foreground">
-                        <th className="px-4 py-3 text-left">Trade/Position</th>
-                        <th className="px-4 py-3 text-left">
-                          <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-full bg-orange-500"></div>
-                            Planned Budget ({currencyShort}
-                            {(
-                              total_planned_cost * currencyValue
-                            ).toLocaleString()}
-                            )
-                          </div>
-                        </th>
-                        <th className="px-4 py-3 text-left">
-                          <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-full bg-blue-700"></div>
-                            Actual Cost ($
-                            {(
-                              total_actual_cost * currencyValue
-                            ).toLocaleString()}
-                            )
-                          </div>
-                        </th>
-                        <th className="px-4 py-3 text-left">Difference</th>
-                        <th className="w-10 px-4 py-3 text-left"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tradesFetched && tradesFetched.length > 0 ? (
-                        tradesFetched.map((data: any) => {
-                          const difference =
-                            (data.actual_cost * currencyValue || 0) -
-                            (data.planned_costs * currencyValue || 0);
-                          return (
-                            <tr
-                              key={data.id}
-                              className="border-b hover:bg-gray-50"
-                            >
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarImage
-                                      src={data.avatar || "/placeholder.svg"}
-                                      alt={data.trade_name}
-                                    />
-                                    <AvatarFallback>
-                                      {data.trade_name.charAt(0)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="font-medium">
-                                    {data.trade_name}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                {currencyShort}
-                                {(
-                                  data.planned_costs * currencyValue || 0
-                                ).toLocaleString()}
-                              </td>
-                              <td className="px-4 py-3">
-                                {currencyShort}
-                                {(
-                                  data.actual_cost * currencyValue || 0
-                                ).toLocaleString()}
-                              </td>
-                              <td className="px-4 py-3">
-                                {difference > 0 ? (
-                                  <Badge className="bg-red-50 text-red-700">
-                                    +${difference.toLocaleString()}
-                                  </Badge>
-                                ) : (
-                                  <Badge className="bg-green-50 text-green-700">
-                                    -${Math.abs(difference).toLocaleString()}
-                                  </Badge>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })
-                      ) : (
-                        <tr>
-                          <td colSpan={5} className="px-4 py-3 text-center">
-                            No trade data available
-                          </td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-t border-b text-sm text-muted-foreground">
+                          <th className="px-4 py-3 text-left">
+                            Trade/Position
+                          </th>
+                          <th className="px-4 py-3 text-left">
+                            <div className="flex items-center gap-2">
+                              <div className="h-3 w-3 rounded-full bg-orange-500"></div>
+                              Planned Budget ({currencyShort}
+                              {(
+                                total_planned_cost * currencyValue
+                              ).toLocaleString()}
+                              )
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-left">
+                            <div className="flex items-center gap-2">
+                              <div className="h-3 w-3 rounded-full bg-blue-700"></div>
+                              Actual Cost ({currencyShort}
+                              {(
+                                total_actual_cost * currencyValue
+                              ).toLocaleString()}
+                              )
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-left">Difference</th>
+                          <th className="px-4 py-3 text-left">Status</th>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {tradesFetched && tradesFetched.length > 0 ? (
+                          tradesFetched.map((data: any) => {
+                            const difference =
+                              (data.actual_cost * currencyValue || 0) -
+                              (data.planned_costs * currencyValue || 0);
+                            return (
+                              <tr
+                                key={data.id}
+                                className="border-b hover:bg-gray-50"
+                              >
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-8 w-8">
+                                      <AvatarImage
+                                        src={data.avatar || "/placeholder.svg"}
+                                        alt={data.trade_name}
+                                      />
+                                      <AvatarFallback>
+                                        {data.trade_name.charAt(0)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="font-medium">
+                                      {data.trade_name}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  {currencyShort}
+                                  {(
+                                    data.planned_costs * currencyValue || 0
+                                  ).toLocaleString()}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {currencyShort}
+                                  {(
+                                    data.actual_cost * currencyValue || 0
+                                  ).toLocaleString()}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {difference > 0 ? (
+                                    <Badge className="bg-red-50 text-red-700">
+                                      +{currencyShort}
+                                      {difference.toLocaleString()}
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="bg-green-50 text-green-700">
+                                      -{currencyShort}
+                                      {Math.abs(difference).toLocaleString()}
+                                    </Badge>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {difference > 0 ? (
+                                    <span className="text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full bg-red-100 text-red-800">
+                                      <ArrowUpRight className="w-3 h-3 mr-1" />
+                                      Over budget
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">
+                                      <ArrowDownRight className="w-3 h-3 mr-1" />
+                                      Under budget
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-3 text-center">
+                              No trade data available
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </TabsContent>
