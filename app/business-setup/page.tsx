@@ -850,7 +850,7 @@ function EditTradeForm({
       } else {
         tradeToUpdate.daily_planned_cost = (
           editedTrade.daily_planned_cost / currencyValue
-        ).toLocaleString();
+        ).toString();
         // tradeToUpdate.monthly_planned_cost = 0; // Set default value for the other field
       }
 

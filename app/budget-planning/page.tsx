@@ -1022,6 +1022,10 @@ export default function BudgetPlanning() {
                                         <td className="px-4 py-3">
                                           <div className="flex items-center gap-2">
                                             <Avatar className="h-8 w-8">
+                                              <Input
+                                                type="search"
+                                                placeholder="Search project..."
+                                              />
                                               <AvatarImage
                                                 src={
                                                   trade.avatar ||
@@ -1270,10 +1274,12 @@ export default function BudgetPlanning() {
                           tradesFetched && tradesFetched.length > 0
                             ? tradesFetched.map((trade: any) => ({
                                 name: trade.trade_name,
-                                planned:
-                                  (trade.planned_costs || 0) * currencyValue,
-                                actual:
-                                  (trade.actual_cost || 0) * currencyValue,
+                                planned: Math.abs(
+                                  (trade.planned_costs || 0) * currencyValue
+                                ),
+                                actual: Math.abs(
+                                  (trade.actual_cost || 0) * currencyValue
+                                ),
                               }))
                             : []
                         }
@@ -1292,7 +1298,7 @@ export default function BudgetPlanning() {
                           tickFormatter={(value) =>
                             `${currencyShort}${value.toLocaleString()}`
                           }
-                          domain={["auto", "auto"]} // This flips the Y-axis
+                          domain={[0, "auto"]}
                         />
                         <Tooltip
                           formatter={customTooltipFormatter}
