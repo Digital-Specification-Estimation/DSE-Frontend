@@ -68,6 +68,17 @@ import {
   Sector,
 } from "recharts";
 import { ChartContainer } from "@/components/ui/chart";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+
+// Extend jsPDF type to include lastAutoTable
+declare module "jspdf" {
+  interface jsPDF {
+    lastAutoTable: {
+      finalY: number;
+    };
+  }
+}
 
 // Define types for better type safety
 interface Trade {
@@ -549,6 +560,409 @@ export default function BudgetPlanning() {
         return "👤";
     }
   };
+  const exportProjectReport = async (project: any) => {
+    try {
+      setIsExporting(true);
+
+      // Validate project data
+      if (!project) {
+        throw new Error("No project data available");
+      }
+
+      const doc = new jsPDF();
+
+      // Add title and project info with proper null checks
+      doc.setFontSize(18);
+      doc.setTextColor(33, 37, 41);
+      doc.text(
+        `Project Report: ${project.project_name || "Unnamed Project"}`,
+        14,
+        20
+      );
+
+      doc.setFontSize(12);
+      doc.setTextColor(73, 80, 87);
+      doc.text(
+        `Budget: ${currencyShort}${
+          (project.budget * currencyValue
+            ? project.budget * currencyValue
+            : 0
+          ).toLocaleString() || "0"
+        }`,
+        14,
+        30
+      );
+      doc.text(`Start Date: ${project.start_date || "Not specified"}`, 14, 40);
+      doc.text(`Status: ${project.status || "Active"}`, 14, 50);
+
+      // Add trades table if they exist
+      if (project.trade_positions?.length > 0) {
+        const tableData = project.trade_positions.map(
+          (trade: any, index: number) => [
+            index + 1,
+            trade.trade_name || "Unnamed Trade",
+            trade.employees?.length || 0,
+            trade.work_days || "N/A",
+            `${currencyShort}${(
+              trade.daily_planned_cost * currencyValue || 0
+            ).toLocaleString()}`,
+            `${currencyShort}${(
+              (trade.daily_planned_cost * currencyValue || 0) *
+              (trade.work_days || 0)
+            ).toLocaleString()}`,
+          ]
+        );
+
+        autoTable(doc, {
+          startY: 60,
+          head: [
+            [
+              "SN",
+              "Trade",
+              "Employees",
+              "Work Days",
+              "Daily Rate",
+              "Total Cost",
+            ],
+          ],
+          body: tableData,
+          theme: "grid",
+          headStyles: {
+            fillColor: [241, 101, 41],
+            textColor: [255, 255, 255],
+            fontStyle: "bold",
+          },
+          margin: { top: 60 },
+          styles: {
+            cellPadding: 4,
+            fontSize: 10,
+            valign: "middle",
+          },
+          columnStyles: {
+            0: { cellWidth: 10 },
+            1: { cellWidth: 40 },
+            2: { cellWidth: 25 },
+            3: { cellWidth: 25 },
+            4: { cellWidth: 30 },
+            5: { cellWidth: 30 },
+          },
+        });
+
+        // Calculate totals
+        const totalPlanned = project.trade_positions.reduce(
+          (sum: number, trade: any) =>
+            sum + (trade.daily_planned_cost || 0) * (trade.work_days || 0),
+          0
+        );
+
+        const totalEmployees = project.trade_positions.reduce(
+          (sum: number, trade: any) => sum + (trade.employees?.length || 0),
+          0
+        );
+
+        // Add summary section
+        doc.setFontSize(14);
+        doc.setTextColor(33, 37, 41);
+        doc.text("Project Summary", 14, doc.lastAutoTable.finalY + 15);
+
+        doc.setFontSize(12);
+        doc.setTextColor(73, 80, 87);
+        doc.text(
+          `Total Trades: ${project.trade_positions.length}`,
+          14,
+          doc.lastAutoTable.finalY + 25
+        );
+        doc.text(
+          `Total Employees: ${totalEmployees}`,
+          14,
+          doc.lastAutoTable.finalY + 35
+        );
+        doc.text(
+          `Total Planned Cost: ${currencyShort}${(
+            totalPlanned * currencyValue
+          ).toLocaleString()}`,
+          14,
+          doc.lastAutoTable.finalY + 45
+        );
+
+        // Add budget comparison
+        const budgetValue = project.budget ? Number(project.budget) : 0;
+        const budgetPercentage =
+          budgetValue > 0 ? (totalPlanned / budgetValue) * 100 : 0;
+        doc.text(
+          `Budget Utilization: ${budgetPercentage.toFixed(1)}%`,
+          14,
+          doc.lastAutoTable.finalY + 55
+        );
+
+        // Add visual indicator
+        doc.setFillColor(241, 101, 41);
+        doc.rect(14, doc.lastAutoTable.finalY + 60, budgetPercentage, 5, "F");
+        doc.rect(14, doc.lastAutoTable.finalY + 60, 100, 5, "S");
+      } else {
+        doc.setFontSize(12);
+        doc.text("No trades assigned to this project", 14, 60);
+      }
+
+      // Add footer
+      doc.setFontSize(10);
+      doc.setTextColor(108, 117, 125);
+      doc.text(
+        `Generated on ${new Date().toLocaleDateString()}`,
+        14,
+        doc.internal.pageSize.height - 10
+      );
+
+      // Save the PDF
+      doc.save(
+        `${(project.project_name || "project").replace(
+          /[^a-z0-9]/gi,
+          "_"
+        )}_Report.pdf`
+      );
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast({
+        title: "Export Failed",
+        description:
+          error instanceof Error ? error.message : "Failed to generate report",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const exportAllProjectsReport = async () => {
+    try {
+      setIsExporting(true);
+
+      // Validate data
+      if (!fetchedData || fetchedData.length === 0) {
+        throw new Error("No projects data available");
+      }
+
+      const doc = new jsPDF();
+      let yPosition = 20;
+
+      // Add title
+      doc.setFontSize(18);
+      doc.setTextColor(33, 37, 41);
+      doc.text("All Projects Budget Report", 14, yPosition);
+      yPosition += 10;
+
+      // Add summary
+      doc.setFontSize(12);
+      doc.setTextColor(73, 80, 87);
+      doc.text(
+        `Report Date: ${new Date().toLocaleDateString()}`,
+        14,
+        yPosition
+      );
+      yPosition += 10;
+      doc.text(`Total Projects: ${fetchedData.length}`, 14, yPosition);
+      yPosition += 15;
+
+      // Add each project's details
+      fetchedData.forEach((project: any, index: number) => {
+        // Add new page if needed
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        // Project header
+        doc.setFontSize(14);
+        doc.setTextColor(33, 37, 41);
+        doc.text(
+          `${index + 1}. ${project.project_name || "Unnamed Project"}`,
+          14,
+          yPosition
+        );
+        yPosition += 10;
+
+        // Project details
+        doc.setFontSize(12);
+        doc.setTextColor(73, 80, 87);
+        doc.text(
+          `Budget: ${currencyShort}${
+            (project.budget * currencyValue
+              ? project.budget * currencyValue
+              : 0
+            ).toLocaleString() || "0"
+          }`,
+          14,
+          yPosition
+        );
+        doc.text(`Status: ${project.status || "Active"}`, 100, yPosition);
+        yPosition += 10;
+
+        // Add trades table if they exist
+        if (project.trade_positions?.length > 0) {
+          const tableData = project.trade_positions.map((trade: any) => [
+            trade.trade_name || "Unnamed Trade",
+            trade.employees?.length || 0,
+            trade.work_days || "N/A",
+            `${currencyShort}${(
+              trade.daily_planned_cost * currencyValue || 0
+            ).toLocaleString()}`,
+            `${currencyShort}${(
+              (trade.daily_planned_cost * currencyValue || 0) *
+              (trade.work_days || 0)
+            ).toLocaleString()}`,
+          ]);
+
+          autoTable(doc, {
+            startY: yPosition,
+            head: [
+              ["Trade", "Employees", "Work Days", "Daily Rate", "Total Cost"],
+            ],
+            body: tableData,
+            theme: "grid",
+            headStyles: {
+              fillColor: [13, 110, 253],
+              textColor: [255, 255, 255],
+              fontStyle: "bold",
+            },
+            margin: { top: yPosition },
+            styles: {
+              cellPadding: 3,
+              fontSize: 9,
+              valign: "middle",
+            },
+            columnStyles: {
+              0: { cellWidth: 40 },
+              1: { cellWidth: 20 },
+              2: { cellWidth: 20 },
+              3: { cellWidth: 25 },
+              4: { cellWidth: 30 },
+            },
+          });
+
+          yPosition = doc.lastAutoTable.finalY + 10;
+
+          // Calculate project totals
+          const totalPlanned = project.trade_positions.reduce(
+            (sum: number, trade: any) =>
+              sum + (trade.daily_planned_cost || 0) * (trade.work_days || 0),
+            0
+          );
+
+          doc.setFontSize(11);
+          doc.setTextColor(33, 37, 41);
+          doc.text(
+            `Total Planned Cost: ${currencyShort}${(
+              totalPlanned * currencyValue
+            ).toLocaleString()}`,
+            14,
+            yPosition
+          );
+          doc.text(
+            `Budget Utilization: ${(project.budget
+              ? (totalPlanned / Number(project.budget)) * 100
+              : 0
+            ).toFixed(1)}%`,
+            100,
+            yPosition
+          );
+          yPosition += 15;
+        } else {
+          doc.setFontSize(11);
+          doc.text("No trades assigned", 14, yPosition);
+          yPosition += 20;
+        }
+
+        // Add separator
+        doc.setDrawColor(222, 226, 230);
+        doc.line(14, yPosition, doc.internal.pageSize.width - 14, yPosition);
+        yPosition += 10;
+      });
+
+      // Add summary statistics
+      if (yPosition > 220) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setTextColor(33, 37, 41);
+      doc.text("Summary Statistics", 14, yPosition);
+      yPosition += 15;
+
+      const totalBudget = fetchedData.reduce(
+        (sum: number, project: any) => sum + (Number(project.budget) || 0),
+        0
+      );
+      const totalPlannedCost = fetchedData.reduce(
+        (sum: number, project: any) => {
+          return (
+            sum +
+            (project.trade_positions?.reduce(
+              (tradeSum: number, trade: any) =>
+                tradeSum +
+                (trade.daily_planned_cost || 0) * (trade.work_days || 0),
+              0
+            ) || 0)
+          );
+        },
+        0
+      );
+
+      doc.setFontSize(12);
+      doc.text(
+        `Total Budget Across Projects: ${currencyShort}${(
+          totalBudget * currencyValue
+        ).toLocaleString()}`,
+        14,
+        yPosition
+      );
+      yPosition += 10;
+      doc.text(
+        `Total Planned Costs: ${currencyShort}${(
+          totalPlannedCost * currencyValue
+        ).toLocaleString()}`,
+        14,
+        yPosition
+      );
+      yPosition += 10;
+      doc.text(
+        `Overall Budget Utilization: ${(totalBudget > 0
+          ? (totalPlannedCost / totalBudget) * 100
+          : 0
+        ).toFixed(1)}%`,
+        14,
+        yPosition
+      );
+      yPosition += 20;
+
+      // Add footer
+      doc.setFontSize(10);
+      doc.setTextColor(108, 117, 125);
+      doc.text(
+        `Generated on ${new Date().toLocaleDateString()}`,
+        14,
+        doc.internal.pageSize.height - 10
+      );
+
+      // Save the PDF
+      doc.save("All_Projects_Report.pdf");
+
+      toast({
+        title: "Export Successful",
+        description: "All projects report has been generated",
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast({
+        title: "Export Failed",
+        description:
+          error instanceof Error ? error.message : "Failed to generate report",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Filter projects based on search term
   const filteredProjects = projects.filter((project) => {
@@ -821,24 +1235,47 @@ export default function BudgetPlanning() {
 
             <div className="flex gap-2">
               {(permissions.full_access || permissions.generate_reports) && (
-                <Button
-                  variant="outline"
-                  className="gap-2 h-12 rounded-full"
-                  onClick={handleExportReport}
-                  disabled={isExporting}
-                >
-                  {isExporting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Exporting...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="h-4 w-4" />
-                      Export Report
-                    </>
-                  )}
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="gap-2 h-12 rounded-full"
+                      disabled={isExporting}
+                    >
+                      {isExporting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Exporting...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4" />
+                          Export Report
+                        </>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={exportAllProjectsReport}
+                      disabled={!fetchedData || fetchedData.length === 0}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Export All Projects
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (fetchedData && fetchedData.length > 0) {
+                          exportProjectReport(fetchedData[0]);
+                        }
+                      }}
+                      disabled={!fetchedData || fetchedData.length === 0}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Export Current Project
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
               <Button
                 onClick={() => {
@@ -977,7 +1414,19 @@ export default function BudgetPlanning() {
                                 : " "}
                             </span>
                           </div>
-                          <div className="ml-auto">
+                          <div className="ml-auto flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                exportProjectReport(project);
+                              }}
+                              disabled={isExporting}
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Export
+                            </Button>
                             {expandedProjectIds.includes(project.id) ? (
                               <ChevronUp className="h-5 w-5 text-gray-500" />
                             ) : (
