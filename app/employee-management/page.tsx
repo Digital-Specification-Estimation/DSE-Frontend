@@ -3,6 +3,7 @@
 import type React from "react";
 
 import { useEffect, useState } from "react";
+import { parse } from "papaparse";
 import {
   Search,
   Upload,
@@ -65,6 +66,11 @@ export interface NewEmployee {
 const projects = ["Metro Bridge", "Mall Construction"];
 
 export default function EmployeeManagement() {
+  const [csvUploadModal, setCsvUploadModal] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvParseError, setCsvParseError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   const [permissions, setPermissions] = useState({
     approve_attendance: false,
     approve_leaves: true,
@@ -106,7 +112,7 @@ export default function EmployeeManagement() {
       }
     }
   }, [sessionData.user.settings, sessionData.user.current_role]);
-  console.log("permissions", permissions);
+  console.log("permissions0", permissions);
   const splitCurrencyValue = (str: string | undefined | null) => {
     if (!str) return null; // return early if str is undefined or null
     const match = str.match(/^([A-Z]+)([\d.]+)$/);
@@ -166,7 +172,97 @@ export default function EmployeeManagement() {
     // Skip fetch if session isn't loaded yet to prevent unnecessary requests
     skip: isSessionLoading,
   });
+  const handleCsvUpload = async () => {
+    if (!csvFile) return;
 
+    setIsUploading(true);
+    setCsvParseError(null);
+
+    try {
+      const text = await csvFile.text();
+      const results = parse(text, {
+        header: true,
+        skipEmptyLines: true,
+      });
+
+      if (results.errors.length > 0) {
+        throw new Error(results.errors[0].message || "CSV parsing error");
+      }
+
+      const requiredHeaders = [
+        "username",
+        "trade_position_id",
+        "daily_rate",
+        "contract_finish_date",
+        "days_projection",
+        "budget_baseline",
+        "company_id",
+      ];
+
+      const missingHeaders = requiredHeaders.filter(
+        (h) => !results.meta.fields?.includes(h)
+      );
+
+      if (missingHeaders.length > 0) {
+        throw new Error(
+          `Missing required columns: ${missingHeaders.join(", ")}`
+        );
+      }
+
+      const employeesToAdd = results.data.map((row: any) => ({
+        username: row.username,
+        trade_position_id: row.trade_position_id,
+        daily_rate: row.daily_rate,
+        contract_finish_date: row.contract_finish_date,
+        days_projection: row.days_projection
+          ? parseInt(row.days_projection)
+          : undefined,
+        budget_baseline: row.budget_baseline,
+        // company_id: row.company_id,
+      }));
+
+      // Process employees sequentially to avoid overwhelming the server
+      const addedEmployees = [];
+      for (const employee of employeesToAdd) {
+        try {
+          const result = await addEmployee(employee).unwrap();
+          addedEmployees.push(result);
+        } catch (error) {
+          console.error(`Error adding employee ${employee.username}:`, error);
+          // Continue with next employee even if one fails
+        }
+      }
+
+      if (addedEmployees.length > 0) {
+        toast({
+          title: "Success",
+          description: `${addedEmployees.length} employees added successfully!`,
+        });
+      }
+
+      if (addedEmployees.length < employeesToAdd.length) {
+        toast({
+          title: "Partial Success",
+          description: `Added ${addedEmployees.length} of ${employeesToAdd.length} employees. Some may have failed.`,
+          variant: "default",
+        });
+      }
+
+      setCsvUploadModal(false);
+      setCsvFile(null);
+      refetchEmployees();
+    } catch (error: any) {
+      console.error("CSV upload error:", error);
+      setCsvParseError(error.message || "Failed to parse CSV file");
+      toast({
+        title: "Error",
+        description: "Failed to upload employees from CSV",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
   // Using keepUnusedDataFor option in RTK Query would be ideal to keep data for longer
   // but can't do it inline, would need to be in the API slice configuration
 
@@ -614,7 +710,7 @@ export default function EmployeeManagement() {
     sessionRefetch();
     refetchTrades();
   };
-
+  console.log("permissions", permissions);
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
@@ -628,7 +724,11 @@ export default function EmployeeManagement() {
 
             <div className="flex gap-2">
               {(permissions.generate_reports || permissions.full_access) && (
-                <Button variant="outline" className="gap-2 h-12 rounded-full">
+                <Button
+                  variant="outline"
+                  className="gap-2 h-12 rounded-full"
+                  onClick={() => setCsvUploadModal(true)}
+                >
                   <Upload className="h-4 w-4" />
                   Upload CSV
                 </Button>
@@ -847,7 +947,82 @@ export default function EmployeeManagement() {
           )}
         </main>
       </div>
+      {csvUploadModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Upload CSV</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setCsvUploadModal(false);
+                  setCsvFile(null);
+                  setCsvParseError(null);
+                }}
+              >
+                &times;
+              </Button>
+            </div>
 
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Upload a CSV file with employee data. Download the template
+                  below.
+                </p>
+                <a
+                  href="/employee-template.csv"
+                  download="employee-template.csv"
+                  className="text-primary underline text-sm"
+                >
+                  Download CSV Template
+                </a>
+              </div>
+
+              <div className="border border-dashed rounded-lg p-4">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                  className="block w-full text-sm text-muted-foreground"
+                />
+              </div>
+
+              {csvParseError && (
+                <div className="text-red-500 text-sm">{csvParseError}</div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setCsvUploadModal(false);
+                    setCsvFile(null);
+                    setCsvParseError(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCsvUpload}
+                  disabled={!csvFile || isUploading}
+                  className="bg-orange-500 hover:bg-orange-600"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    "Upload CSV"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Add Employee Sheet */}
       {showAddEmployee && (
         <div className="fixed inset-0 bg-black/50 flex justify-end z-50">
