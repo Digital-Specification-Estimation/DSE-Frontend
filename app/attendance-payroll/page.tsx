@@ -7,7 +7,15 @@ import {
   ChevronDown,
   FileText,
   FileCheck,
+  Edit,
 } from "lucide-react";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +41,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
 import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
-import { useEditUserStatusMutation } from "@/lib/redux/attendanceSlice";
+import {
+  useAddReasonMutation,
+  useEditUserStatusMutation,
+} from "@/lib/redux/attendanceSlice";
 import { useSessionQuery } from "@/lib/redux/authSlice";
 import { useGetProjectsQuery } from "@/lib/redux/projectSlice";
 
@@ -61,6 +72,11 @@ export default function AttendancePayroll() {
     view_payslip: false,
     view_reports: false,
   });
+  const [newReason, setNewReason] = useState({
+    employee_id: "",
+    reason: "",
+    date: "",
+  });
   const {
     data: sessionData = { user: {} },
     isLoading: isSessionLoading,
@@ -72,6 +88,7 @@ export default function AttendancePayroll() {
     refetchOnReconnect: true,
     skip: false,
   });
+  const [addReason, { isLoading: isAdding }] = useAddReasonMutation();
   useEffect(() => {
     if (sessionData?.user?.settings && sessionData.user.current_role) {
       const userPermission = sessionData.user.settings.find(
@@ -113,6 +130,7 @@ export default function AttendancePayroll() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentMonth, setCurrentMonth] = useState("May 2025");
   const [showFilters, setShowFilters] = useState(true);
+  const [showAddReason, setShowAddReason] = useState(false);
   const [openAttendanceDropdown, setOpenAttendanceDropdown] = useState<
     number | null
   >(null);
@@ -148,7 +166,10 @@ export default function AttendancePayroll() {
     useGetTradesQuery(undefined, {
       refetchOnMountOrArgChange: true,
     });
-
+  const handleAddReason = (employee_id: string) => {
+    setShowAddReason(true);
+    setNewReason({ ...newReason, employee_id });
+  };
   // Create a new RTK Query hook for projects
   const { data: projectsFetched = [], isLoading: isLoadingProjects } =
     useGetProjectsQuery(undefined, {
@@ -343,6 +364,28 @@ export default function AttendancePayroll() {
       setIsGeneratingPayslips(false);
     }
   };
+  const handleAddReasonSubmit = async () => {
+    try {
+      console.log("newReasonObject", newReason);
+      await addReason(newReason).unwrap();
+
+      setNewReason({ employee_id: "", reason: "", date: "" });
+      refetch();
+      setShowAddReason(false);
+
+      toast({
+        title: "Reason adding",
+        description: `Successfully added the reason to the user`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Process Failed",
+        description: error.data.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const generateSinglePayslip = (employee: any) => {
     const doc = new jsPDF();
 
@@ -1639,7 +1682,7 @@ export default function AttendancePayroll() {
                           <th className="px-4 py-3 text-left border-r">
                             Planned vs Actual
                           </th>
-                          <th className="w-10 px-4 py-3 text-center"></th>
+                          {/* <th className="w-10 px-4 py-3 text-center"></th> */}
                         </tr>
                       </thead>
                       <tbody className="text-xs">
@@ -1710,7 +1753,7 @@ export default function AttendancePayroll() {
                                 </Badge>
                               )}
                             </td>
-                            <td className="px-4 py-3 text-center">
+                            {/* <td className="px-4 py-3 text-center">
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -1738,7 +1781,7 @@ export default function AttendancePayroll() {
                                   <circle cx="12" cy="19" r="1" />
                                 </svg>
                               </Button>
-                            </td>
+                            </td> */}
                           </tr>
                         ))}
                       </tbody>
@@ -1800,33 +1843,15 @@ export default function AttendancePayroll() {
                             {employee.unpaidDays}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <Button
-                              variant="ghost"
-                              size="icon"
+                            <span
+                              className="w-[100px] flex flex-row items-center align-middle justify-center hover:cursor-pointer"
                               onClick={() => {
-                                toast({
-                                  title: "Leave Management",
-                                  description: `Managing leave for ${employee.username}`,
-                                });
+                                handleAddReason(employee.id);
                               }}
                             >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="text-muted-foreground"
-                              >
-                                <circle cx="12" cy="12" r="1" />
-                                <circle cx="12" cy="5" r="1" />
-                                <circle cx="12" cy="19" r="1" />
-                              </svg>
-                            </Button>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Add Reason
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -1836,6 +1861,100 @@ export default function AttendancePayroll() {
               )}
             </>
           )}
+          <Dialog open={showAddReason} onOpenChange={setShowAddReason}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Edit Employee</DialogTitle>
+              </DialogHeader>
+              {/* <form
+                                  onSubmit={handleAddReasonSubmit}
+                                  className="space-y-4 pt-4"
+                                > */}
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="edit-username"
+                    className="text-sm font-medium"
+                  >
+                    reason
+                  </label>
+                  <div className="relative w-[300px]">
+                    <Select
+                      value={newReason.reason}
+                      onValueChange={(value) =>
+                        setNewReason({
+                          ...newReason,
+                          reason: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sick">sick</SelectItem>
+
+                        <SelectItem value="vacation">vacation</SelectItem>
+                        <SelectItem value="unpaid leave">
+                          unpaid leave
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="edit-contract-finish-date"
+                    className="text-sm font-medium"
+                  >
+                    Date
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="edit-date"
+                      name="date"
+                      type="date"
+                      value={newReason.date}
+                      onChange={(e) =>
+                        setNewReason({
+                          ...newReason,
+                          date: e.target.value,
+                        })
+                      }
+                      className="w-full py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowAddReason(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    // type="submit"
+                    className="bg-orange-500 hover:bg-orange-600"
+                    disabled={isAdding}
+                    onClick={handleAddReasonSubmit}
+                  >
+                    {isAdding ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      "Add Reason"
+                    )}
+                  </Button>
+                </div>
+                {/* </form> */}
+              </div>
+            </DialogContent>
+          </Dialog>
         </main>
       </div>
     </div>

@@ -65,7 +65,7 @@ export function Sidebar({ user }: SidebarProps) {
       setUserData(sessionData.user);
     }
   }, [sessionData]);
-  console.log(sessionData);
+  // console.log(sessionData);
 
   // Effect to check authentication on mount and reload
   useEffect(() => {

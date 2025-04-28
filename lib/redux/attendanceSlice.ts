@@ -39,7 +39,7 @@ export const attendanceApi = createApi({
     addReason: builder.mutation({
       query: (data) => ({
         url: "reason",
-        method: "PATCH",
+        method: "PUT",
         body: data,
       }),
     }),

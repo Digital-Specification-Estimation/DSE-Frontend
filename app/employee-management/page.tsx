@@ -1478,7 +1478,7 @@ export default function EmployeeManagement() {
                 variant="outline"
                 onClick={() => setShowEditEmployee(false)}
               >
-                Cancel
+                module Cancel
               </Button>
               <Button
                 type="submit"
