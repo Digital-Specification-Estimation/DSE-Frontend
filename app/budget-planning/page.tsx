@@ -1315,7 +1315,7 @@ export default function BudgetPlanning() {
             <TabsContent value="plan" className="p-0 mt-0">
               <div className="flex justify-between items-center mb-4">
                 <div className="relative">
-                  <Select
+                  {/* <Select
                     defaultValue="This Month"
                     onValueChange={handleTimeFilterChange}
                   >
@@ -1327,8 +1327,8 @@ export default function BudgetPlanning() {
                       <SelectItem value="Last Month">Last Month</SelectItem>
                       <SelectItem value="This Quarter">This Quarter</SelectItem>
                       <SelectItem value="This Year">This Year</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    </SelectContent>  
+                  </Select> */}
                 </div>
 
                 <div className="relative w-64">
