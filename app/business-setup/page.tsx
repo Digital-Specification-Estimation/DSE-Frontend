@@ -1019,6 +1019,22 @@ function DeleteTradeConfirmation({
     </div>
   );
 }
+const formatDate = (inputDate: any) => {
+  if (!inputDate) return ""; // handle empty input
+
+  // assume input is like "23/04/2025"
+  const parts = inputDate.split("/");
+
+  if (parts.length !== 3) return ""; // invalid format
+
+  const [day, month, year] = parts;
+
+  // make sure day and month are two digits
+  const formattedDay = day.padStart(2, "0");
+  const formattedMonth = month.padStart(2, "0");
+
+  return `${year}-${formattedMonth}-${formattedDay}`;
+};
 
 // Edit Project Form
 function EditProjectForm({
@@ -1033,6 +1049,7 @@ function EditProjectForm({
   refetchProjects: () => void;
 }) {
   const { toast } = useToast();
+  console.log("project", project);
   const [editedProject, setEditedProject] = useState<NewProject>({
     project_name: project.project_name,
     location_name: project.location_name,
@@ -1151,24 +1168,36 @@ function EditProjectForm({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium">Start Date</label>
-          <Input
+
+          <input
+            id="edit-start-date"
             name="start_date"
-            id="start_date"
             type="date"
-            value={editedProject.start_date}
+            value={
+              editedProject.start_date
+                ? formatDate(editedProject.start_date)
+                : ""
+            }
             onChange={(e) =>
               setEditedProject({ ...editedProject, start_date: e.target.value })
             }
+            className="w-full pl-2 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">End Date</label>
-          <Input
+
+          <input
+            id="edit-end-date"
+            name="end_date"
             type="date"
-            value={editedProject.end_date}
+            value={
+              editedProject.end_date ? formatDate(editedProject.end_date) : ""
+            }
             onChange={(e) =>
               setEditedProject({ ...editedProject, end_date: e.target.value })
             }
+            className="w-full pl-2 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
       </div>
