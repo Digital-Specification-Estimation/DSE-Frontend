@@ -1410,8 +1410,10 @@ export default function BudgetPlanning() {
                             <span className="text-sm bg-gray-100 px-2 py-0.5 rounded-full">
                               {currencyShort}
                               {project.budget * currencyValue
-                                ? project.budget * currencyValue
-                                : " "}
+                                ? (
+                                    project.budget * currencyValue
+                                  ).toLocaleString()
+                                : "0"}
                             </span>
                           </div>
                           <div className="ml-auto flex items-center gap-2">
@@ -1732,7 +1734,7 @@ export default function BudgetPlanning() {
                               }))
                             : []
                         }
-                        margin={{ top: 20, right: 30, left: 30, bottom: 0 }}
+                        margin={{ top: 20, right: 30, left: 70, bottom: 0 }}
                       >
                         <CartesianGrid stroke="#f5f5f5" strokeDasharray="3 3" />
                         <XAxis

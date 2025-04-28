@@ -418,7 +418,7 @@ export default function AttendancePayroll() {
 
     // Format currency helper
     const formatCurrency = (value: number) =>
-      `${currencyValue}${value.toFixed(2).toLocaleString()}`;
+      `${currencyValue}${value.toLocaleString()}`;
 
     // Employee information
     doc.setFontSize(12);
@@ -591,19 +591,18 @@ export default function AttendancePayroll() {
           ["Total Days Worked", totalDays],
           [
             "Total Budget",
-            `${currencyShort}${(totalBudget * currencyValue)
-              .toFixed(2)
-              .toLocaleString()}`,
+            `${currencyShort}${(totalBudget * currencyValue).toLocaleString()}`,
           ],
           [
             "Total Actual Payroll",
-            `${currencyShort}${totalActual.toFixed(2).toLocaleString()}`,
+            `${currencyShort}${totalActual.toLocaleString()}`,
           ],
           [
             "Variance",
-            `${currencyShort}${((totalBudget - totalActual) * currencyValue)
-              .toFixed(2)
-              .toLocaleString()}`,
+            `${currencyShort}${(
+              (totalBudget - totalActual) *
+              currencyValue
+            ).toLocaleString()}`,
           ],
         ],
         theme: "grid",
@@ -629,13 +628,9 @@ export default function AttendancePayroll() {
           return [
             employee.username,
             employee.trade_position?.trade_name || "N/A",
-            `${currencyShort}${(dailyRate * currencyValue)
-              .toFixed(2)
-              .toLocaleString()}`,
+            `${currencyShort}${(dailyRate * currencyValue).toLocaleString()}`,
             daysWorked,
-            `${currencyShort}${(earnings * currencyValue)
-              .toFixed(2)
-              .toLocaleString()}`,
+            `${currencyShort}${(earnings * currencyValue).toLocaleString()}`,
           ];
         }
       );

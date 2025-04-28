@@ -9,7 +9,7 @@ import type React from "react";
 export type NewProject = {
   project_name?: string;
   location_name?: string;
-  currency?: string;
+  budget?: number;
   start_date?: string;
   end_date?: string;
 };
@@ -343,6 +343,8 @@ function TradeForm({
 function ProjectForm({
   onClose,
   refetchProjects,
+  currencyShort,
+  currencyValue,
 }: {
   onClose: () => void;
   refetchProjects: () => void;
@@ -351,7 +353,7 @@ function ProjectForm({
   const [newProject, setNewProject] = useState<any>({
     project_name: "",
     location_name: "",
-    // currency: "USD",
+    budget: 0,
     start_date: "",
     end_date: "",
   });
@@ -364,6 +366,7 @@ function ProjectForm({
       if (
         !newProject.project_name?.trim() ||
         !newProject.location_name?.trim() ||
+        !newProject.budget ||
         !newProject.start_date ||
         !newProject.end_date
       ) {
@@ -376,7 +379,10 @@ function ProjectForm({
       }
 
       // Use RTK Query mutation
-      await addProject(newProject).unwrap();
+      await addProject({
+        ...newProject,
+        budget: (newProject.budget / currencyValue).toString(),
+      }).unwrap();
 
       // Explicitly refetch projects after successful addition
       refetchProjects();
@@ -384,7 +390,7 @@ function ProjectForm({
       setNewProject({
         project_name: "",
         location_name: "",
-        // currency: "USD",
+        budget: 0,
         start_date: "",
         end_date: "",
       });
@@ -417,6 +423,17 @@ function ProjectForm({
         />
       </div>
       <div className="space-y-2">
+        <label className="text-sm font-medium">Budget</label>
+        <Input
+          placeholder="5000"
+          value={newProject.budget}
+          type="number"
+          onChange={(e) =>
+            setNewProject({ ...newProject, budget: e.target.value })
+          }
+        />
+      </div>
+      <div className="space-y-2">
         <label className="text-sm font-medium">Select Location</label>
         <Select
           value={newProject.location_name}
@@ -436,24 +453,7 @@ function ProjectForm({
           </SelectContent>
         </Select>
       </div>
-      {/* <div className="space-y-2">
-        <label className="text-sm font-medium">Select Currency</label>
-        <Select
-          value={newProject.currency}
-          onValueChange={(value) =>
-            setNewProject({ ...newProject, currency: value })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="USD">USD</SelectItem>
-            <SelectItem value="EUR">EUR</SelectItem>
-            <SelectItem value="GBP">GBP</SelectItem>
-          </SelectContent>
-        </Select>
-      </div> */}
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium">Start Date</label>
@@ -1025,6 +1025,8 @@ function EditProjectForm({
   project,
   onClose,
   refetchProjects,
+  currencyValue,
+  currencyShort,
 }: {
   project: any;
   onClose: () => void;
@@ -1034,7 +1036,7 @@ function EditProjectForm({
   const [editedProject, setEditedProject] = useState<NewProject>({
     project_name: project.project_name,
     location_name: project.location_name,
-    // currency: project.currency,
+    budget: project.budget * currencyValue,
     start_date: project.start_date,
     end_date: project.end_date,
   });
@@ -1048,6 +1050,7 @@ function EditProjectForm({
       if (
         !editedProject.project_name?.trim() ||
         !editedProject.location_name?.trim() ||
+        !editedProject.budget ||
         !editedProject.start_date ||
         !editedProject.end_date
       ) {
@@ -1059,7 +1062,11 @@ function EditProjectForm({
         return;
       }
 
-      await updateProject({ id: project.id, ...editedProject }).unwrap();
+      await updateProject({
+        id: project.id,
+        ...editedProject,
+        budget: (editedProject.budget / currencyValue).toString(),
+      }).unwrap();
       refetchProjects();
       onClose();
 
@@ -1086,6 +1093,20 @@ function EditProjectForm({
           value={editedProject.project_name}
           onChange={(e) =>
             setEditedProject({ ...editedProject, project_name: e.target.value })
+          }
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Budget</label>
+        <Input
+          placeholder="5000"
+          type="number"
+          value={editedProject.budget}
+          onChange={(e) =>
+            setEditedProject({
+              ...editedProject,
+              budget: Number(e.target.value),
+            })
           }
         />
       </div>
@@ -1558,7 +1579,7 @@ export default function BusinessSetup() {
                         headers={[
                           "Project Name",
                           "Location Name",
-                          // "Currency",
+                          "Budget",
                           "Start Date",
                           "End Date",
                         ]}
@@ -1582,16 +1603,14 @@ export default function BusinessSetup() {
                             <td className="px-4 py-3">
                               {project.location_name}
                             </td>
-                            {/* <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <img
-                                  src="/placeholder.svg?height=20&width=20"
-                                  alt="USD"
-                                  className="w-5 h-5 rounded-full"
-                                />
-                                {project.currency}
-                              </div>
-                            </td> */}
+                            <td className="px-4 py-3">
+                              {currencyShort}{" "}
+                              {(
+                                (project.budget ? project.budget : 0) *
+                                currencyValue
+                              ).toLocaleString()}
+                            </td>
+
                             <td className="px-4 py-3">{project.start_date}</td>
                             <td className="px-4 py-3">{project.end_date}</td>
                           </>
@@ -1644,6 +1663,8 @@ export default function BusinessSetup() {
           <ProjectForm
             onClose={() => setShowAddProject(false)}
             refetchProjects={refetchProjects}
+            currencyShort={currencyShort}
+            currencyValue={currencyValue}
           />
         </DialogContent>
       </Dialog>
@@ -1726,6 +1747,8 @@ export default function BusinessSetup() {
               project={selectedItem}
               onClose={() => setShowEditProject(false)}
               refetchProjects={refetchProjects}
+              currencyShort={currencyShort}
+              currencyValue={currencyValue}
             />
           )}
         </DialogContent>
