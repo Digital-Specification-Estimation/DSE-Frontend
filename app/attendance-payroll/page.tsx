@@ -26,6 +26,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import DashboardHeader from "@/components/DashboardHeader";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
@@ -273,60 +276,352 @@ export default function AttendancePayroll() {
   };
 
   // Generate payslips using fetch
+  // Function to handle payslip generation for all employees
   const handleGeneratePayslips = async () => {
+    if (!employees || employees.length === 0) {
+      toast({
+        title: "No Employees",
+        description: "There are no employees to generate payslips for.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsGeneratingPayslips(true);
 
-      // API call
-      await fetch(API_ENDPOINTS.GENERATE_PAYSLIPS, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employeeIds: employees.map((e: any) => e.id) }),
+      toast({
+        title: "Generating Payslips",
+        description:
+          "Please wait while we generate payslips for all employees...",
       });
 
+      // Small delay to allow UI to update
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Generate payslip for each employee
+      for (const employee of employees) {
+        try {
+          const doc = generateSinglePayslip(employee);
+          doc.save(
+            `payslip-${employee.username.replace(
+              /\s+/g,
+              "-"
+            )}-${Date.now()}.pdf`
+          );
+
+          // Small delay between each PDF
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        } catch (error) {
+          console.error(
+            `Error generating payslip for ${employee.username}:`,
+            error
+          );
+          toast({
+            title: `Error with ${employee.username}`,
+            description: "Skipping to next employee...",
+            variant: "destructive",
+          });
+        }
+      }
+
       setIsGeneratingPayslips(false);
+
       toast({
         title: "Payslips Generated",
-        description:
-          "Payslips have been generated successfully and are ready for download.",
+        description: `Successfully processed ${employees.length} employees.`,
       });
     } catch (error) {
-      console.error("Error generating payslips:", error);
+      console.error("Error in payslip generation process:", error);
+
       toast({
-        title: "Error",
-        description: "Failed to generate payslips. Please try again.",
+        title: "Process Failed",
+        description: "The payslip generation process encountered an error.",
         variant: "destructive",
       });
+
       setIsGeneratingPayslips(false);
     }
   };
+  const generateSinglePayslip = (employee: any) => {
+    const doc = new jsPDF();
 
+    // Set document properties
+    doc.setProperties({
+      title: `Payslip - ${employee.username}`,
+      subject: "Employee Payslip",
+      author: "Construction Company",
+      creator: "Payroll System",
+    });
+
+    // Add company header
+    doc.setFontSize(20);
+    doc.setTextColor(33, 33, 33);
+    doc.text("CONSTRUCTION COMPANY", 105, 20, { align: "center" });
+    doc.setFontSize(14);
+    doc.text("EMPLOYEE PAYSLIP", 105, 30, { align: "center" });
+
+    // Add date
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 40, {
+      align: "center",
+    });
+
+    // Calculate payroll values
+    const daysWorked = employee.attendance?.length || 0;
+    const dailyRate = Number(employee.daily_rate) || 100;
+    const totalEarnings = dailyRate * daysWorked;
+    const netPay = totalEarnings;
+
+    // Format currency helper
+    const formatCurrency = (value: number) =>
+      `${currencyValue}${value.toFixed(2).toLocaleString()}`;
+
+    // Employee information
+    doc.setFontSize(12);
+    doc.text("Employee Information", 20, 55);
+    doc.setFontSize(10);
+    doc.text(`Name: ${employee.username}`, 20, 65);
+    doc.text(
+      `Position: ${employee.trade_position?.trade_name || "N/A"}`,
+      20,
+      72
+    );
+    doc.text(`Employee ID: ${employee.id}`, 20, 79);
+
+    // Pay period
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    doc.setFontSize(12);
+    doc.text("Pay Period", 120, 55);
+    doc.setFontSize(10);
+    doc.text(`From: ${firstDay.toLocaleDateString()}`, 120, 65);
+    doc.text(`To: ${lastDay.toLocaleDateString()}`, 120, 72);
+
+    // Earnings table
+    doc.setFontSize(12);
+    doc.text("Earnings", 20, 95);
+    autoTable(doc, {
+      startY: 100,
+      head: [["Description", "Rate", "Units", "Amount"]],
+      body: [
+        [
+          "Regular Pay",
+          formatCurrency(dailyRate * currencyValue),
+          `${daysWorked} days`,
+          formatCurrency(totalEarnings * currencyValue),
+        ],
+        [
+          "Overtime",
+          `${currencyShort}0.00`,
+          `${currencyShort}0 hours`,
+          `${currencyShort}0.00`,
+        ],
+        // ["Bonus", "", "", "$0.00"],
+        [
+          "",
+          "",
+          "Total Earnings",
+          formatCurrency(totalEarnings * currencyValue),
+        ],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [66, 66, 66] },
+    });
+
+    // Deductions table
+    // const finalY = (doc as any).lastAutoTable.finalY + 10;
+    // doc.setFontSize(12);
+    // doc.text("Deductions", 20, finalY);
+    // autoTable(doc, {
+    //   startY: finalY + 5,
+    //   head: [["Description", "Amount"]],
+    //   body: [
+    //     ["Tax", formatCurrency(taxDeduction)],
+    //     ["Insurance", formatCurrency(insuranceDeduction)],
+    //     ["", formatCurrency(totalDeductions)],
+    //   ],
+    //   theme: "grid",
+    //   headStyles: { fillColor: [66, 66, 66] },
+    // });
+    // Net pay section
+    const finalY2 = (doc as any).lastAutoTable.finalY + 10;
+    autoTable(doc, {
+      startY: finalY2,
+      head: [["Net Pay", formatCurrency(netPay)]],
+      body: [],
+      theme: "grid",
+      headStyles: {
+        fillColor: [33, 33, 33],
+        fontSize: 14,
+        halign: "center",
+      },
+    });
+
+    // Footer
+    doc.setFontSize(8);
+    doc.text(
+      "This is a computer-generated document and does not require a signature.",
+      105,
+      doc.internal.pageSize.height - 10,
+      { align: "center" }
+    );
+
+    return doc;
+  };
   // console.log("permissions", permissions);
   // Generate payroll report using fetch
   const handleGenerateReport = async () => {
+    if (!employees || employees.length === 0) {
+      toast({
+        title: "No Data",
+        description: "There is no employee data to generate a report.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsGeneratingReport(true);
 
-      // API call
-      const response = await fetch(API_ENDPOINTS.PAYROLL_REPORT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filters }),
+      toast({
+        title: "Generating Report",
+        description: "Please wait while we generate your payroll report...",
       });
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "payroll-report.pdf";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      // Create a new PDF document
+      const doc = new jsPDF();
+
+      // Set document properties
+      doc.setProperties({
+        title: "Payroll Report",
+        subject: "Monthly Payroll Summary",
+        author: "Construction Company",
+        creator: "Payroll System",
+      });
+
+      // Add company header
+      doc.setFontSize(20);
+      doc.setTextColor(33, 33, 33);
+      doc.text("CONSTRUCTION COMPANY", 105, 20, { align: "center" });
+      doc.setFontSize(14);
+      doc.text("PAYROLL REPORT", 105, 30, { align: "center" });
+
+      // Add date
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 40, {
+        align: "center",
+      });
+
+      // Calculate totals
+      let totalBudget = 0;
+      let totalActual = 0;
+      let totalDays = 0;
+      let totalEarnings = 0;
+
+      employees.forEach(
+        (employee: {
+          attendance: string | any[];
+          daily_rate: any;
+          budget_baseline: any;
+        }) => {
+          const daysWorked = employee.attendance?.length || 0;
+          const dailyRate = Number(employee.daily_rate) || 0;
+          totalBudget += Number(employee.budget_baseline) || 0;
+          totalActual += daysWorked * dailyRate;
+          totalDays += daysWorked;
+          totalEarnings += daysWorked * dailyRate;
+        }
+      );
+
+      // Add summary section
+      doc.setFontSize(12);
+      doc.text("Payroll Summary", 20, 55);
+
+      autoTable(doc, {
+        startY: 60,
+        head: [["Metric", "Value"]],
+        body: [
+          ["Total Employees", employees.length],
+          ["Total Days Worked", totalDays],
+          [
+            "Total Budget",
+            `${currencyShort}${(totalBudget * currencyValue)
+              .toFixed(2)
+              .toLocaleString()}`,
+          ],
+          [
+            "Total Actual Payroll",
+            `${currencyShort}${totalActual.toFixed(2).toLocaleString()}`,
+          ],
+          [
+            "Variance",
+            `${currencyShort}${((totalBudget - totalActual) * currencyValue)
+              .toFixed(2)
+              .toLocaleString()}`,
+          ],
+        ],
+        theme: "grid",
+        headStyles: { fillColor: [66, 66, 66] },
+      });
+
+      // Add employee details
+      const finalY = (doc as any).lastAutoTable.finalY + 15;
+      doc.setFontSize(12);
+      doc.text("Employee Details", 20, finalY);
+
+      const employeeData = employees.map(
+        (employee: {
+          attendance: string | any[];
+          daily_rate: any;
+          username: any;
+          trade_position: { trade_name: any };
+        }) => {
+          const daysWorked = employee.attendance?.length || 0;
+          const dailyRate = Number(employee.daily_rate) || 0;
+          const earnings = daysWorked * dailyRate;
+
+          return [
+            employee.username,
+            employee.trade_position?.trade_name || "N/A",
+            `${currencyShort}${(dailyRate * currencyValue)
+              .toFixed(2)
+              .toLocaleString()}`,
+            daysWorked,
+            `${currencyShort}${(earnings * currencyValue)
+              .toFixed(2)
+              .toLocaleString()}`,
+          ];
+        }
+      );
+
+      autoTable(doc, {
+        startY: finalY + 5,
+        head: [["Name", "Position", "Daily Rate", "Days Worked", "Earnings"]],
+        body: employeeData,
+        theme: "grid",
+        headStyles: { fillColor: [66, 66, 66] },
+        styles: { fontSize: 8 },
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 40 },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 25 },
+        },
+      });
+
+      // Save the PDF with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      doc.save(`payroll-report_${timestamp}.pdf`);
 
       setIsGeneratingReport(false);
       toast({
         title: "Report Generated",
-        description: "Payroll report has been generated and downloaded.",
+        description:
+          "Payroll report has been generated and downloaded successfully.",
       });
     } catch (error) {
       console.error("Error generating report:", error);
@@ -338,7 +633,6 @@ export default function AttendancePayroll() {
       setIsGeneratingReport(false);
     }
   };
-
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -497,20 +791,18 @@ export default function AttendancePayroll() {
                 )}
                 {isGeneratingReport ? "Generating..." : "View Payroll Report"}
               </Button>
-              {(permissions.full_access || permissions.view_payslip) && (
-                <Button
-                  className="bg-orange-500 hover:bg-orange-600 gap-2 flex items-center h-14 rounded-full"
-                  onClick={handleGeneratePayslips}
-                  disabled={isGeneratingPayslips}
-                >
-                  {isGeneratingPayslips ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileCheck className="h-5 w-5" />
-                  )}
-                  {isGeneratingPayslips ? "Generating..." : "Generate Payslips"}
-                </Button>
-              )}
+              <Button
+                className="bg-orange-500 hover:bg-orange-600 gap-2 flex items-center h-14 rounded-full"
+                onClick={handleGeneratePayslips}
+                disabled={isGeneratingPayslips}
+              >
+                {isGeneratingPayslips ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileCheck className="h-5 w-5" />
+                )}
+                {isGeneratingPayslips ? "Generating..." : "Generate Payslips"}
+              </Button>
             </div>
           </div>
 

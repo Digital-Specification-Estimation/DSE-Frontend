@@ -522,7 +522,7 @@ export default function EmployeeManagement() {
 
   // Format currency for display
   const formatCurrency = (amount: any) => {
-    if (!amount) return "$0.00";
+    if (!amount) return `${currencyShort}0.00`;
     return `${currencyShort}${Number.parseFloat(amount).toLocaleString()}`;
   };
 
