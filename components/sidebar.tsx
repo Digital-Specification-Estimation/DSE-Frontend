@@ -71,6 +71,7 @@ export function Sidebar({ user }: SidebarProps) {
   useEffect(() => {
     // Force refetch on mount
     refetch();
+    console.log("user cookie",Cookie.get("connect.sid"));
 
     // Check if user is authenticated
     const checkAuth = () => {
