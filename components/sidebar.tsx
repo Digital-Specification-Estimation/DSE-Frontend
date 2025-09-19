@@ -80,7 +80,7 @@ export function Sidebar({ user }: SidebarProps) {
     };
 
     // Check auth on mount
-    checkAuth();
+   // checkAuth();
 
     // Add event listener for page visibility changes
     const handleVisibilityChange = () => {
