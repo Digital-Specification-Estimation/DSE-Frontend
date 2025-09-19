@@ -419,10 +419,10 @@ export default function SignUp() {
                   className="w-full pl-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   disabled={isLoading}
                 >
-                  <option value="admin">Admin</option>
-                  <option value="hr manager">HR Manager</option>
-                  <option value="departure manager">Departure Manager</option>
-                  <option value="employee">Employee</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="HR_MANAGER">HR Manager</option>
+                  <option value="DEPARTURE_MANAGER">Departure Manager</option>
+                  <option value="EMPLOYEE">Employee</option>
                 </select>
               </div>
             </div>
