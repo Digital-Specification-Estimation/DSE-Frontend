@@ -214,9 +214,7 @@ export default function Settings() {
         JSON.stringify(companyData.holidays) !==
         JSON.stringify(companySettings.holidays)
       ) {
-        companySettings.holidays.forEach((holiday: any) => {
-          formData.append("holidays", holiday);
-        });
+        formData.append("holidays", JSON.stringify(companySettings.holidays));
       }
 
       if (companyData.standard_work_hours !== companySettings.workHours) {
@@ -268,7 +266,7 @@ export default function Settings() {
       const modifiedSettings = userSettings.filter((setting) => {
         // Find the corresponding original setting
         const originalSetting = previelegesFetched.find(
-          (orig) => orig.role === setting.role
+          (orig: { role: any }) => orig.role === setting.role
         );
 
         // If not found or permissions are different, it's modified
@@ -505,7 +503,9 @@ export default function Settings() {
       if (setting.role === role) {
         return {
           ...setting,
-          permissions: setting.permissions.filter((p) => p !== permission),
+          permissions: setting.permissions.filter(
+            (p: string) => p !== permission
+          ),
         };
       }
       return setting;
