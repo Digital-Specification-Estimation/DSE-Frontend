@@ -125,10 +125,10 @@ export default function Settings() {
       });
       if (companyData.company_profile) {
         console.log(
-          `https://dse-backend-uv5d.onrender.com//${companyData.company_profile}`
+          `https://dse-backend-uv5d.onrender.com/${companyData.company_profile}`
         );
         setCompanyLogo(
-          `https://dse-backend-uv5d.onrender.com//${companyData.company_profile}`
+          `https://dse-backend-uv5d.onrender.com/${companyData.company_profile}`
         );
       }
     }
@@ -174,10 +174,10 @@ export default function Settings() {
       });
       if (company.company_profile) {
         console.log(
-          `https://dse-backend-uv5d.onrender.com//${company.company_profile}`
+          `https://dse-backend-uv5d.onrender.com/${company.company_profile}`
         );
         setCompanyLogo(
-          `https://dse-backend-uv5d.onrender.com//${company.company_profile}`
+          `https://dse-backend-uv5d.onrender.com/${company.company_profile}`
         );
       }
     }
