@@ -1,20 +1,32 @@
 "use client";
 import { useEffect } from "react";
-import { redirect } from "next/navigation";
-import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 export default function Home() {
+  const router = useRouter();
+
   useEffect(() => {
-    // Check for the cookie on the client side
-    const myCookie = Cookies.get("connect.sid");
-    console.log(myCookie);
-    if (!myCookie) {
-      redirect("/sign-in");
-    } else {
-      redirect("/dashboard");
-    }
-  }, []);
+    const checkAuth = async () => {
+      try {
+        const response = await fetch(
+          "https://dse-backend-uv5d.onrender.com/auth/session"
+        );
+        const session = await response.json();
+
+        if (!session?.user) {
+          router.push("/sign-in");
+        } else {
+          router.push("/dashboard");
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        router.push('/sign-in');
+      }
+    };
+
+    checkAuth();
+  }, [router]); 
 
   return (
     <div className="flex items-center justify-center h-64">
