@@ -72,6 +72,7 @@ export function Sidebar({ user }: SidebarProps) {
     // Force refetch on mount
     refetch();
     console.log("user cookie",Cookie.get("connect.sid"));
+
     // Check if user is authenticated
     const checkAuth = () => {
       if (!Cookie.get("connect.sid")) {
@@ -80,7 +81,7 @@ export function Sidebar({ user }: SidebarProps) {
     };
 
     // Check auth on mount
-    // checkAuth();
+   // checkAuth();
 
     // Add event listener for page visibility changes
     const handleVisibilityChange = () => {
