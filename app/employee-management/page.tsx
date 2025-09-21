@@ -103,8 +103,10 @@ export default function EmployeeManagement() {
     if (sessionData?.user?.settings && sessionData.user.current_role) {
       const userPermission = sessionData.user.settings.find(
         (setting: any) =>
-          setting.role.toLowerCase() ===
-          sessionData.user.current_role.toLowerCase()
+          (setting.role.toLowerCase() ===
+            sessionData.user.current_role.toLowerCase())
+          // && 
+          // (setting.company_id === sessionData.user.company_id)
       );
 
       if (userPermission) {
@@ -112,7 +114,8 @@ export default function EmployeeManagement() {
       }
     }
   }, [sessionData.user.settings, sessionData.user.current_role]);
-  console.log("permissions0", permissions);
+  console.log("permissions", permissions);
+  console.log("sessionData", sessionData);
   const splitCurrencyValue = (str: string | undefined | null) => {
     if (!str) return null; // return early if str is undefined or null
     const match = str.match(/^([A-Z]+)([\d.]+)$/);
