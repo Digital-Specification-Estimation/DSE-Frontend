@@ -172,64 +172,209 @@ export default function EmployeeManagement() {
     // Skip fetch if session isn't loaded yet to prevent unnecessary requests
     skip: isSessionLoading,
   });
+  // Function to map trade names to trade_position_id from DB
+  // Utility: map trade names to db ids
+  // ✅ Updated mapTradeToPositionId function to work with trade_name
+  // ✅ Improved mapTradeToPositionId function with better fuzzy matching
+  async function mapTradeToPositionId(
+    tradeName: string,
+    dbTrades: any[]
+  ): Promise<string | null> {
+    const lower = tradeName.toLowerCase().trim();
+
+    if (!lower) return null;
+
+    // 1. Exact match (case insensitive)
+    let match = dbTrades.find(
+      (t) => t.trade_name?.toLowerCase().trim() === lower
+    );
+    if (match) return match.id;
+
+    // 2. Singular/plural variations and common typos
+    const commonVariations: { [key: string]: string[] } = {
+      porter: ["porters", "port", "ports"],
+      carpenter: ["carpenters", "carpentry", "carpenterwork"],
+      electrician: ["electricians", "electrical", "electric"],
+      plumber: ["plumbers", "plumbing", "plumb"],
+      mason: ["masons", "masonry", "bricklayer"],
+      painter: ["painters", "painting", "paint"],
+      welder: ["welders", "welding", "weld"],
+    };
+
+    // Check if input matches any common variations
+    for (const [baseTrade, variations] of Object.entries(commonVariations)) {
+      if (variations.includes(lower) || lower === baseTrade) {
+        match = dbTrades.find(
+          (t) => t.trade_name?.toLowerCase().trim() === baseTrade
+        );
+        if (match) return match.id;
+      }
+    }
+
+    // 3. Contains match (input contains trade name or trade name contains input)
+    match = dbTrades.find((t) => {
+      const dbTradeLower = t.trade_name?.toLowerCase().trim() || "";
+      return lower.includes(dbTradeLower) || dbTradeLower.includes(lower);
+    });
+    if (match) return match.id;
+
+    // 4. Levenshtein distance for similar names (fuzzy match)
+    // Simple implementation - check for similar starting characters
+    match = dbTrades.find((t) => {
+      const dbTradeLower = t.trade_name?.toLowerCase().trim() || "";
+      return (
+        dbTradeLower.startsWith(lower.substring(0, 3)) ||
+        lower.startsWith(dbTradeLower.substring(0, 3))
+      );
+    });
+    if (match) return match.id;
+
+    // 5. Special case: "Porter" vs "Porters"
+    if (lower === "porter" || lower === "porters") {
+      match = dbTrades.find((t) => {
+        const dbTradeLower = t.trade_name?.toLowerCase().trim() || "";
+        return dbTradeLower === "porter" || dbTradeLower === "porters";
+      });
+      if (match) return match.id;
+    }
+
+    console.warn(`No trade match found for: "${tradeName}"`);
+    return null;
+  }
+
   const handleCsvUpload = async () => {
     if (!csvFile) return;
 
     setIsUploading(true);
     setCsvParseError(null);
 
+    // helper: parse dd/MM/yyyy → ISO
+    function parseDate(dateStr: string): string {
+      if (!dateStr) return new Date().toISOString();
+      const [day, month, year] = dateStr.split("/");
+      return new Date(`${year}-${month}-${day}`).toISOString();
+    }
+
     try {
-      const text = await csvFile.text();
-      const results = parse(text, {
-        header: true,
-        skipEmptyLines: true,
+      // Use FileReader for more reliable file reading
+      const text = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsText(csvFile);
       });
+
+      const results = parse(text, { header: true, skipEmptyLines: true });
 
       if (results.errors.length > 0) {
         throw new Error(results.errors[0].message || "CSV parsing error");
       }
 
+      // Updated required headers - changed "trade" to "trade_position_id"
       const requiredHeaders = [
         "username",
-        "trade_position_id",
+        "trade", // Fixed from "trade"
         "daily_rate",
+        "contract_start_date",
         "contract_finish_date",
         "days_projection",
         "budget_baseline",
-        "company_id",
       ];
 
       const missingHeaders = requiredHeaders.filter(
         (h) => !results.meta.fields?.includes(h)
       );
-
       if (missingHeaders.length > 0) {
         throw new Error(
           `Missing required columns: ${missingHeaders.join(", ")}`
         );
       }
 
-      const employeesToAdd = results.data.map((row: any) => ({
-        username: row.username,
-        trade_position_id: row.trade_position_id,
-        daily_rate: row.daily_rate,
-        contract_finish_date: row.contract_finish_date,
-        days_projection: row.days_projection
-          ? parseInt(row.days_projection)
-          : undefined,
-        budget_baseline: row.budget_baseline,
-        // company_id: row.company_id,
-      }));
+      const dbTrades = tradesFetched;
+      if (!dbTrades || dbTrades.length === 0) {
+        if (isTradesLoading) {
+          throw new Error("Trades are still loading. Please wait a moment.");
+        }
+        throw new Error(
+          "No trade positions available. Please check your trades configuration."
+        );
+      }
 
-      // Process employees sequentially to avoid overwhelming the server
+      console.log(
+        "Available trades:",
+        dbTrades.map((t) => t.trade_name)
+      );
+
+      const employeesToAdd = await Promise.all(
+        results.data.map(async (row: any, index: number) => {
+          // Use trade_position_id instead of trade
+          const tradeId = await mapTradeToPositionId(row.trade, dbTrades);
+
+          if (!tradeId) {
+            console.warn(
+              `Row ${index + 1}: Could not find trade position for "${
+                row.trade_position_id
+              }"`
+            );
+            return null;
+          }
+
+          const dailyRate = parseFloat(row.daily_rate) || 0;
+          const monthlyRate = dailyRate * 30;
+          const daysProjection = parseInt(row.days_projection) || 0;
+          const budgetBaseline = parseFloat(row.budget_baseline) || 0;
+
+          const contractFinishDate = parseDate(row.contract_finish_date);
+          const contractStartDate = parseDate(row.contract_start_date);
+
+          return {
+            username: row.username,
+            trade_position_id: tradeId,
+            daily_rate: dailyRate.toString(), // as string
+            monthly_rate: monthlyRate.toString(), // as string
+            contract_finish_date: contractFinishDate,
+            contract_start_date: contractStartDate,
+            days_projection: daysProjection,
+            budget_baseline: budgetBaseline.toString(),
+            company_id: sessionData.user.company_id, // assign from logged-in user instead of CSV
+            created_date: new Date(), // real Date object
+          };
+        })
+      );
+
+      const validEmployees = employeesToAdd.filter(
+        (emp) => emp?.trade_position_id
+      );
+      const invalidEmployees = employeesToAdd.filter(
+        (emp) => !emp?.trade_position_id
+      );
+
+      if (invalidEmployees.length > 0) {
+        console.warn(
+          `${invalidEmployees.length} employees had invalid trade positions`
+        );
+      }
+
       const addedEmployees = [];
-      for (const employee of employeesToAdd) {
+      for (const employee of validEmployees) {
         try {
           const result = await addEmployee(employee).unwrap();
           addedEmployees.push(result);
         } catch (error) {
-          console.error(`Error adding employee ${employee.username}:`, error);
-          // Continue with next employee even if one fails
+          console.error(
+            `Error adding employee ${employee.username}:`,
+            JSON.stringify(error, null, 2)
+          );
+          if (
+            typeof error === "object" &&
+            error !== null &&
+            "data" in error &&
+            typeof (error as any).data === "object" &&
+            (error as any).data !== null &&
+            "message" in (error as any).data
+          ) {
+            console.error("Validation errors:", (error as any).data.message);
+          }
         }
       }
 
@@ -240,12 +385,17 @@ export default function EmployeeManagement() {
         });
       }
 
-      if (addedEmployees.length < employeesToAdd.length) {
+      if (invalidEmployees.length > 0) {
         toast({
           title: "Partial Success",
-          description: `Added ${addedEmployees.length} of ${employeesToAdd.length} employees. Some may have failed.`,
-          variant: "default",
+          description: `Added ${addedEmployees.length} employees. ${invalidEmployees.length} skipped due to invalid trade positions.`,
         });
+      }
+
+      if (addedEmployees.length === 0 && invalidEmployees.length > 0) {
+        throw new Error(
+          `No employees added. All ${invalidEmployees.length} employees had invalid trade positions.`
+        );
       }
 
       setCsvUploadModal(false);
@@ -256,7 +406,7 @@ export default function EmployeeManagement() {
       setCsvParseError(error.message || "Failed to parse CSV file");
       toast({
         title: "Error",
-        description: "Failed to upload employees from CSV",
+        description: error.message || "Failed to upload employees from CSV",
         variant: "destructive",
       });
     } finally {
