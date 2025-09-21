@@ -11,6 +11,7 @@ import {
   notificationsApi,
   notificationsSlice,
 } from "./redux/notificationSlice";
+import { userSettingsApi } from "./redux/userSettingsSlice";
 
 export const makeStore = () => {
   return configureStore({
@@ -24,6 +25,7 @@ export const makeStore = () => {
       [attendanceApi.reducerPath]: attendanceApi.reducer,
       [companyApi.reducerPath]: companyApi.reducer,
       [userApi.reducerPath]: userApi.reducer,
+      [userSettingsApi.reducerPath]: userSettingsApi.reducer,
       [notificationsApi.reducerPath]: notificationsApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
@@ -31,6 +33,7 @@ export const makeStore = () => {
         .concat(authApi.middleware)
         .concat(employeeApi.middleware)
         .concat(tradePositionApi.middleware)
+        .concat(userSettingsApi.middleware)
         .concat(locationApi.middleware)
         .concat(projectApi.middleware)
         .concat(attendanceApi.middleware)

@@ -13,17 +13,12 @@ import {
   useGetCompanyQuery,
 } from "@/lib/redux/companySlice";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   useGetPrevielegesQuery,
   useUpdatePrevielegesMutation,
   useUpdateUserMutation,
 } from "@/lib/redux/userSlice";
+import { useGetRoleSettingsQuery, useUpdateUserSettingsMutation } from "@/lib/redux/userSettingsSlice";
+
 export default function Settings() {
   const [updateUser] = useUpdateUserMutation();
   const [updatePrevielges] = useUpdatePrevielegesMutation();
@@ -34,6 +29,15 @@ export default function Settings() {
   const [newHoliday, setNewHoliday] = useState<string>("");
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [newPrivilege, setNewPrivilege] = useState<string>("");
+
+  // Role-based user settings state
+  const [roleSettings, setRoleSettings] = useState({
+    admin: {},
+    hr_manager: {},
+    departure_manager: {},
+    employee: {},
+  });
+
   const [availablePrivileges] = useState([
     "Full access",
     "Approve attendance",
@@ -59,10 +63,72 @@ export default function Settings() {
     refetchOnReconnect: true,
     skip: false,
   });
-  const { data: previelegesFetched } = useGetPrevielegesQuery();
 
   // Get the first company ID from the session data
   const companyId = sessionData?.user?.companies?.[0]?.id || "default";
+
+  // Role-based settings queries
+  const { data: adminUserSettings, isLoading: isLoadingAdminRoleSettings } =
+    useGetRoleSettingsQuery(
+      { role: "admin", companyId },
+      { skip: !sessionData?.user?.role || !companyId }
+    );
+
+  const {
+    data: hrManagerUserSettings,
+    isLoading: isLoadingHRManagerRoleSettings,
+  } = useGetRoleSettingsQuery(
+    { role: "hr_manager", companyId },
+    { skip: !sessionData?.user?.role || !companyId }
+  );
+
+  const {
+    data: departureManagerUserSettings,
+    isLoading: isLoadingDepartureManagerRoleSettings,
+  } = useGetRoleSettingsQuery(
+    { role: "departure_manager", companyId },
+    { skip: !sessionData?.user?.role || !companyId }
+  );
+
+  const {
+    data: employeeUserSettings,
+    isLoading: isLoadingEmployeeRoleSettings,
+  } = useGetRoleSettingsQuery(
+    { role: "employee", companyId },
+    { skip: !sessionData?.user?.role || !companyId }
+  );
+
+  // Update role settings when data is fetched
+  useEffect(() => {
+    if (adminUserSettings) {
+      setRoleSettings((prev) => ({ ...prev, admin: adminUserSettings }));
+    }
+    if (hrManagerUserSettings) {
+      setRoleSettings((prev) => ({ ...prev, hr_manager: hrManagerUserSettings }));
+    }
+    if (departureManagerUserSettings) {
+      setRoleSettings((prev) => ({
+        ...prev,
+        departure_manager: departureManagerUserSettings,
+      }));
+    }
+    if (employeeUserSettings) {
+      setRoleSettings((prev) => ({ ...prev, employee: employeeUserSettings }));
+    }
+  }, [
+    adminUserSettings,
+    hrManagerUserSettings,
+    departureManagerUserSettings,
+    employeeUserSettings,
+  ]);
+
+  // Log role settings for debugging
+  useEffect(() => {
+    console.log("Admin user settings:", roleSettings.admin);
+    console.log("HR Manager user settings:", roleSettings.hr_manager);
+    console.log("Departure Manager user settings:", roleSettings.departure_manager);
+    console.log("Employee user settings:", roleSettings.employee);
+  }, [roleSettings]);
 
   // RTK Query hooks
   const { data: companyData, isLoading: isCompanyLoading } = useGetCompanyQuery(
@@ -73,21 +139,22 @@ export default function Settings() {
   );
 
   const [updateCompany, { isLoading: isUpdating }] = useEditCompanyMutation();
-
+ const [updateUserSettings, { isLoading: isUpdatingUserSettings }] = useUpdateUserSettingsMutation();
   const { toast } = useToast();
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
   });
-  console.log("previelegesFetched", previelegesFetched);
+
+  const { data: previelegesFetched } = useGetPrevielegesQuery();
+
   const [userSettings, setUserSettings] = useState<any[]>([]);
   useEffect(() => {
     if (previelegesFetched) {
       setUserSettings(previelegesFetched);
     }
   }, [previelegesFetched]);
-  console.log("user settings check", userSettings);
 
   const [activeTab, setActiveTab] = useState("company");
   const [isLoading, setIsLoading] = useState(true);
@@ -138,52 +205,52 @@ export default function Settings() {
   useEffect(() => {
     if (sessionData && sessionData.user) {
       setUserData(sessionData.user);
-    }
-    console.log(sessionData.user);
-    setPayrollSettings({
-      salary_calculation: sessionData.user?.salary_calculation
-        ? sessionData.user?.salary_calculation
-        : "daily rate",
-      payslip_format: sessionData.user?.payslip_format
-        ? sessionData.user?.payslip_format
-        : "PDF",
-      currency: sessionData.user?.currency
-        ? sessionData.user?.currency
-        : "USD1",
-    });
-    setNotificationSettings({
-      send_email_alerts: sessionData.user?.send_email_alerts
-        ? sessionData.user?.send_email_alerts
-        : false,
-      deadline_notify: sessionData.user?.deadline_notify
-        ? sessionData.user?.deadline_notify
-        : false,
-      remind_approvals: sessionData.user?.remind_approvals
-        ? sessionData.user?.remind_approvals
-        : false,
-    });
-    if (sessionData.user?.companies?.length > 0) {
-      const company = sessionData.user.companies[0];
-      setCompanySettings({
-        companyName: company.company_name,
-        businessType: company.business_type,
-        holidays: company.holidays || [],
-        workHours: company.standard_work_hours,
-        weeklyWorkLimit: company.weekly_work_limit,
-        overtimeRate: company.overtime_rate,
+      setPayrollSettings({
+        salary_calculation: sessionData.user?.salary_calculation
+          ? sessionData.user?.salary_calculation
+          : "daily rate",
+        payslip_format: sessionData.user?.payslip_format
+          ? sessionData.user?.payslip_format
+          : "PDF",
+        currency: sessionData.user?.currency
+          ? sessionData.user?.currency
+          : "USD1",
       });
-      if (company.company_profile) {
-        console.log(
-          `https://dse-backend-uv5d.onrender.com/${company.company_profile}`
-        );
-        setCompanyLogo(
-          `https://dse-backend-uv5d.onrender.com/${company.company_profile}`
-        );
+      setNotificationSettings({
+        send_email_alerts: sessionData.user?.send_email_alerts
+          ? sessionData.user?.send_email_alerts
+          : false,
+        deadline_notify: sessionData.user?.deadline_notify
+          ? sessionData.user?.deadline_notify
+          : false,
+        remind_approvals: sessionData.user?.remind_approvals
+          ? sessionData.user?.remind_approvals
+          : false,
+      });
+      if (sessionData.user?.companies?.length > 0) {
+        const company = sessionData.user.companies[0];
+        setCompanySettings({
+          companyName: company.company_name,
+          businessType: company.business_type,
+          holidays: company.holidays || [],
+          workHours: company.standard_work_hours,
+          weeklyWorkLimit: company.weekly_work_limit,
+          overtimeRate: company.overtime_rate,
+        });
+        if (company.company_profile) {
+          console.log(
+            `https://dse-backend-uv5d.onrender.com/${company.company_profile}`
+          );
+          setCompanyLogo(
+            `https://dse-backend-uv5d.onrender.com/${company.company_profile}`
+          );
+        }
       }
-    }
 
-    setIsLoading(false);
+      setIsLoading(false);
+    }
   }, [sessionData]);
+
   const splitCurrencyValue = (str: string | undefined | null) => {
     if (!str) return null; // return early if str is undefined or null
     const match = str.match(/^([A-Z]+)([\d.]+)$/);
@@ -197,8 +264,74 @@ export default function Settings() {
   const currencyVaue = Number(
     splitCurrencyValue(sessionData.user.currency)?.value
   );
-  // console.log("user currency", sessionData.user.currency);
-  // Remove the existing handleSaveSettings function and replace with these separate functions:
+
+  // Define all possible settings with their labels and default values
+  const allSettings = [
+    { key: 'approve_attendance', label: 'Approve Attendance' },
+    { key: 'approve_leaves', label: 'Approve Leaves' },
+    { key: 'full_access', label: 'Full Access' },
+    { key: 'generate_reports', label: 'Generate Reports' },
+    { key: 'manage_employees', label: 'Manage Employees' },
+    { key: 'manage_payroll', label: 'Manage Payroll' },
+    { key: 'mark_attendance', label: 'Mark Attendance' },
+    { key: 'view_payslip', label: 'View Payslip' },
+    { key: 'view_reports', label: 'View Reports' },
+  ];
+
+  // Get the current settings for a role with default values
+  const getRoleSettings = (role: string) => {
+    const settings = roleSettings[role as keyof typeof roleSettings] || {};
+    // Ensure all settings have a boolean value
+    return allSettings.reduce((acc, setting) => ({
+      ...acc,
+      [setting.key]: settings[setting.key] || false
+    }), {});
+  };
+
+  // Handle toggle for a specific setting
+  const handleToggleSetting = (role: string, settingKey: string) => {
+    const currentSettings = getRoleSettings(role);
+    const newValue = !currentSettings[settingKey];
+    
+    // Update role settings
+    setRoleSettings(prev => ({
+      ...prev,
+      [role]: {
+        ...prev[role as keyof typeof prev],
+        [settingKey]: newValue
+      }
+    }));
+  };
+
+  // Save role settings
+  const handleSaveRoleSettings = async (role: string) => {
+    try {
+      const settings = getRoleSettings(role);
+      console.log(`settings role update ${role} and settings ${settings}`)
+      console.log(`approve attendance ${settings.approve_attendance}`)
+      console.log(`approve leaves ${settings.approve_leaves}`)
+      console.log(`full access ${settings.full_access}`)
+      console.log(`generate reports ${settings.generate_reports}`)
+      console.log(`manage employees ${settings.manage_employees}`)
+      console.log(`manage payroll ${settings.manage_payroll}`)
+      console.log(`mark attendance ${settings.mark_attendance}`)
+      console.log(`view payslip ${settings.view_payslip}`)
+      console.log(`view reports ${settings.view_reports}`)
+      console.log(`id ${roleSettings[role].id}`)
+      await updateUserSettings({ id: roleSettings[role].id, updates: settings }).unwrap();
+      toast({
+        title: "Settings Saved",
+        description: `${role.replace('_', ' ')} settings have been updated.`,
+      });
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save settings. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSaveCompanySettings = async () => {
     try {
@@ -463,62 +596,30 @@ export default function Settings() {
       description: `${holiday} has been removed from holidays.`,
     });
   };
-  function formatSnakeCase(str: string): string {
-    return str
-      .trim() // remove leading/trailing spaces
-      .split("_") // split by underscore
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1)) // capitalize first letter
-      .join(" "); // join with space
-  }
 
-  const handleAddHoliday = () => {
-    if (!newHoliday.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a holiday name",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check if the holiday already exists
-    if (companySettings.holidays.includes(newHoliday)) {
-      toast({
-        title: "Error",
-        description: "This holiday already exists",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Add the new holiday to the array
-    setCompanySettings({
-      ...companySettings,
-      holidays: [...companySettings.holidays, newHoliday],
-    });
-
-    // Clear the input
-    setNewHoliday("");
-
-    toast({
-      title: "Holiday Added",
-      description: `${newHoliday} has been added to holidays.`,
-    });
-  };
-  console.log("user settings", userSettings);
   const handleRemovePermission = (role: string, permission: string) => {
+    // Get the current settings for the role
+    const currentSettings = getRoleSettings(role);
+    
+    // Update the role settings in state
+    setRoleSettings(prev => ({
+      ...prev,
+      [role]: {
+        ...currentSettings,
+        permissions: currentSettings.permissions?.filter((p: string) => p !== permission) || []
+      }
+    }));
+
+    // Also update userSettings for backward compatibility
     const updatedSettings = userSettings.map((setting: any) => {
       if (setting.role === role) {
         return {
           ...setting,
-          permissions: setting.permissions.filter(
-            (p: string) => p !== permission
-          ),
+          permissions: setting.permissions.filter((p: string) => p !== permission)
         };
       }
       return setting;
     });
-
     setUserSettings(updatedSettings);
 
     toast({
@@ -534,34 +635,44 @@ export default function Settings() {
         description: "Please select a privilege to add",
         variant: "destructive",
       });
-      console.log("new previelege on adding ", newPrivilege);
       return;
     }
 
-    // Find the role in userSettings
-    const updatedSettings = userSettings.map((setting) => {
-      if (setting.role === role) {
-        // Check if the privilege already exists
-        if (setting.permissions.includes(newPrivilege)) {
-          toast({
-            title: "Error",
-            description: "This privilege already exists for this role",
-            variant: "destructive",
-          });
-          return setting;
-        }
+    // Get current settings for the role
+    const currentSettings = getRoleSettings(role);
 
-        // Add the new privilege
+    // Check if the privilege already exists
+    if (currentSettings.permissions?.includes(newPrivilege)) {
+      toast({
+        title: "Error",
+        description: "This privilege already exists for this role",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update role settings
+    const updatedRoleSettings = {
+      ...roleSettings,
+      [role]: {
+        ...currentSettings,
+        permissions: [...(currentSettings.permissions || []), newPrivilege]
+      }
+    };
+    setRoleSettings(updatedRoleSettings);
+
+    // Also update userSettings for backward compatibility
+    const updatedSettings = userSettings.map((setting: any) => {
+      if (setting.role === role) {
         return {
           ...setting,
-          permissions: [...setting.permissions, newPrivilege],
+          permissions: [...setting.permissions, newPrivilege]
         };
       }
       return setting;
     });
-
-    // Update the state
     setUserSettings(updatedSettings);
+    
     setNewPrivilege("");
     setSelectedRole(null);
 
@@ -624,6 +735,49 @@ export default function Settings() {
 
   const triggerFileInput = () => {
     fileInputRef.current?.click();
+  };
+
+  const formatSnakeCase = (str: string): string => {
+    return str
+      .trim() // remove leading/trailing spaces
+      .split("_") // split by underscore
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1)) // capitalize first letter
+      .join(" "); // join with space
+  };
+
+  const handleAddHoliday = () => {
+    if (!newHoliday.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a holiday name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if the holiday already exists
+    if (companySettings.holidays.includes(newHoliday)) {
+      toast({
+        title: "Error",
+        description: "This holiday already exists",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Add the new holiday to the array
+    setCompanySettings({
+      ...companySettings,
+      holidays: [...companySettings.holidays, newHoliday],
+    });
+
+    // Clear the input
+    setNewHoliday("");
+
+    toast({
+      title: "Holiday Added",
+      description: `${newHoliday} has been added to holidays.`,
+    });
   };
 
   if (isLoading || isCompanyLoading) {
@@ -942,112 +1096,86 @@ export default function Settings() {
                   <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <div className="mb-6">
                       <h2 className="text-lg font-semibold text-gray-900">
-                        User Settings
+                        User Role Permissions
                       </h2>
                       <p className="text-sm text-gray-500">
-                        Set up and manage your user settings
+                        Configure permissions for each user role
                       </p>
                     </div>
 
                     <div className="space-y-6">
-                      {userSettings.map((user, index) => (
-                        <div
-                          key={index}
-                          className="flex flex-col border-b-2 border-gray-300 py-4"
-                        >
-                          <div className="flex justify-between items-center mb-3">
-                            <label className="flex items-center text-sm font-medium text-gray-700">
-                              {user.role}{" "}
-                              <span className="text-red-500 ml-0.5">*</span>
-                            </label>
+                      <div className="border-b border-gray-200">
+                        <nav className="-mb-px flex space-x-8">
+                          {['admin', 'hr_manager', 'departure_manager', 'employee'].map((role) => (
                             <button
-                              onClick={() =>
-                                setSelectedRole(
-                                  selectedRole === user.role ? null : user.role
-                                )
-                              }
-                              className="px-3 py-1 text-sm border border-gray-200 rounded-md hover:bg-gray-50"
+                              key={role}
+                              onClick={() => setSelectedRole(role)}
+                              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                                selectedRole === role
+                                  ? 'border-orange-500 text-orange-600'
+                                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                              }`}
                             >
-                              {selectedRole === user.role
-                                ? "Cancel"
-                                : "Add Privilege"}
+                              {role.split('_').map(word => 
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                              ).join(' ')}
                             </button>
-                          </div>
+                          ))}
+                        </nav>
+                      </div>
 
-                          <div className="flex flex-wrap gap-2 border border-gray-200 min-h-10 p-2 rounded-lg w-full mb-3">
-                            {user.permissions.map(
-                              (permission: any, idx: any) => (
-                                <div
-                                  key={`${index}-${idx}`}
-                                  className="inline-flex items-center gap-1.5 px-3 h-7 bg-gray-100 rounded-md text-sm border border-gray-300"
+                      {selectedRole && (
+                        <div className="space-y-6">
+                          <div className="grid gap-4">
+                            {allSettings.map((setting) => {
+                              const currentSettings = getRoleSettings(selectedRole);
+                              const isEnabled = currentSettings[setting.key];
+                              
+                              return (
+                                <div 
+                                  key={setting.key}
+                                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
                                 >
-                                  {formatSnakeCase(permission)}
+                                  <div>
+                                    <h4 className="text-sm font-medium text-gray-900">
+                                      {setting.label}
+                                    </h4>
+                                    <p className="text-xs text-gray-500">
+                                      {isEnabled ? 'Enabled' : 'Disabled'}
+                                    </p>
+                                  </div>
                                   <button
-                                    className="text-red-500 hover:text-gray-600"
-                                    onClick={() =>
-                                      handleRemovePermission(
-                                        user.role,
-                                        permission
-                                      )
-                                    }
+                                    type="button"
+                                    onClick={() => handleToggleSetting(selectedRole, setting.key)}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 ${
+                                      isEnabled ? 'bg-orange-500' : 'bg-gray-200'
+                                    }`}
                                   >
-                                    <X className="h-3.5 w-3.5" />
+                                    <span
+                                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                        isEnabled ? 'translate-x-6' : 'translate-x-1'
+                                      }`}
+                                    />
                                   </button>
                                 </div>
-                              )
-                            )}
+                              );
+                            })}
                           </div>
 
-                          {selectedRole === user.role && (
-                            <div className="flex items-center gap-2 mt-2">
-                              <div className="relative flex-1">
-                                <select
-                                  value={newPrivilege}
-                                  onChange={(e) =>
-                                    setNewPrivilege(e.target.value)
-                                  }
-                                  className="w-full px-3 h-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none"
-                                >
-                                  <option value="">Select a privilege</option>
-                                  {availablePrivileges.map((privilege) => (
-                                    <option key={privilege} value={privilege}>
-                                      {privilege}
-                                    </option>
-                                  ))}
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleAddPrivilege(user.role)}
-                                className="px-3 h-10 bg-orange-500 text-white rounded-lg flex items-center justify-center hover:bg-orange-600"
-                              >
-                                <Plus className="h-4 w-4 mr-1" />
-                                Add
-                              </button>
-                            </div>
-                          )}
+                          <div className="flex justify-end pt-4">
+                            <button
+                              type="button"
+                              onClick={() => handleSaveRoleSettings(selectedRole)}
+                              className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm flex items-center gap-2 hover:bg-orange-600"
+                            >
+                              <Save className="h-4 w-4" />
+                              Save {selectedRole.split('_').map(word => 
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                              ).join(' ')} Settings
+                            </button>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                    <div className="flex justify-end mt-6">
-                      <button
-                        className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm flex items-center gap-2"
-                        onClick={handleSaveUserSettings}
-                        disabled={isUpdating}
-                      >
-                        {isUpdating ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="h-4 w-4" />
-                            Save User Settings
-                          </>
-                        )}
-                      </button>
+                      )}
                     </div>
                   </div>
                 )}
