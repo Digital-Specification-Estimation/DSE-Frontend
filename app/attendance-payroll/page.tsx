@@ -1092,7 +1092,7 @@ export default function AttendancePayroll() {
                   <div className="overflow-x-auto">
                     <table className="w-full border rounded-md">
                       <thead>
-                        <tr className="border-t border-b text-[10px] text-gray-500">
+                        <tr className="border-t border-b text-[12px] text-gray-500">
                           {/* <th className="w-10 px-4 py-3 text-left border-r">
                             <input
                               type="checkbox"
