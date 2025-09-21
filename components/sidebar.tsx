@@ -13,6 +13,9 @@ import {
   ChevronDown,
   RefreshCw,
   AlertCircle,
+  LayoutDashboard,
+  BriefcaseBusiness,
+  NotepadText,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
@@ -125,11 +128,11 @@ export function Sidebar({ user }: SidebarProps) {
 
   const menuItems = [
     { name: "Settings", href: "/settings", icon: Settings },
-    { name: "Dashboard", href: "/dashboard", icon: Home },
-    { name: "Business Setup", href: "/business-setup", icon: Home },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Business Setup", href: "/business-setup", icon: BriefcaseBusiness },
     { name: "Budget Planning", href: "/budget-planning", icon: Wallet },
     { name: "Employee Management", href: "/employee-management", icon: Users2 },
-    { name: "Attendance & Payroll", href: "/attendance-payroll", icon: Users2 },
+    { name: "Attendance & Payroll", href: "/attendance-payroll", icon: NotepadText },
     { name: "Logout", href: "/", icon: LogOut, onClick: handleLogout },
   ];
   return (

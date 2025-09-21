@@ -18,6 +18,7 @@ import {
   useUpdateUserMutation,
 } from "@/lib/redux/userSlice";
 import { useGetRoleSettingsQuery, useUpdateUserSettingsMutation } from "@/lib/redux/userSettingsSlice";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Settings() {
   const [updateUser] = useUpdateUserMutation();
