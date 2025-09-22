@@ -111,7 +111,7 @@ export default function SignIn() {
 
       const popup = window.open(
         "https://dse-backend-production.up.railway.app/auth/google",
-        // "https://dse-backend-uv5d.onrender.com/auth/google",
+        // "http://localhost:4000/auth/google",
         "GoogleAuth",
         `width=${width},height=${height},top=${top},left=${left}`
       );
