@@ -176,8 +176,7 @@ export default function SignUp() {
 
     // Redirect to backend OAuth endpoint
     if (provider === "google") {
-      window.location.href =
-        "https://dse-backend-uv5d.onrender.com/auth/google";
+      window.location.href = "http://localhost:4000/auth/google";
     } else {
       // Apple signup would go here
       setTimeout(() => {

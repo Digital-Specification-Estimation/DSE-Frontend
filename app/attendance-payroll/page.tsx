@@ -389,7 +389,9 @@ export default function AttendancePayroll() {
   const generateSinglePayslip = (employee: any) => {
     const doc = new jsPDF();
 
-    // Set document properties
+    // ========================
+    // Document Properties
+    // ========================
     doc.setProperties({
       title: `Payslip - ${employee.username}`,
       subject: "Employee Payslip",
@@ -397,30 +399,25 @@ export default function AttendancePayroll() {
       creator: "Payroll System",
     });
 
-    // Add company header
+    // ========================
+    // Header
+    // ========================
     doc.setFontSize(20);
     doc.setTextColor(33, 33, 33);
     doc.text("CONSTRUCTION COMPANY", 105, 20, { align: "center" });
+
     doc.setFontSize(14);
     doc.text("EMPLOYEE PAYSLIP", 105, 30, { align: "center" });
 
-    // Add date
+    // Date
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 40, {
       align: "center",
     });
 
-    // Calculate payroll values
-    const daysWorked = employee.attendance?.length || 0;
-    const dailyRate = Number(employee.daily_rate) || 100;
-    const totalEarnings = dailyRate * daysWorked;
-    const netPay = totalEarnings;
-
-    // Format currency helper
-    const formatCurrency = (value: number) =>
-      `${currencyValue}${value.toLocaleString()}`;
-
-    // Employee information
+    // ========================
+    // Employee Information
+    // ========================
     doc.setFontSize(12);
     doc.text("Employee Information", 20, 55);
     doc.setFontSize(10);
@@ -432,7 +429,9 @@ export default function AttendancePayroll() {
     );
     doc.text(`Employee ID: ${employee.id}`, 20, 79);
 
-    // Pay period
+    // ========================
+    // Pay Period
+    // ========================
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -443,56 +442,84 @@ export default function AttendancePayroll() {
     doc.text(`From: ${firstDay.toLocaleDateString()}`, 120, 65);
     doc.text(`To: ${lastDay.toLocaleDateString()}`, 120, 72);
 
-    // Earnings table
+    // ========================
+    // Payroll Calculations
+    // ========================
+    const daysWorked = employee.attendance?.length || 0;
+    const dailyRate = Number(employee.daily_rate) || 100;
+
+    const regularPay = dailyRate * daysWorked;
+    const overtimeHours = employee.overtime_hours || 0;
+    const overtimeRate = Number(employee.overtime_rate) || dailyRate / 8; // example
+    const overtimePay = overtimeHours * overtimeRate;
+
+    // Example deductions
+    const taxDeduction = regularPay * 0.1; // 10% tax
+    const insuranceDeduction = 1000; // fixed example
+    const totalDeductions = taxDeduction + insuranceDeduction;
+
+    const totalEarnings = regularPay + overtimePay;
+    const netPay = totalEarnings - totalDeductions;
+
+    // ========================
+    // Currency Formatter
+    // ========================
+    const formatCurrency = (value: number) =>
+      `${currencyShort}${value.toLocaleString()}`;
+
+    // ========================
+    // Earnings Table
+    // ========================
     doc.setFontSize(12);
     doc.text("Earnings", 20, 95);
+
     autoTable(doc, {
       startY: 100,
       head: [["Description", "Rate", "Units", "Amount"]],
       body: [
         [
           "Regular Pay",
-          formatCurrency(dailyRate * currencyValue),
+          formatCurrency(dailyRate),
           `${daysWorked} days`,
-          formatCurrency(totalEarnings * currencyValue),
+          formatCurrency(regularPay),
         ],
         [
           "Overtime",
-          `${currencyShort}0.00`,
-          `${currencyShort}0 hours`,
-          `${currencyShort}0.00`,
+          formatCurrency(overtimeRate),
+          `${overtimeHours} hours`,
+          formatCurrency(overtimePay),
         ],
-        // ["Bonus", "", "", "$0.00"],
-        [
-          "",
-          "",
-          "Total Earnings",
-          formatCurrency(totalEarnings * currencyValue),
-        ],
+        ["", "", "Total Earnings", formatCurrency(totalEarnings)],
       ],
       theme: "grid",
       headStyles: { fillColor: [66, 66, 66] },
     });
 
-    // Deductions table
-    // const finalY = (doc as any).lastAutoTable.finalY + 10;
-    // doc.setFontSize(12);
-    // doc.text("Deductions", 20, finalY);
-    // autoTable(doc, {
-    //   startY: finalY + 5,
-    //   head: [["Description", "Amount"]],
-    //   body: [
-    //     ["Tax", formatCurrency(taxDeduction)],
-    //     ["Insurance", formatCurrency(insuranceDeduction)],
-    //     ["", formatCurrency(totalDeductions)],
-    //   ],
-    //   theme: "grid",
-    //   headStyles: { fillColor: [66, 66, 66] },
-    // });
-    // Net pay section
-    const finalY2 = (doc as any).lastAutoTable.finalY + 10;
+    // ========================
+    // Deductions Table
+    // ========================
+    const deductionsStartY = (doc as any).lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.text("Deductions", 20, deductionsStartY);
+
     autoTable(doc, {
-      startY: finalY2,
+      startY: deductionsStartY + 5,
+      head: [["Description", "Amount"]],
+      body: [
+        ["Tax", formatCurrency(taxDeduction)],
+        ["Insurance", formatCurrency(insuranceDeduction)],
+        ["", formatCurrency(totalDeductions)],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [66, 66, 66] },
+    });
+
+    // ========================
+    // Net Pay
+    // ========================
+    const netPayStartY = (doc as any).lastAutoTable.finalY + 10;
+    autoTable(doc, {
+      startY: netPayStartY,
       head: [["Net Pay", formatCurrency(netPay)]],
       body: [],
       theme: "grid",
@@ -503,7 +530,9 @@ export default function AttendancePayroll() {
       },
     });
 
+    // ========================
     // Footer
+    // ========================
     doc.setFontSize(8);
     doc.text(
       "This is a computer-generated document and does not require a signature.",
