@@ -5,7 +5,7 @@ export const tradePositionApi = createApi({
   baseQuery: fetchBaseQuery({
     // baseUrl: "https://dse-backend-production.up.railway.app/trade-position",
 
-    baseUrl: "http://localhost:4000/trade-position",
+    baseUrl: "https://dse-backend-uv5d.onrender.com/trade-position",
     credentials: "include",
   }),
   endpoints: (builder) => ({

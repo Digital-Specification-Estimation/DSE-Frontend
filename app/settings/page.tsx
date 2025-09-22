@@ -208,8 +208,12 @@ export default function Settings() {
         overtimeRate: companyData.overtime_rate,
       });
       if (companyData.company_profile) {
-        console.log(`http://localhost:4000/${companyData.company_profile}`);
-        setCompanyLogo(`http://localhost:4000/${companyData.company_profile}`);
+        console.log(
+          `https://dse-backend-uv5d.onrender.com/${companyData.company_profile}`
+        );
+        setCompanyLogo(
+          `https://dse-backend-uv5d.onrender.com/${companyData.company_profile}`
+        );
       }
     }
   }, [companyData]);
@@ -251,8 +255,12 @@ export default function Settings() {
           overtimeRate: company.overtime_rate,
         });
         if (company.company_profile) {
-          console.log(`http://localhost:4000/${company.company_profile}`);
-          setCompanyLogo(`http://localhost:4000/${company.company_profile}`);
+          console.log(
+            `https://dse-backend-uv5d.onrender.com/${company.company_profile}`
+          );
+          setCompanyLogo(
+            `https://dse-backend-uv5d.onrender.com/${company.company_profile}`
+          );
         }
       }
 
