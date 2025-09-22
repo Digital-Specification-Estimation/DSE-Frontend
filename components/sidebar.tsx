@@ -71,36 +71,36 @@ export function Sidebar({ user }: SidebarProps) {
   // console.log(sessionData);
 
   // Effect to check authentication on mount and reload
-  useEffect(() => {
-    // Force refetch on mount
-    refetch();
-    console.log("user cookie",Cookie.get("connect.sid"));
+  // useEffect(() => {
+  //   // Force refetch on mount
+  //   refetch();
+  //   console.log("user cookie",Cookie.get("connect.sid"));
 
-    // Check if user is authenticated
-    const checkAuth = () => {
-      if (!Cookie.get("connect.sid")) {
-        router.push("/sign-in");
-      }
-    };
+  //   // Check if user is authenticated
+  //   const checkAuth = () => {
+  //     if (!Cookie.get("connect.sid")) {
+  //       router.push("/sign-in");
+  //     }
+  //   };
 
-    // Check auth on mount
-   // checkAuth();
+  //   // Check auth on mount
+  //  // checkAuth();
 
-    // Add event listener for page visibility changes
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        refetch();
-        checkAuth();
-      }
-    };
+  //   // Add event listener for page visibility changes
+  //   const handleVisibilityChange = () => {
+  //     if (document.visibilityState === "visible") {
+  //       refetch();
+  //       checkAuth();
+  //     }
+  //   };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+  //   document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Clean up
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [refetch, router]);
+  //   // Clean up
+  //   return () => {
+  //     document.removeEventListener("visibilitychange", handleVisibilityChange);
+  //   };
+  // }, [refetch, router]);
 
   const handleLogout = async () => {
     try {
