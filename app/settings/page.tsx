@@ -17,8 +17,17 @@ import {
   useUpdatePrevielegesMutation,
   useUpdateUserMutation,
 } from "@/lib/redux/userSlice";
-import { useGetRoleSettingsQuery, useUpdateUserSettingsMutation } from "@/lib/redux/userSettingsSlice";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  useGetRoleSettingsQuery,
+  useUpdateUserSettingsMutation,
+} from "@/lib/redux/userSettingsSlice";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Settings() {
   const [updateUser] = useUpdateUserMutation();
@@ -105,7 +114,10 @@ export default function Settings() {
       setRoleSettings((prev) => ({ ...prev, admin: adminUserSettings }));
     }
     if (hrManagerUserSettings) {
-      setRoleSettings((prev) => ({ ...prev, hr_manager: hrManagerUserSettings }));
+      setRoleSettings((prev) => ({
+        ...prev,
+        hr_manager: hrManagerUserSettings,
+      }));
     }
     if (departureManagerUserSettings) {
       setRoleSettings((prev) => ({
@@ -127,7 +139,10 @@ export default function Settings() {
   useEffect(() => {
     console.log("Admin user settings:", roleSettings.admin);
     console.log("HR Manager user settings:", roleSettings.hr_manager);
-    console.log("Departure Manager user settings:", roleSettings.departure_manager);
+    console.log(
+      "Departure Manager user settings:",
+      roleSettings.departure_manager
+    );
     console.log("Employee user settings:", roleSettings.employee);
   }, [roleSettings]);
 
@@ -140,7 +155,8 @@ export default function Settings() {
   );
 
   const [updateCompany, { isLoading: isUpdating }] = useEditCompanyMutation();
- const [updateUserSettings, { isLoading: isUpdatingUserSettings }] = useUpdateUserSettingsMutation();
+  const [updateUserSettings, { isLoading: isUpdatingUserSettings }] =
+    useUpdateUserSettingsMutation();
   const { toast } = useToast();
   const [user] = useState({
     name: "Kristin Watson",
@@ -268,39 +284,42 @@ export default function Settings() {
 
   // Define all possible settings with their labels and default values
   const allSettings = [
-    { key: 'approve_attendance', label: 'Approve Attendance' },
-    { key: 'approve_leaves', label: 'Approve Leaves' },
-    { key: 'full_access', label: 'Full Access' },
-    { key: 'generate_reports', label: 'Generate Reports' },
-    { key: 'manage_employees', label: 'Manage Employees' },
-    { key: 'manage_payroll', label: 'Manage Payroll' },
-    { key: 'mark_attendance', label: 'Mark Attendance' },
-    { key: 'view_payslip', label: 'View Payslip' },
-    { key: 'view_reports', label: 'View Reports' },
+    { key: "approve_attendance", label: "Approve Attendance" },
+    { key: "approve_leaves", label: "Approve Leaves" },
+    { key: "full_access", label: "Full Access" },
+    { key: "generate_reports", label: "Generate Reports" },
+    { key: "manage_employees", label: "Manage Employees" },
+    { key: "manage_payroll", label: "Manage Payroll" },
+    { key: "mark_attendance", label: "Mark Attendance" },
+    { key: "view_payslip", label: "View Payslip" },
+    { key: "view_reports", label: "View Reports" },
   ];
 
   // Get the current settings for a role with default values
   const getRoleSettings = (role: string) => {
     const settings = roleSettings[role as keyof typeof roleSettings] || {};
     // Ensure all settings have a boolean value
-    return allSettings.reduce((acc, setting) => ({
-      ...acc,
-      [setting.key]: settings[setting.key] || false
-    }), {});
+    return allSettings.reduce(
+      (acc, setting) => ({
+        ...acc,
+        [setting.key]: settings[setting.key] || false,
+      }),
+      {}
+    );
   };
 
   // Handle toggle for a specific setting
   const handleToggleSetting = (role: string, settingKey: string) => {
     const currentSettings = getRoleSettings(role);
     const newValue = !currentSettings[settingKey];
-    
+
     // Update role settings
-    setRoleSettings(prev => ({
+    setRoleSettings((prev) => ({
       ...prev,
       [role]: {
         ...prev[role as keyof typeof prev],
-        [settingKey]: newValue
-      }
+        [settingKey]: newValue,
+      },
     }));
   };
 
@@ -308,21 +327,24 @@ export default function Settings() {
   const handleSaveRoleSettings = async (role: string) => {
     try {
       const settings = getRoleSettings(role);
-      console.log(`settings role update ${role} and settings ${settings}`)
-      console.log(`approve attendance ${settings.approve_attendance}`)
-      console.log(`approve leaves ${settings.approve_leaves}`)
-      console.log(`full access ${settings.full_access}`)
-      console.log(`generate reports ${settings.generate_reports}`)
-      console.log(`manage employees ${settings.manage_employees}`)
-      console.log(`manage payroll ${settings.manage_payroll}`)
-      console.log(`mark attendance ${settings.mark_attendance}`)
-      console.log(`view payslip ${settings.view_payslip}`)
-      console.log(`view reports ${settings.view_reports}`)
-      console.log(`id ${roleSettings[role].id}`)
-      await updateUserSettings({ id: roleSettings[role].id, updates: settings }).unwrap();
+      console.log(`settings role update ${role} and settings ${settings}`);
+      console.log(`approve attendance ${settings.approve_attendance}`);
+      console.log(`approve leaves ${settings.approve_leaves}`);
+      console.log(`full access ${settings.full_access}`);
+      console.log(`generate reports ${settings.generate_reports}`);
+      console.log(`manage employees ${settings.manage_employees}`);
+      console.log(`manage payroll ${settings.manage_payroll}`);
+      console.log(`mark attendance ${settings.mark_attendance}`);
+      console.log(`view payslip ${settings.view_payslip}`);
+      console.log(`view reports ${settings.view_reports}`);
+      console.log(`id ${roleSettings[role].id}`);
+      await updateUserSettings({
+        id: roleSettings[role].id,
+        updates: settings,
+      }).unwrap();
       toast({
         title: "Settings Saved",
-        description: `${role.replace('_', ' ')} settings have been updated.`,
+        description: `${role.replace("_", " ")} settings have been updated.`,
       });
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -601,14 +623,17 @@ export default function Settings() {
   const handleRemovePermission = (role: string, permission: string) => {
     // Get the current settings for the role
     const currentSettings = getRoleSettings(role);
-    
+
     // Update the role settings in state
-    setRoleSettings(prev => ({
+    setRoleSettings((prev) => ({
       ...prev,
       [role]: {
         ...currentSettings,
-        permissions: currentSettings.permissions?.filter((p: string) => p !== permission) || []
-      }
+        permissions:
+          currentSettings.permissions?.filter(
+            (p: string) => p !== permission
+          ) || [],
+      },
     }));
 
     // Also update userSettings for backward compatibility
@@ -616,7 +641,9 @@ export default function Settings() {
       if (setting.role === role) {
         return {
           ...setting,
-          permissions: setting.permissions.filter((p: string) => p !== permission)
+          permissions: setting.permissions.filter(
+            (p: string) => p !== permission
+          ),
         };
       }
       return setting;
@@ -657,8 +684,8 @@ export default function Settings() {
       ...roleSettings,
       [role]: {
         ...currentSettings,
-        permissions: [...(currentSettings.permissions || []), newPrivilege]
-      }
+        permissions: [...(currentSettings.permissions || []), newPrivilege],
+      },
     };
     setRoleSettings(updatedRoleSettings);
 
@@ -667,13 +694,13 @@ export default function Settings() {
       if (setting.role === role) {
         return {
           ...setting,
-          permissions: [...setting.permissions, newPrivilege]
+          permissions: [...setting.permissions, newPrivilege],
         };
       }
       return setting;
     });
     setUserSettings(updatedSettings);
-    
+
     setNewPrivilege("");
     setSelectedRole(null);
 
@@ -1107,19 +1134,28 @@ export default function Settings() {
                     <div className="space-y-6">
                       <div className="border-b border-gray-200">
                         <nav className="-mb-px flex space-x-8">
-                          {['admin', 'hr_manager', 'departure_manager', 'employee'].map((role) => (
+                          {[
+                            "admin",
+                            "hr_manager",
+                            "departure_manager",
+                            "employee",
+                          ].map((role) => (
                             <button
                               key={role}
                               onClick={() => setSelectedRole(role)}
                               className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
                                 selectedRole === role
-                                  ? 'border-orange-500 text-orange-600'
-                                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                  ? "border-orange-500 text-orange-600"
+                                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                               }`}
                             >
-                              {role.split('_').map(word => 
-                                word.charAt(0).toUpperCase() + word.slice(1)
-                              ).join(' ')}
+                              {role
+                                .split("_")
+                                .map(
+                                  (word) =>
+                                    word.charAt(0).toUpperCase() + word.slice(1)
+                                )
+                                .join(" ")}
                             </button>
                           ))}
                         </nav>
@@ -1129,11 +1165,12 @@ export default function Settings() {
                         <div className="space-y-6">
                           <div className="grid gap-4">
                             {allSettings.map((setting) => {
-                              const currentSettings = getRoleSettings(selectedRole);
+                              const currentSettings =
+                                getRoleSettings(selectedRole);
                               const isEnabled = currentSettings[setting.key];
-                              
+
                               return (
-                                <div 
+                                <div
                                   key={setting.key}
                                   className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
                                 >
@@ -1142,19 +1179,28 @@ export default function Settings() {
                                       {setting.label}
                                     </h4>
                                     <p className="text-xs text-gray-500">
-                                      {isEnabled ? 'Enabled' : 'Disabled'}
+                                      {isEnabled ? "Enabled" : "Disabled"}
                                     </p>
                                   </div>
                                   <button
                                     type="button"
-                                    onClick={() => handleToggleSetting(selectedRole, setting.key)}
+                                    onClick={() =>
+                                      handleToggleSetting(
+                                        selectedRole,
+                                        setting.key
+                                      )
+                                    }
                                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 ${
-                                      isEnabled ? 'bg-orange-500' : 'bg-gray-200'
+                                      isEnabled
+                                        ? "bg-orange-500"
+                                        : "bg-gray-200"
                                     }`}
                                   >
                                     <span
                                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                        isEnabled ? 'translate-x-6' : 'translate-x-1'
+                                        isEnabled
+                                          ? "translate-x-6"
+                                          : "translate-x-1"
                                       }`}
                                     />
                                   </button>
@@ -1166,13 +1212,21 @@ export default function Settings() {
                           <div className="flex justify-end pt-4">
                             <button
                               type="button"
-                              onClick={() => handleSaveRoleSettings(selectedRole)}
+                              onClick={() =>
+                                handleSaveRoleSettings(selectedRole)
+                              }
                               className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm flex items-center gap-2 hover:bg-orange-600"
                             >
                               <Save className="h-4 w-4" />
-                              Save {selectedRole.split('_').map(word => 
-                                word.charAt(0).toUpperCase() + word.slice(1)
-                              ).join(' ')} Settings
+                              Save{" "}
+                              {selectedRole
+                                .split("_")
+                                .map(
+                                  (word) =>
+                                    word.charAt(0).toUpperCase() + word.slice(1)
+                                )
+                                .join(" ")}{" "}
+                              Settings
                             </button>
                           </div>
                         </div>
