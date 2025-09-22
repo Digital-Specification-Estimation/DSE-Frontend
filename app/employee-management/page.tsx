@@ -103,10 +103,10 @@ export default function EmployeeManagement() {
     if (sessionData?.user?.settings && sessionData.user.current_role) {
       const userPermission = sessionData.user.settings.find(
         (setting: any) =>
-          (setting.role.toLowerCase() ===
-            sessionData.user.current_role.toLowerCase())
-          // && 
-          // (setting.company_id === sessionData.user.company_id)
+          setting.role.toLowerCase() ===
+          sessionData.user.current_role.toLowerCase()
+        // &&
+        // (setting.company_id === sessionData.user.company_id)
       );
 
       if (userPermission) {
@@ -387,6 +387,7 @@ export default function EmployeeManagement() {
           description: `${addedEmployees.length} employees added successfully!`,
         });
       }
+      refreshAllData();
 
       if (invalidEmployees.length > 0) {
         toast({
@@ -414,6 +415,7 @@ export default function EmployeeManagement() {
       });
     } finally {
       setIsUploading(false);
+      refreshAllData();
     }
   };
   // Using keepUnusedDataFor option in RTK Query would be ideal to keep data for longer
@@ -544,6 +546,7 @@ export default function EmployeeManagement() {
             }
           )
         );
+        refreshAllData();
       } catch (error) {
         // Update failed - undo changes
         patchResult.undo();
@@ -575,6 +578,7 @@ export default function EmployeeManagement() {
             }
           )
         );
+        refreshAllData();
 
         try {
           await queryFulfilled;
@@ -604,6 +608,7 @@ export default function EmployeeManagement() {
     trade_position_id: "",
     daily_rate: "",
     monthly_rate: "",
+    contract_start_date: "", // <-- add this property
     contract_finish_date: "",
     days_projection: "",
     budget_baseline: "",
@@ -628,9 +633,7 @@ export default function EmployeeManagement() {
     const fetchCompanies = async () => {
       setIsLoadingCompanies(true);
       try {
-        const response = await fetch(
-          "https://dse-backend-uv5d.onrender.com/company/companies"
-        );
+        const response = await fetch("http://localhost:4000/company/companies");
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
@@ -726,7 +729,7 @@ export default function EmployeeManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate form data
+    // --- Validation ---
     if (!newEmployee.username) {
       toast({
         title: "Validation Error",
@@ -735,37 +738,67 @@ export default function EmployeeManagement() {
       });
       return;
     }
+    if (!newEmployee.trade_position_id) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a trade position",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // --- Dates ---
+    const startDate = newEmployee.contract_start_date
+      ? new Date(newEmployee.contract_start_date).toISOString()
+      : new Date().toISOString(); // default to today
+
+    const finishDate = newEmployee.contract_finish_date
+      ? new Date(newEmployee.contract_finish_date).toISOString()
+      : undefined;
+
+    // --- Days projection ---
+    let daysProjection = newEmployee.days_projection
+      ? parseInt(newEmployee.days_projection.toString())
+      : undefined;
+
+    if (!daysProjection && startDate && finishDate) {
+      const start = new Date(startDate);
+      const finish = new Date(finishDate);
+      daysProjection = Math.max(
+        0,
+        Math.ceil((finish.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+      );
+    }
+
+    // --- Build employee object ---
+    const employeeToAdd: NewEmployee = {
+      username: newEmployee.username,
+      trade_position_id: newEmployee.trade_position_id,
+      [getRateFieldName()]:
+        Number(newEmployee[getRateFieldName()]) > 0
+          ? (Number(newEmployee[getRateFieldName()]) / currencyValue).toString()
+          : undefined,
+      contract_start_date: startDate,
+      contract_finish_date: finishDate,
+      days_projection: daysProjection,
+      budget_baseline:
+        Number(newEmployee.budget_baseline) > 0
+          ? (Number(newEmployee.budget_baseline) / currencyValue).toString()
+          : undefined,
+      company_id: newEmployee.company_id || sessionData.user.company_id,
+    };
 
     try {
-      // Create a new employee object formatted for the API
-      const employeeToAdd: NewEmployee = {
-        username: newEmployee.username,
-        trade_position_id: newEmployee.trade_position_id || undefined,
-        [getRateFieldName()]:
-          (
-            Number(newEmployee[getRateFieldName()]) / currencyValue
-          ).toString() || undefined,
-        contract_finish_date: newEmployee.contract_finish_date
-          ? new Date(newEmployee.contract_finish_date).toISOString()
-          : undefined,
-        days_projection: newEmployee.days_projection
-          ? Number.parseInt(newEmployee.days_projection)
-          : undefined,
-        budget_baseline:
-          (Number(newEmployee.budget_baseline) / currencyValue).toString() ||
-          undefined,
-        company_id: newEmployee.company_id || undefined,
-      };
-
-      // Send the data using RTK Query mutation
+      // --- Send to backend ---
       await addEmployee(employeeToAdd).unwrap();
 
-      // Reset form and close
+      // --- Reset form ---
       setNewEmployee({
         username: "",
         trade_position_id: "",
         daily_rate: "",
         monthly_rate: "",
+        contract_start_date: "",
         contract_finish_date: "",
         days_projection: "",
         budget_baseline: "",
@@ -774,14 +807,19 @@ export default function EmployeeManagement() {
 
       setShowAddEmployee(false);
 
-      // Show success notification
+      // --- Success notification ---
       toast({
         title: "Success",
         description: "Employee added successfully!",
       });
+      refreshAllData();
     } catch (error) {
       console.error("Failed to add employee:", error);
-      // Error notification is handled in the mutation now
+      toast({
+        title: "Error",
+        description: (error as any)?.data?.message || "Failed to add employee",
+        variant: "destructive",
+      });
     }
   };
 
@@ -853,6 +891,7 @@ export default function EmployeeManagement() {
         title: "Success",
         description: "Employee deleted successfully!",
       });
+      refreshAllData();
     } catch (error) {
       console.error("Failed to delete employee:", error);
       // Error notification is handled in the mutation now
@@ -1203,6 +1242,7 @@ export default function EmployeeManagement() {
                 </div>
 
                 <div className="space-y-4">
+                  {/* Username */}
                   <div className="space-y-2">
                     <label htmlFor="username" className="text-sm font-medium">
                       Username
@@ -1229,6 +1269,7 @@ export default function EmployeeManagement() {
                     </div>
                   </div>
 
+                  {/* Trade Position */}
                   <div className="space-y-2">
                     <label
                       htmlFor="trade_position_id"
@@ -1267,6 +1308,7 @@ export default function EmployeeManagement() {
                     </Select>
                   </div>
 
+                  {/* Daily / Monthly Rate */}
                   <div className="space-y-2">
                     <label
                       htmlFor={getRateFieldName()}
@@ -1277,13 +1319,13 @@ export default function EmployeeManagement() {
                     <div className="relative">
                       <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
                         {currencyShort}
-                      </p>{" "}
+                      </p>
                       <input
                         id={getRateFieldName()}
                         name={getRateFieldName()}
                         type="number"
                         placeholder="100.00"
-                        value={newEmployee[getRateFieldName()] || 0}
+                        value={newEmployee[getRateFieldName()] || ""}
                         onChange={(e) =>
                           setNewEmployee({
                             ...newEmployee,
@@ -1295,6 +1337,32 @@ export default function EmployeeManagement() {
                     </div>
                   </div>
 
+                  {/* Contract Start Date ✅ Added */}
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="contract_start_date"
+                      className="text-sm font-medium"
+                    >
+                      Contract Start Date
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="contract_start_date"
+                        name="contract_start_date"
+                        type="date"
+                        value={newEmployee.contract_start_date}
+                        onChange={(e) =>
+                          setNewEmployee({
+                            ...newEmployee,
+                            contract_start_date: e.target.value,
+                          })
+                        }
+                        className="w-full py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Contract Finish Date */}
                   <div className="space-y-2">
                     <label
                       htmlFor="contract_finish_date"
@@ -1319,31 +1387,7 @@ export default function EmployeeManagement() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="days_projection"
-                      className="text-sm font-medium"
-                    >
-                      Days Projection
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="days_projection"
-                        name="days_projection"
-                        type="number"
-                        placeholder="30"
-                        value={newEmployee.days_projection}
-                        onChange={(e) =>
-                          setNewEmployee({
-                            ...newEmployee,
-                            days_projection: e.target.value,
-                          })
-                        }
-                        className="w-full py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                  </div>
-
+                  {/* Budget Baseline */}
                   <div className="space-y-2">
                     <label
                       htmlFor="budget_baseline"
@@ -1354,7 +1398,7 @@ export default function EmployeeManagement() {
                     <div className="relative">
                       <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
                         {currencyShort}
-                      </p>{" "}
+                      </p>
                       <input
                         id="budget_baseline"
                         name="budget_baseline"
@@ -1371,41 +1415,6 @@ export default function EmployeeManagement() {
                       />
                     </div>
                   </div>
-
-                  {/* <div className="space-y-2">
-                    <label htmlFor="company_id" className="text-sm font-medium">
-                      Company
-                    </label>
-                    <Select
-                      onValueChange={(value) =>
-                        setNewEmployee({
-                          ...newEmployee,
-                          company_id: value,
-                        })
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select company" />
-                      </SelectTrigger>
-                      {isLoadingCompanies && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Loading companies...
-                        </div>
-                      )}
-                      {companiesError && (
-                        <div className="text-xs text-red-500 mt-1">
-                          {companiesError}
-                        </div>
-                      )}
-                      <SelectContent>
-                        {companies.map((company: any) => (
-                          <SelectItem key={company.id} value={company.id}>
-                            {company.company_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div> */}
 
                   <div className="text-sm">
                     Want to upload multiple employees? Use{" "}
