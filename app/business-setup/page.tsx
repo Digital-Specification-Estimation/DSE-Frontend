@@ -1019,21 +1019,47 @@ function DeleteTradeConfirmation({
     </div>
   );
 }
-const formatDate = (inputDate: any) => {
-  if (!inputDate) return ""; // handle empty input
 
-  // assume input is like "23/04/2025"
-  const parts = inputDate.split("/");
+// Format date for display in the input field (YYYY-MM-DD to YYYY-MM-DD - no conversion needed)
+const formatDateForInput = (dateString: string) => {
+  if (!dateString) return "";
+  // If the date is already in YYYY-MM-DD format, return as is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
+  }
+  // If the date is in DD/MM/YYYY format, convert to YYYY-MM-DD
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+    const [day, month, year] = dateString.split('/');
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  return "";
+};
 
-  if (parts.length !== 3) return ""; // invalid format
-
-  const [day, month, year] = parts;
-
-  // make sure day and month are two digits
-  const formattedDay = day.padStart(2, "0");
-  const formattedMonth = month.padStart(2, "0");
-
-  return `${year}-${formattedMonth}-${formattedDay}`;
+// Format date for API (to ISO string with timezone)
+const formatDateForApi = (dateString: string) => {
+  if (!dateString) return "";
+  let date: Date;
+  
+  // If the date is in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    date = new Date(dateString);
+  }
+  // If the date is in DD/MM/YYYY format
+  else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+    const [day, month, year] = dateString.split('/');
+    date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+  } 
+  // If it's already in ISO format
+  else if (dateString.includes('T')) {
+    date = new Date(dateString);
+  }
+  // If we can't parse it, return as is
+  else {
+    return dateString;
+  }
+  
+  // Return in ISO format with timezone (e.g., "2025-09-24T00:00:00.000Z")
+  return date.toISOString();
 };
 
 // Edit Project Form
@@ -1054,8 +1080,8 @@ function EditProjectForm({
     project_name: project.project_name,
     location_name: project.location_name,
     budget: project.budget * currencyValue,
-    start_date: project.start_date,
-    end_date: project.end_date,
+    start_date: formatDateForInput(project.start_date),
+    end_date: formatDateForInput(project.end_date),
   });
 
   const { data: locations = [] } = useGetLocationsQuery();
@@ -1079,11 +1105,56 @@ function EditProjectForm({
         return;
       }
 
-      await updateProject({
+      // Format dates for API
+      const formattedStartDate = formatDateForApi(editedProject.start_date);
+      const formattedEndDate = formatDateForApi(editedProject.end_date);
+console.log("formattedStartDate", formattedStartDate)
+console.log("formattedEndDate", formattedEndDate)
+      // Create date objects for validation
+      const startDate = new Date(formattedStartDate);
+      const endDate = new Date(formattedEndDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Validate dates
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        toast({
+          title: "Invalid Date",
+          description: "Please enter valid dates.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (startDate < today) {
+        toast({
+          title: "Invalid Start Date",
+          description: "Start date cannot be in the past.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (endDate <= startDate) {
+        toast({
+          title: "Invalid Date Range",
+          description: "End date must be after start date.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const payload = {
         id: project.id,
-        ...editedProject,
+        project_name: editedProject.project_name,
+        location_name: editedProject.location_name,
         budget: (editedProject.budget / currencyValue).toString(),
-      }).unwrap();
+        start_date: formattedStartDate,
+        end_date: formattedEndDate,
+      };
+
+      console.log("Updating project with payload:", payload);
+      await updateProject(payload).unwrap();
       refetchProjects();
       onClose();
 
@@ -1147,24 +1218,7 @@ function EditProjectForm({
           </SelectContent>
         </Select>
       </div>
-      {/* <div className="space-y-2">
-        <label className="text-sm font-medium">Select Currency</label>
-        <Select
-          value={editedProject.currency}
-          onValueChange={(value) =>
-            setEditedProject({ ...editedProject, currency: value })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="USD">USD</SelectItem>
-            <SelectItem value="EUR">EUR</SelectItem>
-            <SelectItem value="GBP">GBP</SelectItem>
-          </SelectContent>
-        </Select>
-      </div> */}
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium">Start Date</label>
@@ -1175,7 +1229,7 @@ function EditProjectForm({
             type="date"
             value={
               editedProject.start_date
-                ? formatDate(editedProject.start_date)
+                ? formatDateForInput(editedProject.start_date)
                 : ""
             }
             onChange={(e) =>
@@ -1192,7 +1246,9 @@ function EditProjectForm({
             name="end_date"
             type="date"
             value={
-              editedProject.end_date ? formatDate(editedProject.end_date) : ""
+              editedProject.end_date
+                ? formatDateForInput(editedProject.end_date)
+                : ""
             }
             onChange={(e) =>
               setEditedProject({ ...editedProject, end_date: e.target.value })
