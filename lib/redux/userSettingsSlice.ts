@@ -18,7 +18,7 @@ interface UserSettings {
 export const userSettingsApi = createApi({
   reducerPath: 'userSettingsApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: 'http://localhost:4000/user-settings',
+    baseUrl: 'https://dse-backend-uv5d.onrender.com/user-settings',
     prepareHeaders: (headers, { getState }) => {
       // Get the token from localStorage
       const token = localStorage.getItem('token');
