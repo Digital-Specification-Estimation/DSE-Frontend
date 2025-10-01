@@ -665,7 +665,7 @@ export default function EmployeeManagement() {
       setIsLoadingCompanies(true);
       try {
         const response = await fetch(
-          "http://localhost:4000/company/companies"
+          "https://dse-backend-uv5d.onrender.com/company/companies"
         );
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
