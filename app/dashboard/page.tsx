@@ -315,6 +315,26 @@ export default function Dashboard() {
     return null;
   };
 
+  // Redirect users whose role request is not yet approved
+  if (
+    sessionData?.user?.role_request_approval &&
+    sessionData.user.role_request_approval !== "APPROVED"
+  ) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/pending-role";
+    }
+  }
+
+  // Redirect users whose role request is not yet approved
+  if (
+    sessionData?.user?.role_request_approval &&
+    sessionData.user.role_request_approval !== "APPROVED"
+  ) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/pending-role";
+    }
+  }
+
   if (isLoading || isSessionLoading) {
     return (
       <div className="flex h-screen bg-gray-50">

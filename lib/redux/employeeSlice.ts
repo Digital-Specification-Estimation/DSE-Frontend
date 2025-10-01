@@ -8,52 +8,55 @@ export const employeeApi = createApi({
     baseUrl: "http://localhost:4000/employee",
     credentials: "include",
   }),
+  tagTypes: ["Employees"],
   endpoints: (builder) => ({
-    addEmployee: builder.mutation({
+    addEmployee: builder.mutation<any, any>({
       query: (data) => ({
         url: "add",
         method: "POST",
         body: data,
       }),
+      invalidatesTags: ["Employees"],
     }),
-    editEmployee: builder.mutation({
+    editEmployee: builder.mutation<any, any>({
       query: (data) => ({
         url: "edit",
         method: "PUT",
         body: data,
       }),
+      invalidatesTags: ["Employees"],
     }),
-    deleteEmployee: builder.mutation({
+    deleteEmployee: builder.mutation<any, string>({
       query: (id) => ({
         url: `delete/${id}`,
         method: "DELETE",
       }),
+      invalidatesTags: ["Employees"],
     }),
-    deleteManyEmployees: builder.mutation({
+    deleteManyEmployees: builder.mutation<any, string[]>({
       query: (ids) => ({
         url: `delete-many?ids=${ids.join(",")}`,
         method: "DELETE",
       }),
+      invalidatesTags: ["Employees"],
     }),
-    getEmployees: builder.query<any, void>({
-      query: () => ({
-        url: "get/employees",
-        method: "GET",
-      }),
+    getEmployees: builder.query<any[], void>({
+      query: () => "get/employees",
+      providesTags: ["Employees"],
     }),
-    getEmployeeNumber: builder.query({
+    getEmployeeNumber: builder.query<any, void>({
       query: () => "get/number",
     }),
-    getEmployee: builder.query({
+    getEmployee: builder.query<any, string>({
       query: (id) => `get/employees/${id}`,
     }),
-    getTotalPayroll: builder.query({
+    getTotalPayroll: builder.query<any, { year: number; month: number }>({
       query: ({ year, month }) => `payroll/${year}/${month}`,
     }),
-    getDaysWorked: builder.query({
+    getDaysWorked: builder.query<any, string>({
       query: (id) => `days-worked/${id}`,
     }),
-    getPlannedVsActual: builder.query({
+    getPlannedVsActual: builder.query<any, string>({
       query: (id) => `plannedVsActual-user/${id}`,
     }),
     getMonthlyStats: builder.query<any, void>({

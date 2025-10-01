@@ -47,6 +47,7 @@
     "cmdk": "1.0.4",
     "currency.js": "^2.0.4",
     "date-fns": "^3.6.0",
+    "decimal.js": "^10.6.0",
     "embla-carousel-react": "8.5.1",
     "framer-motion": "^12.23.16",
     "input-otp": "1.4.1",
@@ -74,6 +75,7 @@
   },
   "devDependencies": {
     "@types/node": "^22",
+    "@types/papaparse": "^5.3.16",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@types/socket.io-client": "^1.4.36",

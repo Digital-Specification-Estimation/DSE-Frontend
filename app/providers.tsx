@@ -1,6 +1,4 @@
-// app/providers.tsx
 "use client";
-
 import { useRef } from "react";
 import { AppStore, makeStore } from "@/lib/store";
 import { Provider } from "react-redux";

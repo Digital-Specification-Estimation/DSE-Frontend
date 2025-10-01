@@ -138,7 +138,7 @@ export default function AttendancePayroll() {
   console.log("permissions", permissions);
 
   const splitCurrencyValue = (str: string | undefined | null) => {
-    if (!str) return null; // return early if str is undefined or null
+    if (!str) return null;
     const match = str.match(/^([A-Z]+)([\d.]+)$/);
     if (!match) return null;
     return {
@@ -187,13 +187,16 @@ export default function AttendancePayroll() {
     dailyActualPayroll: "$500",
   });
 
+  // Updated filters state to include remainingDays
   const [filters, setFilters] = useState({
     trade: "",
     project: "",
     dailyRate: "",
     startDate: "",
     endDate: "",
+    remainingDays: "",
   });
+
   const [attendancePeriod, setAttendancePeriod] = useState("1week");
 
   // Use RTK Query to fetch trades
@@ -215,14 +218,14 @@ export default function AttendancePayroll() {
   useEffect(() => {
     if (tradesData && tradesData.length > 0) {
       const tradeNames = tradesData.map((trade: any) => trade.trade_name);
-      setTrades([...new Set(tradeNames)]);
+      setTrades([...new Set(tradeNames)] as string[]);
     }
 
     if (projectsFetched && projectsFetched.length > 0) {
       const projectNames = projectsFetched.map(
         (project: any) => project.project_name
       );
-      setProjects([...new Set(projectNames)]);
+      setProjects([...new Set(projectNames)] as string[]);
     }
   }, [tradesData, projectsFetched]);
 
@@ -234,22 +237,21 @@ export default function AttendancePayroll() {
           ...new Set(
             employees.map((employee: any) => {
               const rate = employee?.daily_rate || 0;
-              return `${currencyShort || ""}${Math.round(rate)}`;
+              return `${currencyShort}${Math.round(rate)}`;
             })
           ),
-        ].sort((a, b) => {
+        ] as string[];
+        uniqueRates.sort((a, b) => {
           const numA = Number.parseFloat(a.replace(/[^0-9.]/g, "")) || 0;
           const numB = Number.parseFloat(b.replace(/[^0-9.]/g, "")) || 0;
           return numA - numB;
         });
 
-        // Only update if the rates have actually changed - deep comparison
         if (JSON.stringify(uniqueRates) !== JSON.stringify(dailyRates)) {
           setDailyRates(uniqueRates);
         }
       } catch (error) {
         console.error("Error processing daily rates:", error);
-        // Fallback to empty array if there's an error
         if (dailyRates.length === 0) {
           setDailyRates([]);
         }
@@ -279,14 +281,6 @@ export default function AttendancePayroll() {
     };
   }, [employees]);
 
-  // useEffect(() => {
-  // refetchTrades();
-  // if (tradesFetched) {
-  //   tradesFetched.map((trade: any) => {
-  //     setTrades([...trades, trade.trade_name]);
-  //   });
-  // }
-  // }, []);
   // Update employee attendance using fetch
   const updateEmployeeAttendance = async (
     employeeId: number,
@@ -303,7 +297,6 @@ export default function AttendancePayroll() {
         }).unwrap();
         setOpenAttendanceDropdown(null);
 
-        // Add refetch here to update data
         await refetch();
 
         toast({
@@ -328,7 +321,6 @@ export default function AttendancePayroll() {
   };
 
   // Generate payslips using fetch
-  // Function to handle payslip generation for all employees
   const handleGeneratePayslips = async () => {
     if (!permissions.full_access && !permissions.manage_payroll) {
       toast({
@@ -357,10 +349,8 @@ export default function AttendancePayroll() {
           "Please wait while we generate payslips for all employees...",
       });
 
-      // Small delay to allow UI to update
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Generate payslip for each employee
       for (const employee of employees) {
         try {
           const doc = generateSinglePayslip(employee);
@@ -371,7 +361,6 @@ export default function AttendancePayroll() {
             )}-${Date.now()}.pdf`
           );
 
-          // Small delay between each PDF
           await new Promise((resolve) => setTimeout(resolve, 200));
         } catch (error) {
           console.error(
@@ -406,7 +395,6 @@ export default function AttendancePayroll() {
   };
   const handleAddReasonSubmit = async () => {
     try {
-      console.log("newReasonObject", newReason);
       await addReason(newReason).unwrap();
 
       setNewReason({ employee_id: "", reason: "", date: "" });
@@ -414,7 +402,7 @@ export default function AttendancePayroll() {
       setShowAddReason(false);
 
       toast({
-        title: "Reason adding",
+        title: "Reason Added",
         description: `Successfully added the reason to the user`,
       });
     } catch (error: any) {
@@ -429,9 +417,6 @@ export default function AttendancePayroll() {
   const generateSinglePayslip = (employee: any) => {
     const doc = new jsPDF();
 
-    // ========================
-    // Document Properties
-    // ========================
     doc.setProperties({
       title: `Payslip - ${employee.username}`,
       subject: "Employee Payslip",
@@ -439,9 +424,6 @@ export default function AttendancePayroll() {
       creator: "Payroll System",
     });
 
-    // ========================
-    // Header
-    // ========================
     doc.setFontSize(20);
     doc.setTextColor(33, 33, 33);
     doc.text("CONSTRUCTION COMPANY", 105, 20, { align: "center" });
@@ -449,15 +431,11 @@ export default function AttendancePayroll() {
     doc.setFontSize(14);
     doc.text("EMPLOYEE PAYSLIP", 105, 30, { align: "center" });
 
-    // Date
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 40, {
       align: "center",
     });
 
-    // ========================
-    // Employee Information
-    // ========================
     doc.setFontSize(12);
     doc.text("Employee Information", 20, 55);
     doc.setFontSize(10);
@@ -469,9 +447,6 @@ export default function AttendancePayroll() {
     );
     doc.text(`Employee ID: ${employee.id}`, 20, 79);
 
-    // ========================
-    // Pay Period
-    // ========================
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -482,34 +457,24 @@ export default function AttendancePayroll() {
     doc.text(`From: ${firstDay.toLocaleDateString()}`, 120, 65);
     doc.text(`To: ${lastDay.toLocaleDateString()}`, 120, 72);
 
-    // ========================
-    // Payroll Calculations
-    // ========================
     const daysWorked = employee.attendance?.length || 0;
     const dailyRate = Number(employee.daily_rate) || 100;
 
     const regularPay = dailyRate * daysWorked;
     const overtimeHours = employee.overtime_hours || 0;
-    const overtimeRate = Number(employee.overtime_rate) || dailyRate / 8; // example
+    const overtimeRate = Number(employee.overtime_rate) || dailyRate / 8;
     const overtimePay = overtimeHours * overtimeRate;
 
-    // Example deductions
-    const taxDeduction = regularPay * 0.1; // 10% tax
-    const insuranceDeduction = 1000; // fixed example
+    const taxDeduction = regularPay * 0.1;
+    const insuranceDeduction = 1000;
     const totalDeductions = taxDeduction + insuranceDeduction;
 
     const totalEarnings = regularPay + overtimePay;
     const netPay = totalEarnings - totalDeductions;
 
-    // ========================
-    // Currency Formatter
-    // ========================
     const formatCurrency = (value: number) =>
       `${currencyShort}${value.toLocaleString()}`;
 
-    // ========================
-    // Earnings Table
-    // ========================
     doc.setFontSize(12);
     doc.text("Earnings", 20, 95);
 
@@ -535,9 +500,6 @@ export default function AttendancePayroll() {
       headStyles: { fillColor: [66, 66, 66] },
     });
 
-    // ========================
-    // Deductions Table
-    // ========================
     const deductionsStartY = (doc as any).lastAutoTable.finalY + 10;
     doc.setFontSize(12);
     doc.text("Deductions", 20, deductionsStartY);
@@ -554,9 +516,6 @@ export default function AttendancePayroll() {
       headStyles: { fillColor: [66, 66, 66] },
     });
 
-    // ========================
-    // Net Pay
-    // ========================
     const netPayStartY = (doc as any).lastAutoTable.finalY + 10;
     autoTable(doc, {
       startY: netPayStartY,
@@ -570,9 +529,6 @@ export default function AttendancePayroll() {
       },
     });
 
-    // ========================
-    // Footer
-    // ========================
     doc.setFontSize(8);
     doc.text(
       "This is a computer-generated document and does not require a signature.",
@@ -583,8 +539,7 @@ export default function AttendancePayroll() {
 
     return doc;
   };
-  // console.log("permissions", permissions);
-  // Generate payroll report using fetch
+
   const handleGenerateReport = async () => {
     if (!permissions.full_access && !permissions.generate_reports && !permissions.view_reports) {
       toast({
@@ -612,10 +567,8 @@ export default function AttendancePayroll() {
         description: "Please wait while we generate your payroll report...",
       });
 
-      // Create a new PDF document
       const doc = new jsPDF();
 
-      // Set document properties
       doc.setProperties({
         title: "Payroll Report",
         subject: "Monthly Payroll Summary",
@@ -623,20 +576,17 @@ export default function AttendancePayroll() {
         creator: "Payroll System",
       });
 
-      // Add company header
       doc.setFontSize(20);
       doc.setTextColor(33, 33, 33);
       doc.text("CONSTRUCTION COMPANY", 105, 20, { align: "center" });
       doc.setFontSize(14);
       doc.text("PAYROLL REPORT", 105, 30, { align: "center" });
 
-      // Add date
       doc.setFontSize(10);
       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 40, {
         align: "center",
       });
 
-      // Calculate totals
       let totalBudget = 0;
       let totalActual = 0;
       let totalDays = 0;
@@ -657,7 +607,6 @@ export default function AttendancePayroll() {
         }
       );
 
-      // Add summary section
       doc.setFontSize(12);
       doc.text("Payroll Summary", 20, 55);
 
@@ -687,7 +636,6 @@ export default function AttendancePayroll() {
         headStyles: { fillColor: [66, 66, 66] },
       });
 
-      // Add employee details
       const finalY = (doc as any).lastAutoTable.finalY + 15;
       doc.setFontSize(12);
       doc.text("Employee Details", 20, finalY);
@@ -729,7 +677,6 @@ export default function AttendancePayroll() {
         },
       });
 
-      // Save the PDF with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       doc.save(`payroll-report_${timestamp}.pdf`);
 
@@ -789,29 +736,20 @@ export default function AttendancePayroll() {
         )}`;
         if (employeeRate !== filters.dailyRate) return false;
       }
+      if (filters.remainingDays && filters.remainingDays !== "all") {
+        const days = Number(employee.remaining_days) || 0;
+        if (filters.remainingDays === "few" && (days > 10 || days < 0))
+          return false;
+        if (filters.remainingDays === "moderate" && (days <= 10 || days > 30))
+          return false;
+        if (filters.remainingDays === "many" && days <= 30) return false;
+      }
       return true;
     });
   }, [employees, searchTerm, filters, currencyShort]);
 
-  // Add this after the filteredEmployees definition
   const prevFiltersRef = React.useRef(filters);
   const prevFilteredCountRef = React.useRef(filteredEmployees.length);
-
-  // Remove this useEffect entirely as it's causing a loop
-  // useEffect(() => {
-  //   // Only log if filters or count actually changed
-  //   if (
-  //     JSON.stringify(prevFiltersRef.current) !== JSON.stringify(filters) ||
-  //     prevFilteredCountRef.current !== filteredEmployees.length
-  //   ) {
-  //     console.log("Current filters:", filters);
-  //     console.log("Filtered employees count:", filteredEmployees.length);
-
-  //     // Update refs
-  //     prevFiltersRef.current = filters;
-  //     prevFilteredCountRef.current = filteredEmployees.length;
-  //   }
-  // }, [filters, filteredEmployees.length]);
 
   // Refresh data
   const handleRefreshData = async () => {
@@ -844,17 +782,19 @@ export default function AttendancePayroll() {
       dailyRate: "",
       startDate: "",
       endDate: "",
+      remainingDays: "",
     });
     setSearchTerm("");
   };
 
-  // 4. Add defensive checks to the getFilteredAttendance function
-  const getFilteredAttendance = (attendance, period) => {
+  const getFilteredAttendance = (
+    attendance: string | any[],
+    period: string
+  ) => {
     if (!attendance || !Array.isArray(attendance) || attendance.length === 0)
       return [];
 
     try {
-      // Use array slicing based on selected period
       switch (period) {
         case "1week":
           return attendance.slice(0, 7);
@@ -871,10 +811,8 @@ export default function AttendancePayroll() {
     }
   };
 
-  // 3. Add this useEffect cleanup function to prevent memory leaks
   useEffect(() => {
     return () => {
-      // Clean up any pending state updates when component unmounts
       setOpenAttendanceDropdown(null);
       setExpandedEmployee(null);
     };
@@ -887,7 +825,6 @@ export default function AttendancePayroll() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardHeader />
-        {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold">
@@ -928,7 +865,6 @@ export default function AttendancePayroll() {
           </div>
 
           <div className="bg-white rounded-lg border flex justify-between items-center h-20 mb-5 pl-2">
-            {/* Tabs */}
             <div className="flex h-10 items-center rounded-lg ">
               {[
                 { id: "attendance", label: "Attendance" },
@@ -953,7 +889,6 @@ export default function AttendancePayroll() {
               ))}
             </div>
 
-            {/* Search */}
             <div className="p-4 flex items-center gap-1">
               <div className="relative w-52">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -998,136 +933,129 @@ export default function AttendancePayroll() {
             </div>
           </div>
 
-          {/* Filter Row */}
           {showFilters && (
-            <div className="px-4 pb-4 grid grid-cols-5 gap-4">
-              <Select
-                value={filters.trade}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, trade: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Trade" />
-                </SelectTrigger>
-                <SelectContent>
-                  {isLoadingTrades ? (
-                    <div className="flex items-center justify-center p-2">
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      <span>Loading trades...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <SelectItem value="all">All Trades</SelectItem>
-                      {trades.map((trade) => (
-                        <SelectItem key={trade} value={trade}>
-                          {trade}
-                        </SelectItem>
-                      ))}
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filters.project}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, project: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {isLoadingProjects ? (
-                    <div className="flex items-center justify-center p-2">
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      <span>Loading projects...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <SelectItem value="all">All Projects</SelectItem>
-                      {projects.map((project) => (
-                        <SelectItem key={project} value={project}>
-                          {project}
-                        </SelectItem>
-                      ))}
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filters.dailyRate}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, dailyRate: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select by Daily Rate" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Rates</SelectItem>
-                  {dailyRates.map((rate) => (
-                    <SelectItem key={rate} value={rate}>
-                      {rate}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* <Select
-                value={filters.startDate}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, startDate: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Start Date" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date1">Jan 1, 2025</SelectItem>
-                  <SelectItem value="date2">Feb 1, 2025</SelectItem>
-                  <SelectItem value="date3">Mar 1, 2025</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filters.endDate}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, endDate: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Finish Date" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date1">Dec 31, 2025</SelectItem>
-                  <SelectItem value="date2">Nov 30, 2025</SelectItem>
-                  <SelectItem value="date3">Oct 31, 2025</SelectItem>
-                </SelectContent>
-              </Select> */}
-              <Button
-                variant="outline"
-                className="gap-2 flex items-center border-red-500 text-red-500 h-10 rounded-full"
-                onClick={handleResetFilters}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+            <div className="px-4 pb-4">
+              <div className="text-sm text-gray-500 mb-2">
+                Filter employees by trade, project, daily rate, or remaining
+                contract days
+              </div>
+              <div className="grid grid-cols-5 gap-4">
+                <Select
+                  value={filters.trade}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, trade: value }))
+                  }
                 >
-                  <path d="M3 3h18v18H3z"></path>
-                  <path d="M15 9l-6 6m0-6l6 6"></path>
-                </svg>
-                Reset Filters
-              </Button>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Trade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoadingTrades ? (
+                      <div className="flex items-center justify-center p-2">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        <span>Loading trades...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <SelectItem value="all">All Trades</SelectItem>
+                        {trades.map((trade) => (
+                          <SelectItem key={trade} value={trade}>
+                            {trade}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={filters.project}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, project: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoadingProjects ? (
+                      <div className="flex items-center justify-center p-2">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        <span>Loading projects...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <SelectItem value="all">All Projects</SelectItem>
+                        {projects.map((project) => (
+                          <SelectItem key={project} value={project}>
+                            {project}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={filters.dailyRate}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, dailyRate: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select by Daily Rate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Rates</SelectItem>
+                    {dailyRates.map((rate) => (
+                      <SelectItem key={rate} value={rate}>
+                        {rate}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={filters.remainingDays}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, remainingDays: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select by Remaining Days" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Days</SelectItem>
+                    <SelectItem value="few">Few (0-10 days)</SelectItem>
+                    <SelectItem value="moderate">
+                      Moderate (11-30 days)
+                    </SelectItem>
+                    <SelectItem value="many">Many (31+ days)</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="outline"
+                  className="gap-2 flex items-center border-red-500 text-red-500 h-10 rounded-full"
+                  onClick={handleResetFilters}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 3h18v18H3z"></path>
+                    <path d="M15 9l-6 6m0-6l6 6"></path>
+                  </svg>
+                  Reset Filters
+                </Button>
+              </div>
             </div>
           )}
 
@@ -1140,10 +1068,8 @@ export default function AttendancePayroll() {
             </div>
           ) : (
             <>
-              {/* Attendance Tab */}
               {activeTab === "attendance" && (
                 <>
-                  {/* Summary Cards */}
                   <div className="px-4 pb-4">
                     <div className="flex gap-4 mb-4">
                       <div className="bg-white border rounded-lg p-4 flex-1">
@@ -1165,17 +1091,10 @@ export default function AttendancePayroll() {
                     </div>
                   </div>
 
-                  {/* Attendance Table */}
                   <div className="overflow-x-auto">
                     <table className="w-full border rounded-md">
                       <thead>
                         <tr className="border-t border-b text-[12px] text-gray-500">
-                          {/* <th className="w-10 px-4 py-3 text-left border-r">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-gray-300"
-                            />
-                          </th> */}
                           <th className="px-4 py-3 text-left border-r">
                             Employee Name
                           </th>
@@ -1206,12 +1125,6 @@ export default function AttendancePayroll() {
                         {filteredEmployees.map((employee: any) => (
                           <React.Fragment key={employee.id}>
                             <tr className="border-b hover:bg-gray-50">
-                              {/* <td className="px-4 py-3 border-r">
-                                <input
-                                  type="checkbox"
-                                  className="h-4 w-4 rounded border-gray-300"
-                                />
-                              </td> */}
                               <td className="px-4 py-3 border-r">
                                 <div className="flex items-center gap-2">
                                   <Avatar className="h-8 w-8">
@@ -1494,13 +1407,13 @@ export default function AttendancePayroll() {
                                                     toast({
                                                       title: "Error",
                                                       description:
-                                                        "you do not have previelege to make attendance",
+                                                        "You do not have privilege to mark attendance",
                                                       variant: "destructive",
                                                     });
                                                   }
                                                 }}
                                               >
-                                                late
+                                                Late
                                               </Badge>
                                             )}
                                             {day.status !== "absent" && (
@@ -1540,7 +1453,7 @@ export default function AttendancePayroll() {
                                                     toast({
                                                       title: "Error",
                                                       description:
-                                                        "you do not have previelege to make attendance",
+                                                        "You do not have privilege to mark attendance",
                                                       variant: "destructive",
                                                     });
                                                   }
@@ -1586,7 +1499,7 @@ export default function AttendancePayroll() {
                                                     toast({
                                                       title: "Error",
                                                       description:
-                                                        "you do not have previelege to make attendance",
+                                                        "You do not have privilege to mark attendance",
                                                       variant: "destructive",
                                                     });
                                                   }
@@ -1611,10 +1524,8 @@ export default function AttendancePayroll() {
                 </>
               )}
 
-              {/* Payroll Tab */}
               {activeTab === "payroll" && (
                 <>
-                  {/* Summary Cards */}
                   <div className="px-4 pb-4">
                     <div className="grid grid-cols-5 gap-4 mb-4">
                       <div className="bg-white border rounded-lg p-4">
@@ -1666,17 +1577,10 @@ export default function AttendancePayroll() {
                     </div>
                   </div>
 
-                  {/* Payroll Table */}
                   <div className="overflow-x-auto">
                     <table className="w-full border rounded-md">
                       <thead>
                         <tr className="border-t border-b text-[10px] text-gray-500">
-                          {/* <th className="w-10 px-4 py-3 text-left border-r">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-gray-300"
-                            />
-                          </th> */}
                           <th className="px-4 py-3 text-left border-r">
                             Employee Name
                           </th>
@@ -1695,7 +1599,6 @@ export default function AttendancePayroll() {
                           <th className="px-4 py-3 text-left border-r">
                             Planned vs Actual
                           </th>
-                          {/* <th className="w-10 px-4 py-3 text-center"></th> */}
                         </tr>
                       </thead>
                       <tbody className="text-xs">
@@ -1704,12 +1607,6 @@ export default function AttendancePayroll() {
                             key={employee.id}
                             className="border-b hover:bg-gray-50"
                           >
-                            {/* <td className="px-4 py-3 border-r">
-                              <input
-                                type="checkbox"
-                                className="h-4 w-4 rounded border-gray-300"
-                              />
-                            </td> */}
                             <td className="px-4 py-3 border-r">
                               <div className="flex items-center gap-2">
                                 <Avatar className="h-8 w-8">
@@ -1763,35 +1660,6 @@ export default function AttendancePayroll() {
                                 </Badge>
                               )}
                             </td>
-                            {/* <td className="px-4 py-3 text-center">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  toast({
-                                    title: "Employee Details",
-                                    description: `Viewing details for ${employee.name}`,
-                                  });
-                                }}
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-muted-foreground"
-                                >
-                                  <circle cx="12" cy="12" r="1" />
-                                  <circle cx="12" cy="5" r="1" />
-                                  <circle cx="12" cy="19" r="1" />
-                                </svg>
-                              </Button>
-                            </td> */}
                           </tr>
                         ))}
                       </tbody>
@@ -1800,7 +1668,6 @@ export default function AttendancePayroll() {
                 </>
               )}
 
-              {/* Leave Tab */}
               {activeTab === "leave" && (
                 <div className="overflow-x-auto">
                   <table className="w-full border rounded-lg">
@@ -1830,10 +1697,7 @@ export default function AttendancePayroll() {
                           <td className="px-4 py-3 border-r">
                             <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8">
-                                <AvatarImage
-                                  // src={employee.avatar || "/placeholder.svg"}
-                                  alt={employee.username}
-                                />
+                                <AvatarImage alt={employee.username} />
                                 <AvatarFallback>
                                   {employee.username.charAt(0)}
                                 </AvatarFallback>
@@ -1876,17 +1740,13 @@ export default function AttendancePayroll() {
               <DialogHeader>
                 <DialogTitle>Edit Employee</DialogTitle>
               </DialogHeader>
-              {/* <form
-                                  onSubmit={handleAddReasonSubmit}
-                                  className="space-y-4 pt-4"
-                                > */}
               <div className="space-y-4 pt-4">
                 <div className="space-y-2">
                   <label
                     htmlFor="edit-username"
                     className="text-sm font-medium"
                   >
-                    reason
+                    Reason
                   </label>
                   <div className="relative w-[300px]">
                     <Select
@@ -1902,11 +1762,10 @@ export default function AttendancePayroll() {
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="sick">sick</SelectItem>
-
-                        <SelectItem value="vacation">vacation</SelectItem>
+                        <SelectItem value="sick">Sick</SelectItem>
+                        <SelectItem value="vacation">Vacation</SelectItem>
                         <SelectItem value="unpaid leave">
-                          unpaid leave
+                          Unpaid Leave
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -1946,7 +1805,6 @@ export default function AttendancePayroll() {
                     Cancel
                   </Button>
                   <Button
-                    // type="submit"
                     className="bg-orange-500 hover:bg-orange-600"
                     disabled={isAdding}
                     onClick={handleAddReasonSubmit}
@@ -1961,7 +1819,6 @@ export default function AttendancePayroll() {
                     )}
                   </Button>
                 </div>
-                {/* </form> */}
               </div>
             </DialogContent>
           </Dialog>

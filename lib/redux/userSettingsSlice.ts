@@ -3,16 +3,16 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 interface UserSettings {
   id?: string;
   role: string;
-  companyId: string;
-  fullAccess: boolean;
-  approveAttendance: boolean;
-  managePayroll: boolean;
-  viewReports: boolean;
-  approveLeaves: boolean;
-  viewPayslip: boolean;
-  markAttendance: boolean;
-  manageEmployees: boolean;
-  generateReports: boolean;
+  company_id: string;
+  full_access: boolean;
+  approve_attendance: boolean;
+  manage_payroll: boolean;
+  view_reports: boolean;
+  approve_leaves: boolean;
+  view_payslip: boolean;
+  mark_attendance: boolean;
+  manage_employees: boolean;
+  generate_reports: boolean;
 }
 
 export const userSettingsApi = createApi({
@@ -20,43 +20,31 @@ export const userSettingsApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: 'http://localhost:4000/user-settings',
     prepareHeaders: (headers, { getState }) => {
-      // Get the token from localStorage
       const token = localStorage.getItem('token');
-      
-      // If we have a token, set the authorization header
       if (token) {
         headers.set('authorization', `Bearer ${token}`);
       }
-      
       return headers;
     },
   }),
-  tagTypes: ['UserSettings'],
+  tagTypes: ['UserSettings', 'Session'], // Add Session tag
   endpoints: (builder) => ({
-    // Create user settings
     createUserSettings: builder.mutation<UserSettings, Omit<UserSettings, 'id'>>({
       query: (settings) => ({
         url: '/',
         method: 'POST',
         body: settings,
       }),
-      invalidatesTags: ['UserSettings'],
+      invalidatesTags: ['UserSettings', 'Session'], // Invalidate Session
     }),
-
-    // Update user settings
-    updateUserSettings: builder.mutation<{
-      id: string;
-      updates: Partial<UserSettings>;
-    }, UserSettings>({
+    updateUserSettings: builder.mutation<UserSettings, { id: string; updates: Partial<UserSettings> }>({
       query: ({ id, updates }) => ({
         url: `/${id}`,
         method: 'PUT',
         body: updates,
       }),
-      invalidatesTags: ['UserSettings'],
+      invalidatesTags: ['UserSettings', 'Session'], // Invalidate Session
     }),
-
-    // Get all settings for a company
     getCompanySettings: builder.query<UserSettings[], string>({
       query: (companyId) => `/company/${companyId}`,
       providesTags: (result) =>
@@ -67,8 +55,6 @@ export const userSettingsApi = createApi({
             ]
           : [{ type: 'UserSettings', id: 'LIST' }],
     }),
-
-    // Get settings by role and company
     getRoleSettings: builder.query<
       UserSettings,
       { role: string; companyId: string }
