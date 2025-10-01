@@ -217,8 +217,8 @@ function TradeForm({
       const newTradeToAdd: any = {
         location_name: newTrade.location_name,
         trade_name: newTrade.trade_name,
-        monthly_planned_cost: monthlyPlannedCost,
-        daily_planned_cost: dailyPlannedCost,
+        monthly_planned_cost: monthlyPlannedCost.toString(),
+        daily_planned_cost: dailyPlannedCost.toString(),
       };
 
       // Use RTK Query mutation
