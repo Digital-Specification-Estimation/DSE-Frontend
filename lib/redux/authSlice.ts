@@ -1,11 +1,8 @@
-"use client";
-
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface LoginBodyDto {
   email: string;
-  role: string;
   password: string;
 }
 
@@ -25,7 +22,7 @@ export interface SignupBodyDto {
 export interface SignupResponseDto {
   id: string;
   username: string;
-  role: string;
+  role: string[];
   email: string;
   password: string;
   refresh_token: string;
@@ -37,6 +34,8 @@ export interface SignupResponseDto {
   send_email_alerts: boolean;
   deadline_notify: boolean;
   image_url: string;
+  role_request_approval?: "PENDING" | "APPROVED" | "REJECTED";
+  settings?: any[]; // Add settings to the interface
 }
 
 export enum RoleEnum {
@@ -72,10 +71,10 @@ const authSlice = createSlice({
 export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: fetchBaseQuery({
-    // baseUrl: "https://dse-backend-production.up.railway.app/auth",
-    baseUrl: "https://dse-backend-uv5d.onrender.com/auth",
+    baseUrl: "http://localhost:4000/auth",
     credentials: "include",
   }),
+  tagTypes: ['Session'], // Add Session tag
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponseDto, LoginBodyDto>({
       query: (credentials) => ({
@@ -84,7 +83,7 @@ export const authApi = createApi({
         body: credentials,
       }),
     }),
-    signup: builder.mutation<SignupResessionsponseDto, SignupBodyDto>({
+    signup: builder.mutation<SignupResponseDto, SignupBodyDto>({
       query: (userData) => ({
         url: "/signup",
         method: "POST",
@@ -103,11 +102,12 @@ export const authApi = createApi({
         method: "GET",
       }),
     }),
-    session: builder.query<any, void>({
+    session: builder.query<LoginResponseDto, void>({
       query: () => ({
         url: "/session",
         method: "GET",
       }),
+      providesTags: ['Session'], // Provide Session tag
     }),
   }),
 });

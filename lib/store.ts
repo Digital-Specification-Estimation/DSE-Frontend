@@ -24,7 +24,7 @@ export const makeStore = () => {
       [projectApi.reducerPath]: projectApi.reducer,
       [attendanceApi.reducerPath]: attendanceApi.reducer,
       [companyApi.reducerPath]: companyApi.reducer,
-      [userApi.reducerPath]: userApi.reducer,
+      [userApi.reducerPath]: userApi.reducer, // ✅ userApi reducer
       [userSettingsApi.reducerPath]: userSettingsApi.reducer,
       [notificationsApi.reducerPath]: notificationsApi.reducer,
     },
@@ -38,7 +38,7 @@ export const makeStore = () => {
         .concat(projectApi.middleware)
         .concat(attendanceApi.middleware)
         .concat(companyApi.middleware)
-        .concat(userApi.middleware)
+        .concat(userApi.middleware) // ✅ userApi middleware
         .concat(notificationsApi.middleware),
   });
 };

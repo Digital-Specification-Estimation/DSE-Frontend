@@ -74,7 +74,7 @@ export function Sidebar({ user }: SidebarProps) {
   useEffect(() => {
     // Force refetch on mount
     refetch();
-    console.log("user cookie",Cookie.get("connect.sid"));
+    console.log("user cookie", Cookie.get("connect.sid"));
 
     // Check if user is authenticated
     const checkAuth = () => {
@@ -84,7 +84,7 @@ export function Sidebar({ user }: SidebarProps) {
     };
 
     // Check auth on mount
-   // checkAuth();
+    // checkAuth();
 
     // Add event listener for page visibility changes
     const handleVisibilityChange = () => {
@@ -126,15 +126,74 @@ export function Sidebar({ user }: SidebarProps) {
     refetch();
   };
 
-  const menuItems = [
-    { name: "Settings", href: "/settings", icon: Settings },
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Business Setup", href: "/business-setup", icon: BriefcaseBusiness },
-    { name: "Budget Planning", href: "/budget-planning", icon: Wallet },
-    { name: "Employee Management", href: "/employee-management", icon: Users2 },
-    { name: "Attendance & Payroll", href: "/attendance-payroll", icon: NotepadText },
-    { name: "Logout", href: "/", icon: LogOut, onClick: handleLogout },
+  // Derive user permissions from session
+  const userPermissions: Record<string, any> = (() => {
+    const settings = (sessionData as any)?.user?.settings || [];
+    const currentRole = (sessionData as any)?.user?.current_role;
+    if (!currentRole || !Array.isArray(settings)) return {};
+    const found = settings.find(
+      (s: any) => s.role?.toLowerCase() === String(currentRole).toLowerCase()
+    );
+    return found || {};
+  })();
+
+  // Base menu
+  const allMenuItems = [
+    {
+      name: "Settings",
+      href: "/settings",
+      icon: Settings,
+      required: "full_access",
+    },
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: LayoutDashboard,
+      required: null,
+    },
+    {
+      name: "Business Setup",
+      href: "/business-setup",
+      icon: BriefcaseBusiness,
+      required: "full_access",
+    },
+    {
+      name: "Budget Planning",
+      href: "/budget-planning",
+      icon: Wallet,
+      required: "view_reports",
+    },
+    {
+      name: "Employee Management",
+      href: "/employee-management",
+      icon: Users2,
+      required: "manage_employees",
+    },
+    {
+      name: "Attendance & Payroll",
+      href: "/attendance-payroll",
+      icon: NotepadText,
+      required: "manage_payroll",
+    },
+    {
+      name: "User & Role Management",
+      href: "/user-management",
+      icon: NotepadText,
+      required: "full_access",
+    },
+    {
+      name: "Logout",
+      href: "/",
+      icon: LogOut,
+      onClick: handleLogout,
+      required: null,
+    },
   ];
+
+  const menuItems = allMenuItems.filter((item) => {
+    if (!item.required) return true;
+    return userPermissions[item.required] === true;
+  });
   return (
     <div className="w-[280px] min-h-screen bg-[#FAFAFA] flex flex-col border-r border-gray-200">
       {/* Logo */}

@@ -5,7 +5,7 @@ export const projectApi = createApi({
   baseQuery: fetchBaseQuery({
     // baseUrl: "https://dse-backend-production.up.railway.app/project",
 
-    baseUrl: "https://dse-backend-uv5d.onrender.com/project",
+    baseUrl: "http://localhost:4000/project",
     credentials: "include",
   }),
   endpoints: (builder) => ({
