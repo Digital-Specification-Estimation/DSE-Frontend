@@ -57,32 +57,32 @@ export default function SignIn() {
         console.warn("No access_token in login response");
       }
 
-      // Refetch session to get role_request_approval
-      const sessionResult = await refetchSession().unwrap();
-      console.log("Session Refetch Result:", sessionResult);
+      // // Refetch session to get role_request_approval
+      // const sessionResult = await refetchSession().unwrap();
+      // console.log("Session Refetch Result:", sessionResult);
 
-      const roleStatus = sessionResult?.user?.role_request_approval;
-      console.log("Role Status:", roleStatus);
+      // const roleStatus = sessionResult?.user?.role_request_approval;
+      // console.log("Role Status:", roleStatus);
 
-      if (!sessionResult?.user) {
-        throw new Error("Session data missing user information");
-      }
+      // if (!sessionResult?.user) {
+      //   throw new Error("Session data missing user information");
+      // }
 
-      toast({
-        title: "Login Successful",
-        description: "Welcome back! You've been logged in successfully.",
-      });
+      // toast({
+      //   title: "Login Successful",
+      //   description: "Welcome back! You've been logged in successfully.",
+      // });
 
-      // Delay redirect to ensure toast is visible
-      setTimeout(() => {
-        if (roleStatus && roleStatus !== "APPROVED") {
-          console.log("Redirecting to /pending-role");
-          router.push("/pending-role");
-        } else {
-          console.log("Redirecting to /dashboard");
-          router.push("/dashboard");
-        }
-      }, 1000);
+      // // Delay redirect to ensure toast is visible
+      // setTimeout(() => {
+      //   if (roleStatus && roleStatus !== "APPROVED") {
+      //     console.log("Redirecting to /pending-role");
+      //     router.push("/pending-role");
+      //   } else {
+      //     console.log("Redirecting to /dashboard");
+      //     router.push("/dashboard");
+      //   }
+      // }, 1000);
     } catch (err: any) {
       console.error("Login Error:", err, "Stack:", err.stack);
       const errorMessage =
