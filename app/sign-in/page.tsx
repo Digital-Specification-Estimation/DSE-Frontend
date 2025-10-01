@@ -21,6 +21,7 @@ export default function SignIn() {
     email: "",
     password: "",
     rememberMe: false,
+    role: "admin", // Default role
   });
   const [error, setError] = useState("");
 
@@ -44,6 +45,7 @@ export default function SignIn() {
       const data = await login({
         email: formData.email,
         password: formData.password,
+        role: formData.role, // Include role in login request
       }).unwrap();
       console.log("Login Response:", data);
 
@@ -207,12 +209,36 @@ export default function SignIn() {
                   id="email"
                   name="email"
                   type="email"
+                  placeholder="johndoe@example.com"
                   value={formData.email}
                   onChange={handleChange}
                   className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                   disabled={isLoading}
                 />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="role" className="text-sm font-medium">
+                Role
+              </label>
+              <div className="relative">
+                <select
+                  id="role"
+                  name="role"
+                  value={formData.role}
+                  onChange={(e) =>
+                    setFormData({ ...formData, role: e.target.value })
+                  }
+                  className="w-full pl-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  disabled={isLoading}
+                >
+                  <option value="admin">Admin</option>
+                  <option value="hr_manager">HR Manager</option>
+                  <option value="departure_manager">Departure Manager</option>
+                  <option value="employee">Employee</option>
+                </select>
               </div>
             </div>
 
