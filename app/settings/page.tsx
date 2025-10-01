@@ -12,11 +12,7 @@ import {
   useEditCompanyMutation,
   useGetCompanyQuery,
 } from "@/lib/redux/companySlice";
-import {
-  useGetPrevielegesQuery,
-  useUpdatePrevielegesMutation,
-  useUpdateUserMutation,
-} from "@/lib/redux/userSlice";
+import { useUpdateUserMutation } from "@/lib/redux/userSlice";
 import {
   useGetRoleSettingsQuery,
   useUpdateUserSettingsMutation,
@@ -31,7 +27,6 @@ import {
 
 export default function Settings() {
   const [updateUser] = useUpdateUserMutation();
-  const [updatePrevielges] = useUpdatePrevielegesMutation();
   const [userData, setUserData] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -121,7 +116,9 @@ export default function Settings() {
   const { data: adminUserSettings, isLoading: isLoadingAdminRoleSettings } =
     useGetRoleSettingsQuery(
       { role: "admin", companyId },
-      { skip: !sessionData?.user?.role || !companyId }
+      {
+        skip: !sessionData?.user?.role || !companyId || companyId === "default",
+      }
     );
 
   const {
@@ -129,7 +126,7 @@ export default function Settings() {
     isLoading: isLoadingHRManagerRoleSettings,
   } = useGetRoleSettingsQuery(
     { role: "hr_manager", companyId },
-    { skip: !sessionData?.user?.role || !companyId }
+    { skip: !sessionData?.user?.role || !companyId || companyId === "default" }
   );
 
   const {
@@ -137,7 +134,7 @@ export default function Settings() {
     isLoading: isLoadingDepartureManagerRoleSettings,
   } = useGetRoleSettingsQuery(
     { role: "departure_manager", companyId },
-    { skip: !sessionData?.user?.role || !companyId }
+    { skip: !sessionData?.user?.role || !companyId || companyId === "default" }
   );
 
   const {
@@ -145,7 +142,7 @@ export default function Settings() {
     isLoading: isLoadingEmployeeRoleSettings,
   } = useGetRoleSettingsQuery(
     { role: "employee", companyId },
-    { skip: !sessionData?.user?.role || !companyId }
+    { skip: !sessionData?.user?.role || !companyId || companyId === "default" }
   );
 
   // Update role settings when data is fetched
@@ -306,6 +303,17 @@ export default function Settings() {
   // Save role settings
   const handleSaveRoleSettings = async (role: string) => {
     try {
+      const id = roleSettings[role as keyof typeof roleSettings]?.id;
+      if (!id) {
+        toast({
+          title: "Error",
+          description:
+            "No settings found for this role. Please ensure you have a company set up.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const settings = getRoleSettings(role);
       console.log(`settings role update ${role} and settings ${settings}`);
       console.log(`approve attendance ${settings.approve_attendance}`);
@@ -317,9 +325,9 @@ export default function Settings() {
       console.log(`mark attendance ${settings.mark_attendance}`);
       console.log(`view payslip ${settings.view_payslip}`);
       console.log(`view reports ${settings.view_reports}`);
-      console.log(`id ${roleSettings[role].id}`);
+      console.log(`id ${id}`);
       await updateUserSettings({
-        id: roleSettings[role].id,
+        id,
         updates: settings,
       }).unwrap();
       toast({
@@ -399,49 +407,6 @@ export default function Settings() {
       toast({
         title: "Error",
         description: "Failed to save company settings. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSaveUserSettings = async () => {
-    try {
-      // Find only the modified roles by comparing with original data
-      const modifiedSettings = userSettings.filter((setting) => {
-        // Find the corresponding original setting
-        const originalSetting = previelegesFetched.find(
-          (orig: { role: any }) => orig.role === setting.role
-        );
-
-        // If not found or permissions are different, it's modified
-        if (!originalSetting) return true;
-
-        // Check if permissions array is different
-        return (
-          JSON.stringify(originalSetting.permissions) !==
-          JSON.stringify(setting.permissions)
-        );
-      });
-
-      if (modifiedSettings.length > 0) {
-        console.log("saving modified settings", modifiedSettings);
-        await updatePrevielges(modifiedSettings);
-
-        toast({
-          title: "User Settings Saved",
-          description: "Your user settings have been updated successfully.",
-        });
-      } else {
-        toast({
-          title: "No Changes",
-          description: "No changes were detected in user settings.",
-        });
-      }
-    } catch (error) {
-      console.error("Error saving user settings:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save user settings. Please try again.",
         variant: "destructive",
       });
     }
@@ -579,9 +544,6 @@ export default function Settings() {
         case "company":
           await handleSaveCompanySettings();
           break;
-        case "user":
-          await handleSaveUserSettings();
-          break;
         case "payroll":
           await handleSavePayrollSettings();
           break;
@@ -592,7 +554,6 @@ export default function Settings() {
           // Save all settings if no specific tab is active
           await Promise.all([
             handleSaveCompanySettings(),
-            handleSaveUserSettings(),
             handleSavePayrollSettings(),
             handleSaveNotificationSettings(),
           ]);
@@ -620,96 +581,6 @@ export default function Settings() {
     toast({
       title: "Holiday Removed",
       description: `${holiday} has been removed from holidays.`,
-    });
-  };
-
-  const handleRemovePermission = (role: string, permission: string) => {
-    // Get the current settings for the role
-    const currentSettings = getRoleSettings(role);
-
-    // Update the role settings in state
-    setRoleSettings((prev) => ({
-      ...prev,
-      [role]: {
-        ...currentSettings,
-        permissions:
-          currentSettings.permissions?.filter(
-            (p: string) => p !== permission
-          ) || [],
-      },
-    }));
-
-    // Also update userSettings for backward compatibility
-    const updatedSettings = userSettings.map((setting: any) => {
-      if (setting.role === role) {
-        return {
-          ...setting,
-          permissions: setting.permissions.filter(
-            (p: string) => p !== permission
-          ),
-        };
-      }
-      return setting;
-    });
-    setUserSettings(updatedSettings);
-
-    toast({
-      title: "Permission Removed",
-      description: `"${permission}" permission removed from ${role} role.`,
-    });
-  };
-
-  const handleAddPrivilege = (role: string) => {
-    if (!newPrivilege.trim()) {
-      toast({
-        title: "Error",
-        description: "Please select a privilege to add",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Get current settings for the role
-    const currentSettings = getRoleSettings(role);
-
-    // Check if the privilege already exists
-    if (currentSettings.permissions?.includes(newPrivilege)) {
-      toast({
-        title: "Error",
-        description: "This privilege already exists for this role",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Update role settings
-    const updatedRoleSettings = {
-      ...roleSettings,
-      [role]: {
-        ...currentSettings,
-        permissions: [...(currentSettings.permissions || []), newPrivilege],
-      },
-    };
-    setRoleSettings(updatedRoleSettings);
-
-    // Also update userSettings for backward compatibility
-    const updatedSettings = userSettings.map((setting: any) => {
-      if (setting.role === role) {
-        return {
-          ...setting,
-          permissions: [...setting.permissions, newPrivilege],
-        };
-      }
-      return setting;
-    });
-    setUserSettings(updatedSettings);
-
-    setNewPrivilege("");
-    setSelectedRole(null);
-
-    toast({
-      title: "Privilege Added",
-      description: `"${newPrivilege}" privilege added to ${role} role.`,
     });
   };
 
@@ -1134,107 +1005,118 @@ export default function Settings() {
                       </p>
                     </div>
 
-                    <div className="space-y-6">
-                      <div className="border-b border-gray-200">
-                        <nav className="-mb-px flex space-x-8">
-                          {[
-                            "admin",
-                            "hr_manager",
-                            "departure_manager",
-                            "employee",
-                          ].map((role) => (
-                            <button
-                              key={role}
-                              onClick={() => setSelectedRole(role)}
-                              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                                selectedRole === role
-                                  ? "border-orange-500 text-orange-600"
-                                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                              }`}
-                            >
-                              {role
-                                .split("_")
-                                .map(
-                                  (word) =>
-                                    word.charAt(0).toUpperCase() + word.slice(1)
-                                )
-                                .join(" ")}
-                            </button>
-                          ))}
-                        </nav>
+                    {companyId === "default" ? (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-gray-500">
+                          No company found. Please create a company first to
+                          manage user settings.
+                        </p>
                       </div>
-
-                      {selectedRole && (
-                        <div className="space-y-6">
-                          <div className="grid gap-4">
-                            {allSettings.map((setting) => {
-                              const currentSettings =
-                                getRoleSettings(selectedRole);
-                              const isEnabled = currentSettings[setting.key];
-
-                              return (
-                                <div
-                                  key={setting.key}
-                                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-                                >
-                                  <div>
-                                    <h4 className="text-sm font-medium text-gray-900">
-                                      {setting.label}
-                                    </h4>
-                                    <p className="text-xs text-gray-500">
-                                      {isEnabled ? "Enabled" : "Disabled"}
-                                    </p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleToggleSetting(
-                                        selectedRole,
-                                        setting.key
-                                      )
-                                    }
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 ${
-                                      isEnabled
-                                        ? "bg-orange-500"
-                                        : "bg-gray-200"
-                                    }`}
-                                  >
-                                    <span
-                                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                        isEnabled
-                                          ? "translate-x-6"
-                                          : "translate-x-1"
-                                      }`}
-                                    />
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          <div className="flex justify-end pt-4">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleSaveRoleSettings(selectedRole)
-                              }
-                              className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm flex items-center gap-2 hover:bg-orange-600"
-                            >
-                              <Save className="h-4 w-4" />
-                              Save{" "}
-                              {selectedRole
-                                .split("_")
-                                .map(
-                                  (word) =>
-                                    word.charAt(0).toUpperCase() + word.slice(1)
-                                )
-                                .join(" ")}{" "}
-                              Settings
-                            </button>
-                          </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="border-b border-gray-200">
+                          <nav className="-mb-px flex space-x-8">
+                            {[
+                              "admin",
+                              "hr_manager",
+                              "departure_manager",
+                              "employee",
+                            ].map((role) => (
+                              <button
+                                key={role}
+                                onClick={() => setSelectedRole(role)}
+                                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                                  selectedRole === role
+                                    ? "border-orange-500 text-orange-600"
+                                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                }`}
+                              >
+                                {role
+                                  .split("_")
+                                  .map(
+                                    (word) =>
+                                      word.charAt(0).toUpperCase() +
+                                      word.slice(1)
+                                  )
+                                  .join(" ")}
+                              </button>
+                            ))}
+                          </nav>
                         </div>
-                      )}
-                    </div>
+
+                        {selectedRole && (
+                          <div className="space-y-6">
+                            <div className="grid gap-4">
+                              {allSettings.map((setting) => {
+                                const currentSettings =
+                                  getRoleSettings(selectedRole);
+                                const isEnabled = currentSettings[setting.key];
+
+                                return (
+                                  <div
+                                    key={setting.key}
+                                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+                                  >
+                                    <div>
+                                      <h4 className="text-sm font-medium text-gray-900">
+                                        {setting.label}
+                                      </h4>
+                                      <p className="text-xs text-gray-500">
+                                        {isEnabled ? "Enabled" : "Disabled"}
+                                      </p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleToggleSetting(
+                                          selectedRole,
+                                          setting.key
+                                        )
+                                      }
+                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 ${
+                                        isEnabled
+                                          ? "bg-orange-500"
+                                          : "bg-gray-200"
+                                      }`}
+                                    >
+                                      <span
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                          isEnabled
+                                            ? "translate-x-6"
+                                            : "translate-x-1"
+                                        }`}
+                                      />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <div className="flex justify-end pt-4">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleSaveRoleSettings(selectedRole)
+                                }
+                                className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm flex items-center gap-2 hover:bg-orange-600"
+                              >
+                                <Save className="h-4 w-4" />
+                                Save{" "}
+                                {selectedRole
+                                  .split("_")
+                                  .map(
+                                    (word) =>
+                                      word.charAt(0).toUpperCase() +
+                                      word.slice(1)
+                                  )
+                                  .join(" ")}{" "}
+                                Settings
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
