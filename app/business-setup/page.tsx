@@ -22,7 +22,7 @@ export type NewTrade = {
 export type NewLocation = {
   location_name?: string;
 };
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Building2,
   Plus,
@@ -33,12 +33,14 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
+  ChevronDown,
 } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -71,6 +73,8 @@ import {
   useDeleteProjectMutation,
 } from "@/lib/redux/projectSlice";
 import { useSessionQuery } from "@/lib/redux/authSlice";
+import { convertCurrency, getExchangeRate } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
 
 function LocationForm({
   onClose,
@@ -98,7 +102,7 @@ function LocationForm({
       }
 
       // Use RTK Query mutation
-      await addLocation(newLocation).unwrap();
+      await addLocation(newLocatiosetpermissionsn).unwrap();
 
       // Explicitly refetch locations after successful addition
       refetchLocations();
@@ -156,8 +160,6 @@ function LocationForm({
 function TradeForm({
   onClose,
   refetchTrades,
-  currencyShort,
-  currencyValue,
   sessionData,
 }: {
   onClose: () => void;
@@ -205,24 +207,19 @@ function TradeForm({
         });
         return;
       }
+      let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
+      let monthlyPlannedCost = newTrade.monthly_planned_cost || 0;
+      let dailyPlannedCost = newTrade.daily_planned_cost || 0;
+      // If the currency is not RWF, convert the values
+        monthlyPlannedCost = Number(monthlyPlannedCost) * Number(exchangeRate);
+        dailyPlannedCost = Number(dailyPlannedCost) * Number(exchangeRate);
 
       const newTradeToAdd: any = {
         location_name: newTrade.location_name,
         trade_name: newTrade.trade_name,
+        monthly_planned_cost: monthlyPlannedCost,
+        daily_planned_cost: dailyPlannedCost,
       };
-
-      // Set either monthly_planned_cost or daily_planned_cost based on salary calculation type
-      if (sessionData?.user?.salary_calculation === "monthly rate") {
-        newTradeToAdd.monthly_planned_cost = (
-          Number(newTrade.monthly_planned_cost) / currencyValue
-        ).toString();
-        // newTradeToAdd.daily_planned_cost = 0; // Set default value for the other field
-      } else {
-        newTradeToAdd.daily_planned_cost = (
-          Number(newTrade.daily_planned_cost) / currencyValue
-        ).toString();
-        // newTradeToAdd.monthly_planned_cost = 0; // Set default value for the other field
-      }
 
       // Use RTK Query mutation
       await addTrade(newTradeToAdd).unwrap();
@@ -296,11 +293,13 @@ function TradeForm({
         </label>
         <div className="relative">
           <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
-            {currencyShort}
+            {sessionData?.user?.currency}
           </p>{" "}
           <Input
             placeholder="Enter rate"
-            type="decimal"
+            type="number"
+            step="0.01"
+            min="0"
             className="pl-10"
             value={
               sessionData?.user?.salary_calculation === "monthly rate"
@@ -318,6 +317,12 @@ function TradeForm({
                     daily_planned_cost: e.target.value,
                   })
             }
+            onKeyDown={(e) => {
+              // Prevent negative numbers and multiple decimal points
+              if (e.key === '-' || (e.key === '.' && (sessionData?.user?.salary_calculation === "monthly rate" ? newTrade.monthly_planned_cost : newTrade.daily_planned_cost).includes('.'))) {
+                e.preventDefault();
+              }
+            }}
           />
         </div>
       </div>
@@ -343,17 +348,16 @@ function TradeForm({
 function ProjectForm({
   onClose,
   refetchProjects,
-  currencyShort,
-  currencyValue,
+  sessionData,
 }: {
   onClose: () => void;
   refetchProjects: () => void;
+  sessionData: any;
 }) {
   const { toast } = useToast();
   const [newProject, setNewProject] = useState<any>({
     project_name: "",
     location_name: "",
-    budget: 0,
     start_date: "",
     end_date: "",
   });
@@ -366,7 +370,6 @@ function ProjectForm({
       if (
         !newProject.project_name?.trim() ||
         !newProject.location_name?.trim() ||
-        !newProject.budget ||
         !newProject.start_date ||
         !newProject.end_date
       ) {
@@ -378,10 +381,16 @@ function ProjectForm({
         return;
       }
 
+      let budget = newProject.budget || 0;
+      const exchangeRate = await getExchangeRate(sessionData?.user?.currency,sessionData?.user?.companies?.[0]?.base_currency);
+      console.log("exchangeRate", exchangeRate);
+      // Convert the budget to RWF if needed
+     budget = budget * exchangeRate;
+      
       // Use RTK Query mutation
       await addProject({
         ...newProject,
-        budget: (newProject.budget / currencyValue).toString(),
+        budget: budget,
       }).unwrap();
 
       // Explicitly refetch projects after successful addition
@@ -390,7 +399,6 @@ function ProjectForm({
       setNewProject({
         project_name: "",
         location_name: "",
-        budget: 0,
         start_date: "",
         end_date: "",
       });
@@ -419,17 +427,6 @@ function ProjectForm({
           value={newProject.project_name}
           onChange={(e) =>
             setNewProject({ ...newProject, project_name: e.target.value })
-          }
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Budget</label>
-        <Input
-          placeholder="5000"
-          value={newProject.budget}
-          type="number"
-          onChange={(e) =>
-            setNewProject({ ...newProject, budget: e.target.value })
           }
         />
       </div>
@@ -506,6 +503,10 @@ function DataTable({
   onRetry,
   onEdit,
   onDelete,
+  onEditBudget,
+  onEditRate,
+  sessionData,
+  activeTab,
 }: {
   headers: string[];
   data: any[];
@@ -515,6 +516,10 @@ function DataTable({
   onRetry: () => void;
   onEdit: (item: any) => void;
   onDelete: (item: any) => void;
+  onEditBudget: (item: any) => void;
+  onEditRate: (item: any) => void;
+  sessionData: any;
+  activeTab: string;
 }) {
   const { toast } = useToast();
 
@@ -575,6 +580,19 @@ function DataTable({
     );
   }
 
+  const renderCurrency = async (value: number) => {
+    if (!value) return '0';
+    if (sessionData?.user?.currency === 'RWF') return value.toLocaleString();
+    
+    try {
+      const converted = await convertCurrency(value, sessionData.user.currency,sessionData.user.company.base_currency);
+      return converted.toLocaleString();
+    } catch (error) {
+      console.error('Error converting currency:', error);
+      return value.toLocaleString();
+    }
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -609,9 +627,10 @@ function DataTable({
               {renderRow(item)}
               <td className="px-4 py-3 text-right">
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
+                  <DropdownMenuTrigger asChild >
+                    <Button variant="ghost" className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white hover:text-white">
+                      Actions
+                      <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -619,6 +638,18 @@ function DataTable({
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </DropdownMenuItem>
+                    {activeTab === "projects" && onEditBudget && (
+                      <DropdownMenuItem onClick={() => onEditBudget(item)}>
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Edit Budget
+                      </DropdownMenuItem>
+                    )}
+                    {activeTab === "trades" && onEditRate && (
+                      <DropdownMenuItem onClick={() => onEditRate(item)}>
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Edit Rate
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem onClick={() => onDelete(item)}>
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete
@@ -782,8 +813,6 @@ function EditTradeForm({
   trade,
   onClose,
   refetchTrades,
-  currencyShort,
-  currencyValue,
   sessionData,
 }: {
   trade: any;
@@ -794,79 +823,44 @@ function EditTradeForm({
   const { toast } = useToast();
   const [editedTrade, setEditedTrade] = useState({
     location_name: trade.location_name,
-    monthly_planned_cost: trade.monthly_planned_cost * currencyValue || 0,
-    daily_planned_cost: trade.daily_planned_cost * currencyValue || 0,
     trade_name: trade.trade_name,
   });
 
   const { data: locations = [] } = useGetLocationsQuery();
   const [updateTrade, { isLoading: isUpdatingTrade }] = useEditTradeMutation();
 
-  const handleUpdateTrade = async () => {
+  const handleUpdateTrade = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      if (
-        !editedTrade.location_name?.trim() ||
-        !editedTrade.trade_name?.trim()
-      ) {
+      if (!editedTrade.trade_name?.trim()) {
         toast({
-          title: "Validation Error",
-          description: "Trade name and location are required.",
+          title: "Error",
+          description: "Trade name is required.",
           variant: "destructive",
         });
         return;
       }
 
-      // Check if the rate field is filled based on salary calculation type
-      if (
-        (sessionData?.user?.salary_calculation === "monthly rate" &&
-          !editedTrade.monthly_planned_cost) ||
-        (sessionData?.user?.salary_calculation !== "monthly rate" &&
-          !editedTrade.daily_planned_cost)
-      ) {
-        toast({
-          title: "Validation Error",
-          description: `${
-            sessionData?.user?.salary_calculation === "monthly rate"
-              ? "Monthly"
-              : "Daily"
-          } rate is required.`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const tradeToUpdate: any = {
+      const tradeToUpdate = {
         id: trade.id,
-        location_name: editedTrade.location_name,
         trade_name: editedTrade.trade_name,
+        location_name: editedTrade.location_name
       };
 
-      // Set either monthly_planned_cost or daily_planned_cost based on salary calculation type
-      if (sessionData?.user?.salary_calculation === "monthly rate") {
-        tradeToUpdate.monthly_planned_cost = (
-          editedTrade.monthly_planned_cost / currencyValue
-        ).toString();
-        // tradeToUpdate.daily_planned_cost = 0; // Set default value for the other field
-      } else {
-        tradeToUpdate.daily_planned_cost = (
-          editedTrade.daily_planned_cost / currencyValue
-        ).toString();
-        // tradeToUpdate.monthly_planned_cost = 0; // Set default value for the other field
-      }
-
       await updateTrade(tradeToUpdate).unwrap();
+      
+      toast({
+        title: "Success",
+        description: "Trade updated successfully",
+      });
+      
       refetchTrades();
       onClose();
-
-      toast({
-        title: "Trade Updated",
-        description: `${editedTrade.trade_name} has been updated successfully.`,
-      });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating trade:", error);
       toast({
         title: "Error",
-        description: "Failed to update trade. Please try again.",
+        description: error?.data?.message?.[0] || "Failed to update trade.",
         variant: "destructive",
       });
     }
@@ -907,39 +901,6 @@ function EditTradeForm({
             ))}
           </SelectContent>
         </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">
-          {sessionData?.user?.salary_calculation === "monthly rate"
-            ? "Monthly Rate"
-            : "Daily Rate"}
-        </label>
-        <div className="relative">
-          <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
-            {currencyShort}
-          </p>
-          <Input
-            placeholder="Enter rate"
-            type="decimal"
-            className="pl-10"
-            value={
-              sessionData?.user?.salary_calculation === "monthly rate"
-                ? editedTrade.monthly_planned_cost
-                : editedTrade.daily_planned_cost
-            }
-            onChange={(e) =>
-              sessionData?.user?.salary_calculation === "monthly rate"
-                ? setEditedTrade({
-                    ...editedTrade,
-                    monthly_planned_cost: e.target.value,
-                  })
-                : setEditedTrade({
-                    ...editedTrade,
-                    daily_planned_cost: e.target.value,
-                  })
-            }
-          />
-        </div>
       </div>
       <Button
         className="w-full bg-orange-500 hover:bg-orange-600"
@@ -1020,69 +981,48 @@ function DeleteTradeConfirmation({
   );
 }
 
-// Format date for display in the input field (YYYY-MM-DD to YYYY-MM-DD - no conversion needed)
-const formatDateForInput = (dateString: string) => {
-  if (!dateString) return "";
-  // If the date is already in YYYY-MM-DD format, return as is
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-    return dateString;
-  }
-  // If the date is in DD/MM/YYYY format, convert to YYYY-MM-DD
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
-    const [day, month, year] = dateString.split('/');
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-  }
-  return "";
-};
-
-// Format date for API (to ISO string with timezone)
-const formatDateForApi = (dateString: string) => {
-  if (!dateString) return "";
-  let date: Date;
-  
-  // If the date is in YYYY-MM-DD format
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-    date = new Date(dateString);
-  }
-  // If the date is in DD/MM/YYYY format
-  else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
-    const [day, month, year] = dateString.split('/');
-    date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
-  } 
-  // If it's already in ISO format
-  else if (dateString.includes('T')) {
-    date = new Date(dateString);
-  }
-  // If we can't parse it, return as is
-  else {
-    return dateString;
-  }
-  
-  // Return in ISO format with timezone (e.g., "2025-09-24T00:00:00.000Z")
-  return date.toISOString();
-};
-
 // Edit Project Form
 function EditProjectForm({
   project,
   onClose,
   refetchProjects,
-  currencyValue,
-  currencyShort,
+  sessionData,
 }: {
   project: any;
   onClose: () => void;
   refetchProjects: () => void;
+  sessionData: any;
 }) {
   const { toast } = useToast();
-  console.log("project", project);
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [editedProject, setEditedProject] = useState<NewProject>({
     project_name: project.project_name,
     location_name: project.location_name,
-    budget: project.budget * currencyValue,
     start_date: formatDateForInput(project.start_date),
     end_date: formatDateForInput(project.end_date),
   });
+
+  useEffect(() => {
+    const fetchExchangeRate = async () => {
+      try {
+        const rate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
+        setExchangeRate(rate);
+      } catch (error) {
+        console.error('Failed to fetch exchange rate:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load exchange rate. Using default rate of 1.",
+          variant: "destructive",
+        });
+        setExchangeRate(1);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchExchangeRate();
+  }, [sessionData.user.currency, toast]);
 
   const { data: locations = [] } = useGetLocationsQuery();
   const [updateProject, { isLoading: isUpdatingProject }] =
@@ -1093,7 +1033,6 @@ function EditProjectForm({
       if (
         !editedProject.project_name?.trim() ||
         !editedProject.location_name?.trim() ||
-        !editedProject.budget ||
         !editedProject.start_date ||
         !editedProject.end_date
       ) {
@@ -1108,8 +1047,8 @@ function EditProjectForm({
       // Format dates for API
       const formattedStartDate = formatDateForApi(editedProject.start_date);
       const formattedEndDate = formatDateForApi(editedProject.end_date);
-console.log("formattedStartDate", formattedStartDate)
-console.log("formattedEndDate", formattedEndDate)
+      console.log("formattedStartDate", formattedStartDate)
+      console.log("formattedEndDate", formattedEndDate)
       // Create date objects for validation
       const startDate = new Date(formattedStartDate);
       const endDate = new Date(formattedEndDate);
@@ -1144,11 +1083,11 @@ console.log("formattedEndDate", formattedEndDate)
         return;
       }
 
+      
       const payload = {
         id: project.id,
         project_name: editedProject.project_name,
         location_name: editedProject.location_name,
-        budget: (editedProject.budget / currencyValue).toString(),
         start_date: formattedStartDate,
         end_date: formattedEndDate,
       };
@@ -1181,20 +1120,6 @@ console.log("formattedEndDate", formattedEndDate)
           value={editedProject.project_name}
           onChange={(e) =>
             setEditedProject({ ...editedProject, project_name: e.target.value })
-          }
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Budget</label>
-        <Input
-          placeholder="5000"
-          type="number"
-          value={editedProject.budget}
-          onChange={(e) =>
-            setEditedProject({
-              ...editedProject,
-              budget: Number(e.target.value),
-            })
           }
         />
       </div>
@@ -1339,6 +1264,254 @@ function DeleteProjectConfirmation({
   );
 }
 
+// Edit Trade Rate Form
+function EditTradeRateForm({
+  trade,
+  onClose,
+  refetchTrades,
+  sessionData,
+}: {
+  trade: any;
+  onClose: () => void;
+  refetchTrades: () => void;
+  sessionData: any;
+}) {
+  const { toast } = useToast();
+  const [editedRate, setEditedRate] = useState(
+    sessionData?.user?.salary_calculation === "monthly rate"
+      ? ""
+      : ""
+  );
+
+  const [updateTradeRate, { isLoading: isUpdatingRate }] = useEditTradeMutation();
+
+  const handleUpdateRate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (!editedRate) {
+        toast({
+          title: "Error",
+          description: `${
+            sessionData?.user?.salary_calculation === "monthly rate"
+              ? "Monthly"
+              : "Daily"
+          } rate is required.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get exchange rate if needed
+      let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
+      let updatedRate = Number(editedRate) * Number(exchangeRate);
+
+      const tradeToUpdate: any = {
+        id: trade.id,
+      };
+
+      if (sessionData?.user?.salary_calculation === "monthly rate") {
+        tradeToUpdate.monthly_planned_cost = updatedRate.toString();
+      } else {
+        tradeToUpdate.daily_planned_cost = updatedRate.toString();
+      }
+
+      await updateTradeRate(tradeToUpdate).unwrap();
+      
+      toast({
+        title: "Success",
+        description: "Trade rate updated successfully",
+      });
+      
+      refetchTrades();
+      onClose();
+    } catch (error: any) {
+      console.error("Error updating trade rate:", error);
+      toast({
+        title: "Error",
+        description: error?.data?.message?.[0] || "Failed to update trade rate.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-4 pt-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium">
+          {sessionData?.user?.salary_calculation === "monthly rate"
+            ? "Monthly Rate"
+            : "Daily Rate"}
+        </label>
+        <div className="relative">
+          <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
+            {sessionData?.user?.currency}
+          </p>
+          <Input
+            placeholder="Enter rate"
+            type="number"
+            step="0.01"
+            min="0"
+            className="pl-10"
+            value={editedRate}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Only update if the value is a valid number or empty string
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setEditedRate(value);
+              }
+            }}
+            onKeyDown={(e) => {
+              // Prevent negative numbers and multiple decimal points
+              if (e.key === '-' || (e.key === '.' && editedRate.includes('.'))) {
+                e.preventDefault();
+              }
+            }}
+          />
+        </div>
+      </div>
+      <Button
+        className="w-full bg-orange-500 hover:bg-orange-600"
+        onClick={handleUpdateRate}
+        disabled={isUpdatingRate}
+      >
+        {isUpdatingRate ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Updating...
+          </>
+        ) : (
+          "Update Rate"
+        )}
+      </Button>
+    </div>
+  );
+}
+
+// Format date for display in the input field (YYYY-MM-DD to YYYY-MM-DD - no conversion needed)
+const formatDateForInput = (dateString: string) => {
+  if (!dateString) return "";
+  // If the date is already in YYYY-MM-DD format, return as is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
+  }
+  // If the date is in DD/MM/YYYY format, convert to YYYY-MM-DD
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+    const [day, month, year] = dateString.split('/');
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  return "";
+};
+
+// Format date for API (to ISO string with timezone)
+const formatDateForApi = (dateString: string) => {
+  if (!dateString) return "";
+  let date: Date;
+  
+  // If the date is in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    date = new Date(dateString);
+  }
+  // If the date is in DD/MM/YYYY format
+  else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+    const [day, month, year] = dateString.split('/');
+    date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+  } 
+  // If it's already in ISO format
+  else if (dateString.includes('T')) {
+    date = new Date(dateString);
+  }
+  // If we can't parse it, return as is
+  else {
+    return dateString;
+  }
+  
+  // Return in ISO format with timezone (e.g., "2025-09-24T00:00:00.000Z")
+  return date.toISOString();
+};
+
+function EditBudgetModal({
+  project,
+  onClose,
+  onSave,
+  currency,
+}: {
+  project: any;
+  onClose: () => void;
+  onSave: (projectId: string, budget: number) => Promise<void>;
+  currency: string;
+}) {
+  const [budget, setBudget] = useState<number>(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      try {
+        const response = await onSave(project.id, budget);
+        console.log("response", response);
+        setBudget(0);
+      } catch (error) {
+        console.error("Error updating budget:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update budget",
+          variant: "destructive",
+        });
+      }
+      toast({
+        title: "Success",
+        description: "Budget updated successfully",
+      });
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update budget",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Edit Budget for {project.project_name}</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-4 py-4">
+        <div className="space-y-2">
+          <Label htmlFor="budget">Budget ({currency})</Label>
+          <Input
+            id="budget"
+            type="number"
+            value={budget}
+            onChange={(e) => setBudget(Number(e.target.value))}
+            min={0}
+            step="0.01"
+          />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose} disabled={isSaving}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
 // Main Business Setup Component
 export default function BusinessSetup() {
   const {
@@ -1389,7 +1562,39 @@ export default function BusinessSetup() {
   const [showDeleteTrade, setShowDeleteTrade] = useState(false);
   const [showEditProject, setShowEditProject] = useState(false);
   const [showDeleteProject, setShowDeleteProject] = useState(false);
+  const [showEditBudget, setShowEditBudget] = useState(false);
+  const [showEditTradeRate, setShowEditTradeRate] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+
+function ConvertedAmount({ 
+  amount, 
+  currency, 
+  showCurrency = true 
+}: { 
+  amount: number; 
+  currency: string; 
+  showCurrency?: boolean;
+}) {
+  const [convertedAmount, setConvertedAmount] = useState<string>('...');
+
+  useEffect(() => {
+    const convert = async () => {
+      try {
+        const result = await convertCurrency(amount, currency, sessionData.user.companies[0].base_currency);
+        setConvertedAmount(result);
+      } catch (error) {
+        console.error('Error converting currency:', error);
+        setConvertedAmount('Error');
+      }
+    };
+
+    if (amount !== undefined) {
+      convert();
+    }
+  }, [amount, currency]);
+console.log("convertedAmount", convertedAmount)
+  return <>{showCurrency ? `${currency} ${Number(convertedAmount).toLocaleString()}` : Number(convertedAmount).toLocaleString()}</>;
+}
 
   // RTK Query hooks
   const {
@@ -1412,7 +1617,7 @@ export default function BusinessSetup() {
     isError: isErrorProjects,
     refetch: refetchProjects,
   } = useGetProjectsQuery();
-
+console.log("projects", projects)
   // Check if any data is loading
   const isLoading = isLoadingLocations || isLoadingTrades || isLoadingProjects;
 
@@ -1438,6 +1643,28 @@ export default function BusinessSetup() {
       title: "Refreshing Data",
       description: `Refreshing ${activeTab} data...`,
     });
+  };
+
+  const handleUpdateBudget = async (projectId: string, budget: number) => {
+    let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
+    budget = budget * exchangeRate;
+    const body = {
+      budget: budget.toString(), // Convert number to string to match IsDecimal()
+      projectId: projectId.toString() // Ensure projectId is a string
+    };
+    try {
+    const response = await fetch(`http://localhost:4000/project/budget`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+    });
+      refetchProjects();
+    } catch (error) {
+      console.error('Error updating budget:', error);
+      throw error;
+    }
   };
 
   if (isLoading && !locations.length && !trades.length && !projects.length) {
@@ -1561,6 +1788,8 @@ export default function BusinessSetup() {
                             </div>
                           </td>
                         )}
+                        sessionData={sessionData}
+                        activeTab={activeTab}
                       />
                     </>
                   )}
@@ -1594,7 +1823,7 @@ export default function BusinessSetup() {
                             "monthly rate"
                               ? "Monthly"
                               : "Daily"
-                          } Rate (${currencyShort})`,
+                          } Rate (${sessionData?.user?.currency})`,
                         ]}
                         data={trades}
                         isLoading={isLoadingTrades}
@@ -1607,6 +1836,10 @@ export default function BusinessSetup() {
                         onDelete={(trade) => {
                           setSelectedItem(trade);
                           setShowDeleteTrade(true);
+                        }}
+                        onEditRate={(trade) => {
+                          setSelectedItem(trade);
+                          setShowEditTradeRate(true);
                         }}
                         renderRow={(trade: NewTrade) => (
                           <>
@@ -1624,18 +1857,23 @@ export default function BusinessSetup() {
                               {sessionData?.user?.salary_calculation ===
                               "monthly rate"
                                 ? (
-                                    (trade.monthly_planned_cost
-                                      ? trade.monthly_planned_cost
-                                      : 1) * currencyValue
-                                  ).toLocaleString()
+                              
+                                <ConvertedAmount 
+                                amount={trade.monthly_planned_cost || 0} 
+                                currency={sessionData.user.currency} 
+                              />
+                                )
                                 : (
-                                    (trade.daily_planned_cost
-                                      ? trade.daily_planned_cost
-                                      : 1) * currencyValue
-                                  ).toLocaleString()}
+                                <ConvertedAmount 
+                                amount={trade.daily_planned_cost || 0} 
+                                currency={sessionData.user.currency} 
+                              />
+                                )}
                             </td>
                           </>
                         )}
+                        sessionData={sessionData}
+                        activeTab={activeTab}
                       />
                     </>
                   )}
@@ -1664,9 +1902,9 @@ export default function BusinessSetup() {
                         headers={[
                           "Project Name",
                           "Location Name",
-                          "Budget",
                           "Start Date",
                           "End Date",
+                          "Budget",
                         ]}
                         data={projects}
                         isLoading={isLoadingProjects}
@@ -1680,6 +1918,10 @@ export default function BusinessSetup() {
                           setSelectedItem(project);
                           setShowDeleteProject(true);
                         }}
+                        onEditBudget={(project) => {
+                          setSelectedItem(project);
+                          setShowEditBudget(true);
+                        }}
                         renderRow={(project: NewProject) => (
                           <>
                             <td className="px-4 py-3">
@@ -1688,18 +1930,14 @@ export default function BusinessSetup() {
                             <td className="px-4 py-3">
                               {project.location_name}
                             </td>
-                            <td className="px-4 py-3">
-                              {currencyShort}{" "}
-                              {(
-                                (project.budget ? project.budget : 0) *
-                                currencyValue
-                              ).toLocaleString()}
-                            </td>
 
                             <td className="px-4 py-3">{project.start_date}</td>
                             <td className="px-4 py-3">{project.end_date}</td>
+                            <td className="px-4 py-3">{<ConvertedAmount amount={project.budget || 0} currency={sessionData.user.currency} />}</td>
                           </>
                         )}
+                        sessionData={sessionData}
+                        activeTab={activeTab}
                       />
                     </>
                   )}
@@ -1732,8 +1970,6 @@ export default function BusinessSetup() {
           <TradeForm
             onClose={() => setShowAddTrade(false)}
             refetchTrades={refetchTrades}
-            currencyShort={currencyShort}
-            currencyValue={currencyValue}
             sessionData={sessionData}
           />
         </DialogContent>
@@ -1748,8 +1984,7 @@ export default function BusinessSetup() {
           <ProjectForm
             onClose={() => setShowAddProject(false)}
             refetchProjects={refetchProjects}
-            currencyShort={currencyShort}
-            currencyValue={currencyValue}
+            sessionData={sessionData}
           />
         </DialogContent>
       </Dialog>
@@ -1797,8 +2032,6 @@ export default function BusinessSetup() {
               trade={selectedItem}
               onClose={() => setShowEditTrade(false)}
               refetchTrades={refetchTrades}
-              currencyShort={currencyShort}
-              currencyValue={currencyValue}
               sessionData={sessionData}
             />
           )}
@@ -1832,8 +2065,7 @@ export default function BusinessSetup() {
               project={selectedItem}
               onClose={() => setShowEditProject(false)}
               refetchProjects={refetchProjects}
-              currencyShort={currencyShort}
-              currencyValue={currencyValue}
+              sessionData={sessionData}
             />
           )}
         </DialogContent>
@@ -1850,6 +2082,35 @@ export default function BusinessSetup() {
               project={selectedItem}
               onClose={() => setShowDeleteProject(false)}
               refetchProjects={refetchProjects}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Budget Modal */}
+      <Dialog open={showEditBudget} onOpenChange={setShowEditBudget}>
+        {selectedItem && (
+          <EditBudgetModal
+            project={selectedItem}
+            onClose={() => setShowEditBudget(false)}
+            onSave={handleUpdateBudget}
+            currency={sessionData?.user?.currency || 'RWF'}
+          />
+        )}
+      </Dialog>
+
+      {/* Edit Trade Rate Modal */}
+      <Dialog open={showEditTradeRate} onOpenChange={setShowEditTradeRate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit {selectedItem?.trade_name} Rate</DialogTitle>
+          </DialogHeader>
+          {selectedItem && (
+            <EditTradeRateForm
+              trade={selectedItem}
+              onClose={() => setShowEditTradeRate(false)}
+              refetchTrades={refetchTrades}
+              sessionData={sessionData}
             />
           )}
         </DialogContent>

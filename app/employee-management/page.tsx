@@ -50,6 +50,7 @@ import { employeeSlice } from "@/lib/redux/employeeSlice";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionQuery } from "@/lib/redux/authSlice";
 import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
+import { convertCurrency, getExchangeRate } from "@/lib/utils";
 
 export interface NewEmployee {
   username: string;
@@ -64,7 +65,37 @@ export interface NewEmployee {
 
 // Sample data for projects
 const projects = ["Metro Bridge", "Mall Construction"];
+function ConvertedAmount({ 
+  amount, 
+  currency, 
+  showCurrency = true,
+  sessionData
+}: { 
+  amount: number; 
+  currency: string; 
+  showCurrency?: boolean;
+  sessionData: any;
+}) {
+  const [convertedAmount, setConvertedAmount] = useState<string>('...');
 
+  useEffect(() => {
+    const convert = async () => {
+      try {
+        const result = await convertCurrency(amount, currency, sessionData.user.companies[0].base_currency);
+        setConvertedAmount(result);
+      } catch (error) {
+        console.error('Error converting currency:', error);
+        setConvertedAmount('Error');
+      }
+    };
+
+    if (amount !== undefined) {
+      convert();
+    }
+  }, [amount, currency]);
+console.log("convertedAmount", convertedAmount)
+  return <>{showCurrency ? `${currency} ${Number(convertedAmount).toLocaleString()}` : Number(convertedAmount).toLocaleString()}</>;
+}
 export default function EmployeeManagement() {
   const [csvUploadModal, setCsvUploadModal] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -99,14 +130,14 @@ export default function EmployeeManagement() {
     refetchOnReconnect: true,
     skip: false,
   });
+  console.log("sessionData",sessionData)
+  console.log("settings",sessionData?.user?.settings)
   useEffect(() => {
     if (sessionData?.user?.settings && sessionData.user.current_role) {
       const userPermission = sessionData.user.settings.find(
         (setting: any) =>
-          setting.role.toLowerCase() ===
-          sessionData.user.current_role.toLowerCase()
-        // &&
-        // (setting.company_id === sessionData.user.company_id)
+          setting.company_id === sessionData.user.company_id
+      && setting.role === sessionData.user.current_role
       );
 
       if (userPermission) {
@@ -634,7 +665,7 @@ export default function EmployeeManagement() {
       setIsLoadingCompanies(true);
       try {
         const response = await fetch(
-          "https://dse-backend-uv5d.onrender.com/company/companies"
+          "http://localhost:4000/company/companies"
         );
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -711,11 +742,11 @@ export default function EmployeeManagement() {
       id: employee.id,
       username: employee.username,
       trade_position_id: employee.trade_position_id,
-      daily_rate: employee.daily_rate * currencyValue,
-      monthly_rate: employee.monthly_rate * currencyValue,
+      daily_rate: employee.daily_rate ,
+      monthly_rate: employee.monthly_rate ,
       contract_finish_date: formatDateForInput(employee.contract_finish_date),
       days_projection: employee.days_projection?.toString() || "",
-      budget_baseline: employee.budget_baseline * currencyValue,
+      budget_baseline: employee.budget_baseline,
       company_id: employee.company_id,
     });
     setShowEditEmployee(true);
@@ -771,6 +802,7 @@ export default function EmployeeManagement() {
         Math.ceil((finish.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
       );
     }
+      let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
 
     // --- Build employee object ---
     const employeeToAdd: NewEmployee = {
@@ -778,14 +810,14 @@ export default function EmployeeManagement() {
       trade_position_id: newEmployee.trade_position_id,
       [getRateFieldName()]:
         Number(newEmployee[getRateFieldName()]) > 0
-          ? (Number(newEmployee[getRateFieldName()]) / currencyValue).toString()
+          ? (Number(newEmployee[getRateFieldName()]) * exchangeRate).toString()
           : undefined,
       contract_start_date: startDate,
       contract_finish_date: finishDate,
       days_projection: daysProjection,
       budget_baseline:
         Number(newEmployee.budget_baseline) > 0
-          ? (Number(newEmployee.budget_baseline) / currencyValue).toString()
+          ? (Number(newEmployee.budget_baseline) * exchangeRate).toString()
           : undefined,
       company_id: newEmployee.company_id || sessionData.user.company_id,
     };
@@ -838,6 +870,8 @@ export default function EmployeeManagement() {
       });
       return;
     }
+    let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
+
 
     try {
       // Create an updated employee object formatted for the API
@@ -846,7 +880,7 @@ export default function EmployeeManagement() {
         username: editedEmployee.username,
         trade_position_id: editedEmployee.trade_position_id || undefined,
         [getRateFieldName()]:
-          (editedEmployee[getRateFieldName()] / currencyValue).toString() ||
+          (editedEmployee[getRateFieldName()] * exchangeRate).toString() ||
           undefined,
         contract_finish_date: editedEmployee.contract_finish_date
           ? new Date(editedEmployee.contract_finish_date).toISOString()
@@ -855,7 +889,7 @@ export default function EmployeeManagement() {
           ? Number.parseInt(editedEmployee.days_projection)
           : undefined,
         budget_baseline:
-          (editedEmployee.budget_baseline / currencyValue).toString() ||
+          (editedEmployee.budget_baseline * exchangeRate).toString() ||
           undefined,
         company_id: editedEmployee.company_id || undefined,
       };
@@ -929,7 +963,7 @@ export default function EmployeeManagement() {
                   Upload CSV
                 </Button>
               )}
-              {(permissions.full_access || permissions.manage_employees) && (
+              {(permissions.manage_employees || permissions.full_access) && (
                 <Button
                   onClick={() => setShowAddEmployee(true)}
                   className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full"
@@ -1079,28 +1113,37 @@ export default function EmployeeManagement() {
                           {employee.trade_position?.trade_name || "N/A"}
                         </td>
                         <td className="px-4 py-3">
-                          {formatCurrency(
-                            employee[getRateFieldName()] * currencyValue ||
-                              employee.daily_rate * currencyValue
-                          )}
+                          {
+                            <ConvertedAmount
+                              amount={employee[getRateFieldName()] ||
+                              employee.daily_rate}
+                              currency={sessionData.user.currency}
+                              showCurrency={true}
+                              sessionData={sessionData}
+                            />
+                          }
                         </td>
                         <td className="px-4 py-3">
-                          {formatDate(employee.contract_finish_date)}
+                          {
+                            formatDate(employee.contract_finish_date)
+                          }
                         </td>
                         <td className="px-4 py-3">
                           {employee.days_projection || "N/A"}
                         </td>
                         <td className="px-4 py-3">
-                          {formatCurrency(
-                            employee.budget_baseline * currencyValue || "0"
-                          )}
+                          <ConvertedAmount
+                            amount={employee.budget_baseline}
+                            currency={sessionData.user.currency}
+                            showCurrency={true}
+                            sessionData={sessionData}
+                          />
                         </td>
                         <td className="px-4 py-3">
                           {employee.company?.company_name || "N/A"}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {(permissions.full_access ||
-                            permissions.manage_employees) &&
+                          {(permissions.manage_employees || permissions.full_access) &&
                             !employee._isOptimistic &&
                             !employee._isUpdating && (
                               <DropdownMenu>
@@ -1320,7 +1363,7 @@ export default function EmployeeManagement() {
                     </label>
                     <div className="relative">
                       <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
-                        {currencyShort}
+                        {sessionData.user.currency}
                       </p>
                       <input
                         id={getRateFieldName()}
@@ -1399,7 +1442,7 @@ export default function EmployeeManagement() {
                     </label>
                     <div className="relative">
                       <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
-                        {currencyShort}
+                        {sessionData.user.currency}
                       </p>
                       <input
                         id="budget_baseline"
@@ -1516,7 +1559,7 @@ export default function EmployeeManagement() {
               </label>
               <div className="relative">
                 <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
-                  {currencyShort}
+                  {sessionData.user.currency}
                 </p>{" "}
                 <input
                   id="edit-daily-rate"
@@ -1593,7 +1636,7 @@ export default function EmployeeManagement() {
               </label>
               <div className="relative">
                 <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
-                  {currencyShort}
+                  {sessionData.user.currency}
                 </p>{" "}
                 <input
                   id="edit-budget-baseline"

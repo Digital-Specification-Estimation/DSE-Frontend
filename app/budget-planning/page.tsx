@@ -70,6 +70,7 @@ import {
 import { ChartContainer } from "@/components/ui/chart";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { convertCurrency, getExchangeRate } from "@/lib/utils";
 
 // Extend jsPDF type to include lastAutoTable
 declare module "jspdf" {
@@ -100,6 +101,40 @@ interface Project {
 }
 
 export default function BudgetPlanning() {
+
+  function ConvertedAmount({ 
+    amount, 
+    currency, 
+    showCurrency = true 
+  }: { 
+    amount: number; 
+    currency: string; 
+    showCurrency?: boolean;
+  }) {
+    const [convertedAmount, setConvertedAmount] = useState<number | string>('...');
+  
+    useEffect(() => {
+      const convert = async () => {
+        try {
+          const result = await convertCurrency(amount, currency, sessionData.user.companies[0].base_currency);
+          setConvertedAmount(result);
+        } catch (error) {
+          console.error('Error converting currency:', error);
+          setConvertedAmount('Error');
+        }
+      };
+  
+      if (amount !== undefined) {
+        convert();
+      }
+    }, [amount, currency]);
+
+    const formattedAmount = typeof convertedAmount === 'number' 
+      ? convertedAmount.toLocaleString() 
+      : convertedAmount;
+
+    return <>{showCurrency ? `${currency} ${formattedAmount.toLocaleString()}` : formattedAmount.toLocaleString()}</>;
+  }
   const [permissions, setPermissions] = useState({
     approve_attendance: false,
     approve_leaves: true,
@@ -127,12 +162,13 @@ export default function BudgetPlanning() {
     pollingInterval: 60000, // Poll every minute to keep session data fresh
     skip: false,
   });
+  
   useEffect(() => {
     if (sessionData?.user?.settings && sessionData.user.current_role) {
       const userPermission = sessionData.user.settings.find(
         (setting: any) =>
           setting.role.toLowerCase() ===
-          sessionData.user.current_role.toLowerCase()
+          sessionData.user.current_role.toLowerCase() && setting.company_id === sessionData.user.company_id
       );
 
       if (userPermission) {
@@ -140,7 +176,7 @@ export default function BudgetPlanning() {
       }
     }
   }, [sessionData.user.settings, sessionData.user.current_role]);
-  console.log("permissions", permissions);
+  // console.log("permissions", permissions);
 
   const splitCurrencyValue = (str: string | undefined | null) => {
     if (!str) return null; // return early if str is undefined or null
@@ -179,7 +215,8 @@ export default function BudgetPlanning() {
     refetchOnReconnect: true,
     pollingInterval: 30000, // Poll every 30 seconds
   });
-
+console.log("tradesFetched", tradesFetched);
+console.log("fetchedData", fetchedData);
   const [unassignProject] = useUnassignTradeProjectIdMutation();
   const [updateTrade, { isLoading: isUpdating }] = useEditTradeMutation();
   const { toast } = useToast();
@@ -333,6 +370,7 @@ export default function BudgetPlanning() {
       }
 
       setIsSaving(true);
+      let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
 
       // Prepare the trade data
       const tradeData = {
@@ -342,7 +380,7 @@ export default function BudgetPlanning() {
         [sessionData.user.salary_calculation === "monthly rate"
           ? "monthly_planned_cost"
           : "daily_planned_cost"]: (
-          Number(newTrade.plannedSalary) / currencyValue
+          Number(newTrade.plannedSalary) * exchangeRate
         ).toString(),
       };
 
@@ -419,6 +457,7 @@ export default function BudgetPlanning() {
       }
 
       setIsSaving(true);
+      let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
 
       await updateTrade({
         id: editTrade.id,
@@ -426,7 +465,7 @@ export default function BudgetPlanning() {
         [sessionData.user.salary_calculation === "monthly rate"
           ? "monthly_planned_cost"
           : "daily_planned_cost"]: Number(
-          Number(editTrade.plannedSalary) / currencyValue
+          Number(editTrade.plannedSalary) * exchangeRate
         ).toString(),
       }).unwrap();
 
@@ -484,10 +523,10 @@ export default function BudgetPlanning() {
         plannedSalary:
           sessionData.user.salary_calculation === "monthly rate"
             ? trade.monthly_planned_cost
-              ? trade.monthly_planned_cost * currencyValue
+              ? trade.monthly_planned_cost 
               : 0
             : trade.daily_planned_cost
-            ? trade.daily_planned_cost * currencyValue
+            ? trade.daily_planned_cost 
             : 0,
       });
       setSelectedTrade(trade);
@@ -583,9 +622,9 @@ export default function BudgetPlanning() {
       doc.setFontSize(12);
       doc.setTextColor(73, 80, 87);
       doc.text(
-        `Budget: ${currencyShort}${
-          (project.budget * currencyValue
-            ? project.budget * currencyValue
+        `Budget: ${sessionData.user.currency}${
+          (project.budget  
+            ? project.budget  
             : 0
           ).toLocaleString() || "0"
         }`,
@@ -603,11 +642,11 @@ export default function BudgetPlanning() {
             trade.trade_name || "Unnamed Trade",
             trade.employees?.length || 0,
             trade.work_days || "N/A",
-            `${currencyShort}${(
-              trade.daily_planned_cost * currencyValue || 0
+            `${sessionData.user.currency}${(
+              trade.daily_planned_cost   || 0
             ).toLocaleString()}`,
-            `${currencyShort}${(
-              (trade.daily_planned_cost * currencyValue || 0) *
+            `${sessionData.user.currency}${(
+              (trade.daily_planned_cost   || 0) *
               (trade.work_days || 0)
             ).toLocaleString()}`,
           ]
@@ -678,8 +717,8 @@ export default function BudgetPlanning() {
           doc.lastAutoTable.finalY + 35
         );
         doc.text(
-          `Total Planned Cost: ${currencyShort}${(
-            totalPlanned * currencyValue
+          `Total Planned Cost: ${sessionData.user.currency}${(
+            totalPlanned  
           ).toLocaleString()}`,
           14,
           doc.lastAutoTable.finalY + 45
@@ -785,9 +824,9 @@ export default function BudgetPlanning() {
         doc.setFontSize(12);
         doc.setTextColor(73, 80, 87);
         doc.text(
-          `Budget: ${currencyShort}${
-            (project.budget * currencyValue
-              ? project.budget * currencyValue
+          `Budget: ${sessionData.user.currency}${
+            (project.budget  
+              ? project.budget  
               : 0
             ).toLocaleString() || "0"
           }`,
@@ -803,11 +842,11 @@ export default function BudgetPlanning() {
             trade.trade_name || "Unnamed Trade",
             trade.employees?.length || 0,
             trade.work_days || "N/A",
-            `${currencyShort}${(
-              trade.daily_planned_cost * currencyValue || 0
+            `${sessionData.user.currency}${(
+              trade.daily_planned_cost   || 0
             ).toLocaleString()}`,
-            `${currencyShort}${(
-              (trade.daily_planned_cost * currencyValue || 0) *
+            `${sessionData.user.currency}${(
+              (trade.daily_planned_cost   || 0) *
               (trade.work_days || 0)
             ).toLocaleString()}`,
           ]);
@@ -851,8 +890,8 @@ export default function BudgetPlanning() {
           doc.setFontSize(11);
           doc.setTextColor(33, 37, 41);
           doc.text(
-            `Total Planned Cost: ${currencyShort}${(
-              totalPlanned * currencyValue
+            `Total Planned Cost: ${sessionData.user.currency}${(
+              totalPlanned  
             ).toLocaleString()}`,
             14,
             yPosition
@@ -910,16 +949,16 @@ export default function BudgetPlanning() {
 
       doc.setFontSize(12);
       doc.text(
-        `Total Budget Across Projects: ${currencyShort}${(
-          totalBudget * currencyValue
+        `Total Budget Across Projects: ${sessionData.user.currency}${(
+          totalBudget  
         ).toLocaleString()}`,
         14,
         yPosition
       );
       yPosition += 10;
       doc.text(
-        `Total Planned Costs: ${currencyShort}${(
-          totalPlannedCost * currencyValue
+        `Total Planned Costs: ${sessionData.user.currency}${(
+          totalPlannedCost  
         ).toLocaleString()}`,
         14,
         yPosition
@@ -1056,8 +1095,8 @@ export default function BudgetPlanning() {
 
       return {
         name: month,
-        planned: Math.round(plannedValue * currencyValue),
-        actual: Math.round(actualValue * currencyValue),
+        planned: Math.round(plannedValue  ),
+        actual: Math.round(actualValue  ),
       };
     });
   };
@@ -1070,8 +1109,8 @@ export default function BudgetPlanning() {
 
     return tradesFetched.map((trade: any) => ({
       name: trade.trade_name,
-      value: (trade.planned_costs || 0) * currencyValue,
-      actualValue: (trade.actual_cost || 0) * currencyValue,
+      value: (trade.planned_costs || 0)  ,
+      actualValue: (trade.actual_cost || 0)  ,
     }));
   };
 
@@ -1144,7 +1183,7 @@ export default function BudgetPlanning() {
           fill="#333"
           className="text-xs"
         >
-          {`${currencyShort}${value.toLocaleString()}`}
+          {`${sessionData.user.currency}${value.toLocaleString()}`}
         </text>
         <text
           x={ex + (cos >= 0 ? 1 : -1) * 12}
@@ -1162,7 +1201,7 @@ export default function BudgetPlanning() {
 
   // Custom tooltip formatter
   const customTooltipFormatter = (value: number, name: string) => {
-    return [`${currencyShort}${value.toLocaleString()}`, name];
+    return [`${sessionData.user.currency}${value.toLocaleString()}`, name];
   };
 
   const trendData = generateTrendData();
@@ -1172,7 +1211,7 @@ export default function BudgetPlanning() {
   const budgetStatus =
     total_actual_cost <= total_planned_cost ? "under" : "over";
   const budgetDifference =
-    Math.abs(total_actual_cost - total_planned_cost) * currencyValue;
+    Math.abs(total_actual_cost - total_planned_cost);
   const budgetPercentage =
     total_planned_cost > 0
       ? Math.round(
@@ -1234,7 +1273,7 @@ export default function BudgetPlanning() {
             </div>
 
             <div className="flex gap-2">
-              {(permissions.full_access || permissions.generate_reports) && (
+              {(permissions.generate_reports || permissions.full_access) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -1277,15 +1316,17 @@ export default function BudgetPlanning() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              <Button
-                onClick={() => {
-                  setShowAddTrade(true);
-                }}
-                className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full"
-              >
-                <Plus className="h-4 w-4" />
-                Add New Trade
-              </Button>
+              {(permissions.manage_employees || permissions.full_access) && (
+                <Button
+                  onClick={() => {
+                    setShowAddTrade(true);
+                  }}
+                  className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add New Trade
+                </Button>
+              )}
             </div>
           </div>
 
@@ -1351,9 +1392,7 @@ export default function BudgetPlanning() {
 
                     // Search in project name
                     if (
-                      project.project_name
-                        .toLowerCase()
-                        .includes(searchTerm.toLowerCase())
+                      project.project_name.toLowerCase().includes(searchTerm.toLowerCase())
                     )
                       return true;
 
@@ -1363,9 +1402,7 @@ export default function BudgetPlanning() {
                       project.trade_positions.length > 0
                     ) {
                       return project.trade_positions.some((trade: any) =>
-                        trade.trade_name
-                          .toLowerCase()
-                          .includes(searchTerm.toLowerCase())
+                        trade.trade_name.toLowerCase().includes(searchTerm.toLowerCase())
                       );
                     }
 
@@ -1408,27 +1445,29 @@ export default function BudgetPlanning() {
                               {project.project_name}
                             </span>
                             <span className="text-sm bg-gray-100 px-2 py-0.5 rounded-full">
-                              {currencyShort}
-                              {project.budget * currencyValue
+                              {sessionData.user.currency}
+                              {project.budget  
                                 ? (
-                                    project.budget * currencyValue
-                                  ).toLocaleString()
+                                  <ConvertedAmount amount={project.budget} currency={sessionData.user.currency} showCurrency={false} />
+                                  )
                                 : "0"}
                             </span>
                           </div>
                           <div className="ml-auto flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                exportProjectReport(project);
-                              }}
-                              disabled={isExporting}
-                            >
-                              <FileText className="h-4 w-4 mr-2" />
-                              Export
-                            </Button>
+                            {(permissions.generate_reports || permissions.full_access) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  exportProjectReport(project);
+                                }}
+                                disabled={isExporting}
+                              >
+                                <FileText className="h-4 w-4 mr-2" />
+                                Export
+                              </Button>
+                            )}
                             {expandedProjectIds.includes(project.id) ? (
                               <ChevronUp className="h-5 w-5 text-gray-500" />
                             ) : (
@@ -1453,7 +1492,7 @@ export default function BudgetPlanning() {
                                     Work Days
                                   </th>
                                   <th className="px-4 py-3 text-left">
-                                    Planned Salary ({currencyShort})
+                                    Planned Salary ({sessionData.user.currency})
                                   </th>
                                   <th className="w-10 px-4 py-3 text-left"></th>
                                 </tr>
@@ -1507,58 +1546,68 @@ export default function BudgetPlanning() {
                                             : "unspecified"}
                                         </td>
                                         <td className="px-4 py-3">
-                                          {currencyShort}
                                           {sessionData.user
                                             .salary_calculation ===
                                           "monthly rate"
-                                            ? `${(
-                                                (trade.monthly_planned_cost
-                                                  ? trade.monthly_planned_cost
-                                                  : 0) * currencyValue
-                                              ).toLocaleString()}/month`
-                                            : `${(
-                                                (trade.daily_planned_cost
-                                                  ? trade.daily_planned_cost
-                                                  : 0) * currencyValue
-                                              ).toLocaleString()}/day`}
+                                            ? (
+                                            <>
+                                              <ConvertedAmount
+                                                amount={Number(trade.monthly_planned_cost)}
+                                                currency={sessionData.user.currency}
+                                                showCurrency={true}
+                                              />
+                                              /month
+                                            </>
+                                          ) : (
+                                            <>
+                                              <ConvertedAmount
+                                                amount={Number(trade.daily_planned_cost)}
+                                                currency={sessionData.user.currency}
+                                                showCurrency={true}
+                                              />
+                                              /day
+                                            </>
+                                          )}
                                         </td>
                                         <td className="px-4 py-3">
-                                          <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                              >
-                                                <MoreHorizontal className="h-4 w-4" />
-                                              </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                              <DropdownMenuItem
-                                                onClick={() =>
-                                                  handleTradeAction(
-                                                    "edit",
-                                                    trade,
-                                                    project.id
-                                                  )
-                                                }
-                                              >
-                                                <Edit className="h-4 w-4 mr-2" />
-                                                Edit
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem
-                                                onClick={() =>
-                                                  handleTradeAction(
-                                                    "delete",
-                                                    trade,
-                                                    project.id
-                                                  )
-                                                }
-                                              >
-                                                <Trash2 className="h-4 w-4 mr-2" />
-                                                Delete
-                                              </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                          </DropdownMenu>
+                                          {(permissions.manage_employees || permissions.full_access) && (
+                                            <DropdownMenu>
+                                              <DropdownMenuTrigger asChild>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                >
+                                                  <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end">
+                                                <DropdownMenuItem
+                                                  onClick={() =>
+                                                    handleTradeAction(
+                                                      "edit",
+                                                      trade,
+                                                      project.id
+                                                    )
+                                                  }
+                                                >
+                                                  <Edit className="h-4 w-4 mr-2" />
+                                                  Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                  onClick={() =>
+                                                    handleTradeAction(
+                                                      "delete",
+                                                      trade,
+                                                      project.id
+                                                    )
+                                                  }
+                                                >
+                                                  <Trash2 className="h-4 w-4 mr-2" />
+                                                  Delete
+                                                </DropdownMenuItem>
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
+                                          )}
                                         </td>
                                       </tr>
                                     )
@@ -1604,8 +1653,12 @@ export default function BudgetPlanning() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {currencyShort}
-                      {(total_planned_cost * currencyValue).toLocaleString()}
+                      {sessionData.user.currency}
+                      {<ConvertedAmount
+                        amount={total_planned_cost}
+                        currency={sessionData.user.currency}
+                        showCurrency={false}
+                      />}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       For {timeFilter}
@@ -1622,8 +1675,12 @@ export default function BudgetPlanning() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {currencyShort}
-                      {(total_actual_cost * currencyValue).toLocaleString()}
+                      {sessionData.user.currency}
+                      {<ConvertedAmount
+                        amount={total_actual_cost}
+                        currency={sessionData.user.currency}
+                        showCurrency={false}
+                      />}
                     </div>
                     <div className="flex items-center gap-1 mt-1">
                       {budgetStatus === "under" ? (
@@ -1650,10 +1707,18 @@ export default function BudgetPlanning() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {currencyShort}
+                      {sessionData.user.currency}
                       {budgetStatus === "under"
-                        ? budgetDifference.toLocaleString()
-                        : (0).toLocaleString()}
+                        ? <ConvertedAmount
+                          amount={budgetDifference}
+                          currency={sessionData.user.currency}
+                          showCurrency={false}
+                        />
+                        : <ConvertedAmount
+                          amount={0}
+                          currency={sessionData.user.currency}
+                          showCurrency={false}
+                        />}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       {budgetStatus === "under"
@@ -1726,10 +1791,10 @@ export default function BudgetPlanning() {
                             ? tradesFetched.map((trade: any) => ({
                                 name: trade.trade_name,
                                 planned: Math.abs(
-                                  (trade.planned_costs || 0) * currencyValue
+                                  (trade.planned_costs || 0)  
                                 ),
                                 actual: Math.abs(
-                                  (trade.actual_cost || 0) * currencyValue
+                                  (trade.actual_cost || 0)  
                                 ),
                               }))
                             : []
@@ -1747,7 +1812,7 @@ export default function BudgetPlanning() {
                         />
                         <YAxis
                           tickFormatter={(value) =>
-                            `${currencyShort}${value.toLocaleString()}`
+                            `${sessionData.user.currency}${value.toLocaleString()}`
                           }
                           domain={[0, "auto"]}
                         />
@@ -1797,20 +1862,28 @@ export default function BudgetPlanning() {
                           <th className="px-4 py-3 text-left">
                             <div className="flex items-center gap-2">
                               <div className="h-3 w-3 rounded-full bg-orange-500"></div>
-                              Planned Budget ({currencyShort}
+                              Planned Budget ({sessionData.user.currency}
                               {(
-                                total_planned_cost * currencyValue
-                              ).toLocaleString()}
+                                <ConvertedAmount
+                                  amount={total_planned_cost}
+                                  currency={sessionData.user.currency}
+                                  showCurrency={false}
+                                />
+                              )}
                               )
                             </div>
                           </th>
                           <th className="px-4 py-3 text-left">
                             <div className="flex items-center gap-2">
                               <div className="h-3 w-3 rounded-full bg-blue-700"></div>
-                              Actual Cost ({currencyShort}
+                              Actual Cost ({sessionData.user.currency}
                               {(
-                                total_actual_cost * currencyValue
-                              ).toLocaleString()}
+                                <ConvertedAmount
+                                  amount={total_actual_cost}
+                                  currency={sessionData.user.currency}
+                                  showCurrency={false}
+                                />
+                              )}
                               )
                             </div>
                           </th>
@@ -1822,8 +1895,8 @@ export default function BudgetPlanning() {
                         {tradesFetched && tradesFetched.length > 0 ? (
                           tradesFetched.map((data: any) => {
                             const difference =
-                              (data.actual_cost * currencyValue || 0) -
-                              (data.planned_costs * currencyValue || 0);
+                              (data.actual_cost || 0) -
+                              (data.planned_costs || 0);
                             return (
                               <tr
                                 key={data.id}
@@ -1848,24 +1921,32 @@ export default function BudgetPlanning() {
                                 <td className="px-4 py-3">
                                   {currencyShort}
                                   {(
-                                    data.planned_costs * currencyValue || 0
-                                  ).toLocaleString()}
+                                    <ConvertedAmount
+                                      amount={data.planned_costs || 0}
+                                      currency={sessionData.user.currency}
+                                      showCurrency={false}
+                                    />
+                                  )}
                                 </td>
                                 <td className="px-4 py-3">
                                   {currencyShort}
                                   {(
-                                    data.actual_cost * currencyValue || 0
-                                  ).toLocaleString()}
+                                    <ConvertedAmount
+                                      amount={data.actual_cost || 0}
+                                      currency={sessionData.user.currency}
+                                      showCurrency={false}
+                                    />
+                                  )}
                                 </td>
                                 <td className="px-4 py-3">
                                   {difference > 0 ? (
                                     <Badge className="bg-red-50 text-red-700">
-                                      +{currencyShort}
+                                      +{sessionData.user.currency}
                                       {difference.toLocaleString()}
                                     </Badge>
                                   ) : (
                                     <Badge className="bg-green-50 text-green-700">
-                                      -{currencyShort}
+                                      -{sessionData.user.currency}
                                       {Math.abs(difference).toLocaleString()}
                                     </Badge>
                                   )}
@@ -1993,7 +2074,7 @@ export default function BudgetPlanning() {
                             plannedSalary: e.target.value,
                           })
                         }
-                        placeholder="5,000"
+                        placeholder="0"
                       />
                     </div>
                   </div>
@@ -2056,11 +2137,11 @@ export default function BudgetPlanning() {
                       <Input
                         type="number"
                         className="pl-[40px]"
-                        value={editTrade.plannedSalary}
+                        value={Number(editTrade.plannedSalary)}
                         onChange={(e) =>
                           setEditTrade({
                             ...editTrade,
-                            plannedSalary: e.target.value,
+                            plannedSalary: Number(e.target.value),
                           })
                         }
                       />

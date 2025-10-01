@@ -42,6 +42,52 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Search, Filter } from "lucide-react";
+import { convertCurrency } from "@/lib/utils";
+
+function ConvertedAmount({ 
+  amount, 
+  currency, 
+  showCurrency = true 
+}: { 
+  amount: number; 
+  currency: string; 
+  showCurrency?: boolean;
+}) {
+  const [convertedAmount, setConvertedAmount] = useState<string>('...');
+  const {
+    data: sessionData = { user: { settings: [] } },
+    isLoading: isSessionLoading,
+    refetch: refetchSession,
+  } = useSessionQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    pollingInterval: 300000, // Poll every 5 minutes
+  });
+
+  useEffect(() => {
+    const convert = async () => {
+      console.log("session company id",sessionData.user.companies[0].base_currency)
+
+      try {
+        if (!sessionData?.user?.companies[0]?.base_currency) return;
+        console.log(sessionData.user.companies[0].base_currency)
+        
+        const result = await convertCurrency(amount, currency, sessionData.user.companies[0].base_currency);
+        setConvertedAmount(result.toLocaleString());
+      } catch (error) {
+        console.error('Error converting currency:', error);
+        setConvertedAmount('Error');
+      }
+    };
+
+    if (amount !== undefined) {
+      convert();
+    }
+  }, [amount, currency, sessionData?.user?.companies[0]?.base_currency]);
+
+  return <>{showCurrency ? `${currency} ${Number(convertedAmount).toLocaleString()}` : Number(convertedAmount).toLocaleString()}</>;
+}
 
 export default function Dashboard() {
   const [permissions, setPermissions] = useState({
@@ -69,37 +115,6 @@ export default function Dashboard() {
   });
 
   // Redux query hooks with proper options for keeping data fresh
-  const {
-    data: sessionData = { user: { settings: [] } },
-    isLoading: isSessionLoading,
-    refetch: refetchSession,
-  } = useSessionQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-    refetchOnFocus: true,
-    refetchOnReconnect: true,
-    pollingInterval: 300000, // Poll every 5 minutes
-  });
-
-  const splitCurrencyValue = (str: string | undefined | null) => {
-    if (!str) return null; // return early if str is undefined or null
-    const match = str.match(/^([A-Z]+)([\d.]+)$/);
-    if (!match) return null;
-    return {
-      currency: match[1],
-      value: match[2],
-    };
-  };
-  const [currencyValue, setCurrencyValue] = useState<number | null>(null);
-  const [currencyShort, setCurrencyShort] = useState<string | null | undefined>(
-    null
-  );
-  useEffect(() => {
-    setCurrencyValue(
-      Number(splitCurrencyValue(sessionData.user.currency)?.value)
-    );
-    setCurrencyShort(splitCurrencyValue(sessionData.user.currency)?.currency);
-  }, []);
-
   const {
     data: employees = [],
     isLoading: isEmployeesLoading,
@@ -133,7 +148,6 @@ export default function Dashboard() {
 
   // Combined loading state
   const isLoading =
-    isSessionLoading ||
     isEmployeesLoading ||
     isPayrollLoading ||
     isAttendanceLoading;
@@ -159,7 +173,6 @@ export default function Dashboard() {
 
       // Refresh all data sources concurrently
       await Promise.all([
-        refetchSession(),
         refetchEmployees(),
         refetchPayroll(),
         refetchAttendance(),
@@ -180,7 +193,6 @@ export default function Dashboard() {
       setIsRefreshing(false);
     }
   }, [
-    refetchSession,
     refetchEmployees,
     refetchPayroll,
     refetchAttendance,
@@ -188,6 +200,13 @@ export default function Dashboard() {
   ]);
 
   // Auto-refresh data when component mounts
+  /**
+   * Set up an interval to check if data needs refreshing.
+   * This effect is used to keep the dashboard data up to date.
+   * It checks every 15 minutes if the data needs to be refreshed.
+   * If not already refreshing or fetching data, it calls the handleRefreshData() function.
+   * The interval is cleared when the component unmounts.
+   */
   useEffect(() => {
     // Initial data load is handled by the RTK Query hooks
     // This effect can be used for additional setup if needed
@@ -204,6 +223,17 @@ export default function Dashboard() {
   }, [handleRefreshData, isRefreshing, isFetching]);
 
   // Set permissions based on user role
+  const {
+    data: sessionData = { user: { settings: [] } },
+    isLoading: isSessionLoading,
+    refetch: refetchSession,
+  } = useSessionQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    pollingInterval: 300000, // Poll every 5 minutes
+  });
+
   useEffect(() => {
     if (sessionData?.user?.settings && sessionData.user.current_role) {
       const userPermission = sessionData.user.settings.find(
@@ -211,10 +241,7 @@ export default function Dashboard() {
           setting.role.toLowerCase() ===
           sessionData.user.current_role.toLowerCase()
       );
-      setCurrencyValue(
-        Number(splitCurrencyValue(sessionData.user.currency)?.value)
-      );
-      setCurrencyShort(splitCurrencyValue(sessionData.user.currency)?.currency);
+
 
       if (userPermission) {
         setPermissions(userPermission);
@@ -243,17 +270,17 @@ export default function Dashboard() {
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm">Planned Cost</span>
             <span className="text-sm font-medium">
-              {currencyShort}
-              {(
-                (payload[0].value ? payload[0].value : 1) * currencyValue
-              ).toLocaleString()}
+              <ConvertedAmount 
+                amount={payload[0].value} 
+                currency={sessionData.user.currency} 
+              />
             </span>
             <span className="text-sm">Actual Cost</span>
             <span className="text-sm font-medium">
-              {currencyShort}
-              {(
-                (payload[1].value ? payload[1].value : 1) * currencyValue
-              ).toLocaleString()}
+              <ConvertedAmount 
+                amount={payload[1].value} 
+                currency={sessionData.user.currency} 
+              />
             </span>
           </div>
         </div>
@@ -288,7 +315,7 @@ export default function Dashboard() {
     return null;
   };
 
-  if (isLoading) {
+  if (isLoading || isSessionLoading) {
     return (
       <div className="flex h-screen bg-gray-50">
         <Sidebar user={user} />
@@ -533,7 +560,6 @@ export default function Dashboard() {
     numberOfLateArrivals,
     payrollPercentage,
   } = processEmployeeData();
-  console.log("currencyValue", currencyValue, "currencyShort", currencyShort);
   console.log("sessionData", sessionData);
   console.log("permissions", permissions);
   return (
@@ -646,13 +672,13 @@ export default function Dashboard() {
                       <SelectContent>
                         <SelectItem value="all">All Rates</SelectItem>
                         <SelectItem value="low">
-                          Low (&lt; {currencyShort}100)
+                          Low (&lt; {sessionData.user.currency}100)
                         </SelectItem>
                         <SelectItem value="medium">
-                          {currencyShort}100 - {currencyShort}200
+                          {sessionData.user.currency}100 - {sessionData.user.currency}200
                         </SelectItem>
                         <SelectItem value="high">
-                          High (&gt; {currencyShort}200)
+                          High (&gt; {sessionData.user.currency}200)
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -717,9 +743,14 @@ export default function Dashboard() {
               />
               <StatCard
                 title="Total Actual Payroll"
-                value={`${currencyShort}${(
-                  totalActualPayroll * currencyValue
-                ).toLocaleString()}`}
+                value={
+                  <>
+                    <ConvertedAmount 
+                      amount={totalActualPayroll} 
+                      currency={sessionData.user.currency}
+                    />
+                  </>
+                }
                 icon={DollarSign}
                 iconBackground="bg-green-600"
                 change={{
@@ -741,8 +772,10 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="text-3xl font-bold mb-6">
-                    {currencyShort}
-                    {(totalActualPayroll * currencyValue).toLocaleString()}
+                    <ConvertedAmount 
+                      amount={totalActualPayroll} 
+                      currency={sessionData.user.currency}
+                    />
                   </div>
                 </div>
 
@@ -771,9 +804,10 @@ export default function Dashboard() {
                           axisLine={false}
                           tickLine={false}
                           tick={{ fontSize: 9, fill: "#888888" }}
-                          tickFormatter={(value) =>
-                            `${currencyShort}${(value * currencyValue) / 1000}K`
-                          }
+                          tickFormatter={(value) => {
+                            const amount = value / 1000;
+                            return `${amount.toFixed(1)}K`;
+                          }}
                           domain={["auto", "auto"]}
                           allowDataOverflow={false}
                         />
@@ -915,77 +949,45 @@ export default function Dashboard() {
                             </div>
                           </td>
                           <td className="p-4">
-                            {currencyShort}
-                            {(
-                              tradeStatistics[trade].planned_budget *
-                              currencyValue
-                            ).toLocaleString()}
+                            <ConvertedAmount 
+                              amount={tradeStatistics[trade].planned_budget} 
+                              currency={sessionData.user.currency}
+                            />
                           </td>
                           <td className="p-4">
-                            {currencyShort}
-                            {(
-                              tradeStatistics[trade].actual_cost * currencyValue
-                            ).toLocaleString()}
+                            <ConvertedAmount 
+                              amount={tradeStatistics[trade].actual_cost} 
+                              currency={sessionData.user.currency}
+                            />
                           </td>
                           <td className="p-4">
                             <div className="flex items-center gap-1">
                               <div
                                 className={`h-5 w-5 rounded-full flex items-center justify-center ${
-                                  tradeStatistics[trade].difference *
-                                    currencyValue >
-                                  0
+                                  tradeStatistics[trade].difference > 0
                                     ? "bg-green-100"
                                     : "bg-red-100"
                                 }`}
                               >
                                 <span
                                   className={`text-xs ${
-                                    tradeStatistics[trade].difference *
-                                      currencyValue >
-                                    0
+                                    tradeStatistics[trade].difference > 0
                                       ? "text-green-600"
                                       : "text-red-600"
                                   }`}
                                 >
-                                  {tradeStatistics[trade].difference *
-                                    currencyValue >
-                                  0
+                                  {tradeStatistics[trade].difference > 0
                                     ? "+"
                                     : ""}
                                 </span>
                               </div>
-                              <span
-                                className={`${
-                                  tradeStatistics[trade].difference *
-                                    currencyValue >
-                                  0
-                                    ? "text-green-600"
-                                    : "text-red-600"
-                                }`}
-                              >
-                                {currencyShort}
-                                {Math.abs(
-                                  tradeStatistics[trade].difference *
-                                    currencyValue
-                                ).toLocaleString()}
-                              </span>
+                              <ConvertedAmount 
+                                amount={Math.abs(tradeStatistics[trade].difference)} 
+                                currency={sessionData.user.currency}
+                              />
                             </div>
                           </td>
-                          <td className="p-4">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => {
-                                toast({
-                                  title: "View Details",
-                                  description: `Viewing details for ${trade}`,
-                                });
-                              }}
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </td>
+                
                         </tr>
                       )
                     )}

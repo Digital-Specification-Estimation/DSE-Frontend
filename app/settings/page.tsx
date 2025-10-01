@@ -39,6 +39,20 @@ export default function Settings() {
   const [newHoliday, setNewHoliday] = useState<string>("");
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [newPrivilege, setNewPrivilege] = useState<string>("");
+ const {
+    data: sessionData = { user: {} },
+    isLoading: isSessionLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useSessionQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    skip: false,
+  });
+  // console.log("user",localStorage.getItem("user"))
 
   // Role-based user settings state
   const [roleSettings, setRoleSettings] = useState({
@@ -60,18 +74,44 @@ export default function Settings() {
     "Generate reports",
   ]);
 
-  const {
-    data: sessionData = { user: { companies: [] } },
-    isLoading: isSessionLoading,
-    isError,
-    error,
-    refetch,
-    isFetching,
-  } = useSessionQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-    refetchOnFocus: true,
-    refetchOnReconnect: true,
-    skip: false,
+
+  const [user] = useState({
+    name: "Kristin Watson",
+    role: "Personal Account",
+    avatar: "/placeholder.svg?height=40&width=40",
+  });
+
+  const { data: previelegesFetched } = useGetPrevielegesQuery();
+
+  const [userSettings, setUserSettings] = useState<any[]>([]);
+  useEffect(() => {
+    if (previelegesFetched) {
+      setUserSettings(previelegesFetched);
+    }
+  }, [previelegesFetched]);
+
+  const [activeTab, setActiveTab] = useState("company");
+  const [isLoading, setIsLoading] = useState(true);
+  const [companySettings, setCompanySettings] = useState({
+    companyName: "",
+    businessType: "",
+    holidays: [] as string[],
+    workHours: "",
+    weeklyWorkLimit: "",
+    overtimeRate: "",
+  });
+
+  const [payrollSettings, setPayrollSettings] = useState({
+    salary_calculation: "daily rate",
+    currency: "RWF",
+    payslip_format: "PDF",
+    baseCurrency: "RWF", // Add baseCurrency to payrollSettings
+  });
+
+  const [notificationSettings, setNotificationSettings] = useState({
+    send_email_alerts: true,
+    remind_approvals: false,
+    deadline_notify: true,
   });
 
   // Get the first company ID from the session data
@@ -137,13 +177,13 @@ export default function Settings() {
 
   // Log role settings for debugging
   useEffect(() => {
-    console.log("Admin user settings:", roleSettings.admin);
-    console.log("HR Manager user settings:", roleSettings.hr_manager);
-    console.log(
-      "Departure Manager user settings:",
-      roleSettings.departure_manager
-    );
-    console.log("Employee user settings:", roleSettings.employee);
+    // console.log("Admin user settings:", roleSettings.admin);
+    // console.log("HR Manager user settings:", roleSettings.hr_manager);
+    // console.log(
+    //   "Departure Manager user settings:",
+    //   roleSettings.departure_manager
+    // );
+    // console.log("Employee user settings:", roleSettings.employee);
   }, [roleSettings]);
 
   // RTK Query hooks
@@ -158,69 +198,9 @@ export default function Settings() {
   const [updateUserSettings, { isLoading: isUpdatingUserSettings }] =
     useUpdateUserSettingsMutation();
   const { toast } = useToast();
-  const [user] = useState({
-    name: "Kristin Watson",
-    role: "Personal Account",
-    avatar: "/placeholder.svg?height=40&width=40",
-  });
 
-  const { data: previelegesFetched } = useGetPrevielegesQuery();
-
-  const [userSettings, setUserSettings] = useState<any[]>([]);
   useEffect(() => {
-    if (previelegesFetched) {
-      setUserSettings(previelegesFetched);
-    }
-  }, [previelegesFetched]);
-
-  const [activeTab, setActiveTab] = useState("company");
-  const [isLoading, setIsLoading] = useState(true);
-  const [companySettings, setCompanySettings] = useState({
-    companyName: "",
-    businessType: "",
-    holidays: [] as string[],
-    workHours: "",
-    weeklyWorkLimit: "",
-    overtimeRate: "",
-  });
-
-  const [payrollSettings, setPayrollSettings] = useState({
-    salary_calculation: "daily rate",
-    currency: "USD1",
-    payslip_format: "PDF",
-  });
-
-  const [notificationSettings, setNotificationSettings] = useState({
-    send_email_alerts: true,
-    remind_approvals: false,
-    deadline_notify: true,
-  });
-
-  // Update local state when company data is loaded
-  useEffect(() => {
-    if (companyData) {
-      setCompanySettings({
-        companyName: companyData.company_name,
-        businessType: companyData.business_type,
-        holidays: companyData.holidays,
-        workHours: companyData.standard_work_hours,
-        weeklyWorkLimit: companyData.weekly_work_limit,
-        overtimeRate: companyData.overtime_rate,
-      });
-      if (companyData.company_profile) {
-        console.log(
-          `https://dse-backend-uv5d.onrender.com/${companyData.company_profile}`
-        );
-        setCompanyLogo(
-          `https://dse-backend-uv5d.onrender.com/${companyData.company_profile}`
-        );
-      }
-    }
-  }, [companyData]);
-
-  // Update local state from session data
-  useEffect(() => {
-    if (sessionData && sessionData.user) {
+    if (sessionData?.user) {
       setUserData(sessionData.user);
       setPayrollSettings({
         salary_calculation: sessionData.user?.salary_calculation
@@ -231,7 +211,8 @@ export default function Settings() {
           : "PDF",
         currency: sessionData.user?.currency
           ? sessionData.user?.currency
-          : "USD1",
+          : "RWF",
+        baseCurrency: sessionData?.user?.companies?.[0]?.base_currency || "RWF",
       });
       setNotificationSettings({
         send_email_alerts: sessionData.user?.send_email_alerts
@@ -256,10 +237,10 @@ export default function Settings() {
         });
         if (company.company_profile) {
           console.log(
-            `https://dse-backend-uv5d.onrender.com/${company.company_profile}`
+            `http://localhost:4000/${company.company_profile}`
           );
           setCompanyLogo(
-            `https://dse-backend-uv5d.onrender.com/${company.company_profile}`
+            `http://localhost:4000/${company.company_profile}`
           );
         }
       }
@@ -311,14 +292,13 @@ export default function Settings() {
   // Handle toggle for a specific setting
   const handleToggleSetting = (role: string, settingKey: string) => {
     const currentSettings = getRoleSettings(role);
-    const newValue = !currentSettings[settingKey];
 
     // Update role settings
     setRoleSettings((prev) => ({
       ...prev,
       [role]: {
         ...prev[role as keyof typeof prev],
-        [settingKey]: newValue,
+        [settingKey]: !currentSettings[settingKey],
       },
     }));
   };
@@ -491,9 +471,32 @@ export default function Settings() {
         updatedFields.payslip_format = payrollSettings.payslip_format;
         hasChanges = true;
       }
-
+      
+      const formData = new FormData();
+      if(payrollSettings.baseCurrency){
+        formData.append("base_currency", payrollSettings.baseCurrency);
+        hasChanges = true;
+      }
       if (hasChanges) {
-        await updateUser(updatedFields);
+     
+
+        // Add company ID
+        formData.append("id", companyId);
+       const result =  await updateCompany(formData);
+       console.log("updatedFields being sent to updateUser:", updatedFields);
+        try {
+          const result2 = await updateUser(updatedFields);
+          console.log("result2", result2);
+        } catch (error) {
+          console.error("Error updating user:", error);
+          toast({
+            title: "Error",
+            description: "Failed to update user. Please try again.",
+            variant: "destructive",
+          });
+        }
+        console.log("result", result);
+     
         toast({
           title: "Payroll Settings Saved",
           description: "Your payroll settings have been updated successfully.",
@@ -1297,17 +1300,52 @@ export default function Settings() {
                               <SelectValue placeholder="Select" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="USD1">USD</SelectItem>
-                              <SelectItem value="RWF1251.00">RWF</SelectItem>
-                              <SelectItem value="EUR0.9200">EUR</SelectItem>
-                              <SelectItem value="GBP0.7508">GBP</SelectItem>
-                              <SelectItem value="JPY142.7850">JPY</SelectItem>
-                              <SelectItem value="CNY7.2893">CNY</SelectItem>
-                              <SelectItem value="INR85.36">INR</SelectItem>
-                              <SelectItem value="ZAR18.7066">ZAR</SelectItem>
-                              <SelectItem value="KES129.3550">KES</SelectItem>
-                              <SelectItem value="UGX3664.42">UGX</SelectItem>
-                              <SelectItem value="TZS2673.02">TZS</SelectItem>
+                              <SelectItem value="RWF">RWF</SelectItem>
+                              <SelectItem value="USD">USD</SelectItem>
+                              <SelectItem value="EUR">EUR</SelectItem>
+                              <SelectItem value="GBP">GBP</SelectItem>
+                              <SelectItem value="JPY">JPY</SelectItem>
+                              <SelectItem value="CNY">CNY</SelectItem>
+                              <SelectItem value="INR">INR</SelectItem>
+                              <SelectItem value="ZAR">ZAR</SelectItem>
+                              <SelectItem value="KES">KES</SelectItem>
+                              <SelectItem value="UGX">UGX</SelectItem>
+                              <SelectItem value="TZS">TZS</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="flex h-20 justify-between items-center border-b-2 border-gray-300">
+                        <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                          Base Currency{" "}
+                          <span className="text-red-500 ml-0.5">*</span>
+                        </label>
+                        <div className="w-[400px]">
+                          <Select
+                            value={payrollSettings.baseCurrency}
+                            onValueChange={(value) =>
+                              setPayrollSettings({
+                                ...payrollSettings,
+                                baseCurrency: value,
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="RWF">RWF</SelectItem>
+                              <SelectItem value="USD">USD</SelectItem>
+                              <SelectItem value="EUR">EUR</SelectItem>
+                              <SelectItem value="GBP">GBP</SelectItem>
+                              <SelectItem value="JPY">JPY</SelectItem>
+                              <SelectItem value="CNY">CNY</SelectItem>
+                              <SelectItem value="INR">INR</SelectItem>
+                              <SelectItem value="ZAR">ZAR</SelectItem>
+                              <SelectItem value="KES">KES</SelectItem>
+                              <SelectItem value="UGX">UGX</SelectItem>
+                              <SelectItem value="TZS">TZS</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
