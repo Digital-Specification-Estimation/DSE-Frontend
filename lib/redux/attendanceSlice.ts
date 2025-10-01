@@ -5,7 +5,7 @@ export const attendanceApi = createApi({
   baseQuery: fetchBaseQuery({
     // baseUrl: "https://dse-backend-production.up.railway.app/location",
 
-    baseUrl: "https://dse-backend-uv5d.onrender.com/attendance",
+    baseUrl: "http://localhost:4000/attendance",
     credentials: "include",
   }),
   endpoints: (builder) => ({
@@ -58,6 +58,16 @@ export const attendanceApi = createApi({
     getDailyAttendanceMonthly: builder.query<any, void>({
       query: () => "daily-percentage-monthly",
     }),
+    getAttendanceHistory: builder.query({
+      query: ({ employeeId, startDate, endDate }: { employeeId: string; startDate?: string; endDate?: string }) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        
+        const queryString = params.toString();
+        return `history/${employeeId}${queryString ? `?${queryString}` : ''}`;
+      },
+    }),
   }),
 });
 
@@ -71,4 +81,5 @@ export const {
   useGetAttendanceByDateQuery,
   useDeleteManyAttendancesMutation,
   useGetDailyAttendanceMonthlyQuery,
+  useGetAttendanceHistoryQuery,
 } = attendanceApi;

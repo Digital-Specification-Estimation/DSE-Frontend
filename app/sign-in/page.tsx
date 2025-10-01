@@ -83,7 +83,10 @@ export default function SignIn() {
           title: "Login Successful",
           description: "Welcome back! You've been logged in successfully.",
         });
+        localStorage.setItem("user", JSON.stringify(response.data));
+        console.log("user", localStorage.getItem("user"));
         router.push("/dashboard");
+        
       }
     } catch (err: any) {
       console.error("Caught Error:", err); // Log the caught error for debugging
@@ -111,7 +114,7 @@ export default function SignIn() {
 
       const popup = window.open(
         "https://dse-backend-production.up.railway.app/auth/google",
-        // "https://dse-backend-uv5d.onrender.com/auth/google",
+        // "http://localhost:4000/auth/google",
         "GoogleAuth",
         `width=${width},height=${height},top=${top},left=${left}`
       );

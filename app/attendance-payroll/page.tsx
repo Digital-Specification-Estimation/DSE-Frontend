@@ -47,6 +47,8 @@ import {
 } from "@/lib/redux/attendanceSlice";
 import { useSessionQuery } from "@/lib/redux/authSlice";
 import { useGetProjectsQuery } from "@/lib/redux/projectSlice";
+import { convertCurrency } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 // API endpoints
 const API_ENDPOINTS = {
@@ -57,17 +59,47 @@ const API_ENDPOINTS = {
   GENERATE_PAYSLIPS: "/api/payroll/generate-payslips",
   PAYROLL_REPORT: "/api/payroll/report",
 };
+function ConvertedAmount({ 
+  amount, 
+  currency, 
+  showCurrency = true,
+  sessionData
+}: { 
+  amount: number; 
+  currency: string; 
+  showCurrency?: boolean;
+  sessionData: any;
+}) {
+  const [convertedAmount, setConvertedAmount] = useState<string>('...');
 
+  useEffect(() => {
+    const convert = async () => {
+      try {
+        const result = await convertCurrency(amount, currency, sessionData.user.companies[0].base_currency);
+        setConvertedAmount(result);
+      } catch (error) {
+        console.error('Error converting currency:', error);
+        setConvertedAmount('Error');
+      }
+    };
+
+    if (amount !== undefined) {
+      convert();
+    }
+  }, [amount, currency]);
+console.log("convertedAmount", convertedAmount)
+  return <>{showCurrency ? `${currency} ${Number(convertedAmount).toLocaleString()}` : Number(convertedAmount).toLocaleString()}</>;
+}
 export default function AttendancePayroll() {
   const [permissions, setPermissions] = useState({
     approve_attendance: false,
-    approve_leaves: true,
+    approve_leaves: false,
     full_access: false,
-    generate_reports: null,
+    generate_reports: false,
     id: "",
-    manage_employees: null,
+    manage_employees: false,
     manage_payroll: false,
-    mark_attendance: true,
+    mark_attendance: false,
     role: "",
     view_payslip: false,
     view_reports: false,
@@ -89,12 +121,13 @@ export default function AttendancePayroll() {
     skip: false,
   });
   const [addReason, { isLoading: isAdding }] = useAddReasonMutation();
+  console.log("session data ",sessionData)
   useEffect(() => {
     if (sessionData?.user?.settings && sessionData.user.current_role) {
       const userPermission = sessionData.user.settings.find(
         (setting: any) =>
-          setting.role.toLowerCase() ===
-          sessionData.user.current_role.toLowerCase()
+          setting.company_id === sessionData.user.company_id &&
+          setting.role === sessionData.user.current_role
       );
 
       if (userPermission) {
@@ -102,6 +135,8 @@ export default function AttendancePayroll() {
       }
     }
   }, [sessionData.user.settings, sessionData.user.current_role]);
+  console.log("permissions", permissions);
+
   const splitCurrencyValue = (str: string | undefined | null) => {
     if (!str) return null; // return early if str is undefined or null
     const match = str.match(/^([A-Z]+)([\d.]+)$/);
@@ -258,11 +293,7 @@ export default function AttendancePayroll() {
     status: "Present" | "Absent" | "Late"
   ) => {
     try {
-      if (
-        permissions.approve_attendance ||
-        permissions.full_access ||
-        permissions.mark_attendance
-      ) {
+      if (permissions.full_access || permissions.approve_attendance || permissions.mark_attendance) {
         // Use RTK Query mutation instead of fetch
         await updateAttendance({
           employeeId,
@@ -281,8 +312,8 @@ export default function AttendancePayroll() {
         });
       } else {
         toast({
-          title: "Error",
-          description: "you do not have previelege to make attendance",
+          title: "Access Denied",
+          description: "You don't have permission to update attendance.",
           variant: "destructive",
         });
       }
@@ -299,6 +330,15 @@ export default function AttendancePayroll() {
   // Generate payslips using fetch
   // Function to handle payslip generation for all employees
   const handleGeneratePayslips = async () => {
+    if (!permissions.full_access && !permissions.manage_payroll) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to generate payslips.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!employees || employees.length === 0) {
       toast({
         title: "No Employees",
@@ -546,6 +586,15 @@ export default function AttendancePayroll() {
   // console.log("permissions", permissions);
   // Generate payroll report using fetch
   const handleGenerateReport = async () => {
+    if (!permissions.full_access && !permissions.generate_reports && !permissions.view_reports) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to generate reports.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!employees || employees.length === 0) {
       toast({
         title: "No Data",
@@ -831,6 +880,7 @@ export default function AttendancePayroll() {
     };
   }, []);
 
+  const router = useRouter();
   return (
     <div className="flex h-screen bg-white">
       <Sidebar user={user} />
@@ -845,31 +895,35 @@ export default function AttendancePayroll() {
             </h1>
 
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="gap-2 flex items-center border-2 border-gray-300 rounded-full h-14"
-                onClick={handleGenerateReport}
-                disabled={isGeneratingReport}
-              >
-                {isGeneratingReport ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <FileText className="h-5 w-5" />
-                )}
-                {isGeneratingReport ? "Generating..." : "View Payroll Report"}
-              </Button>
-              <Button
-                className="bg-orange-500 hover:bg-orange-600 gap-2 flex items-center h-14 rounded-full"
-                onClick={handleGeneratePayslips}
-                disabled={isGeneratingPayslips}
-              >
-                {isGeneratingPayslips ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <FileCheck className="h-5 w-5" />
-                )}
-                {isGeneratingPayslips ? "Generating..." : "Generate Payslips"}
-              </Button>
+              {(permissions.full_access || permissions.generate_reports || permissions.view_reports) && (
+                <Button
+                  variant="outline"
+                  className="gap-2 flex items-center border-2 border-gray-300 rounded-full h-14"
+                  onClick={handleGenerateReport}
+                  disabled={isGeneratingReport}
+                >
+                  {isGeneratingReport ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileText className="h-5 w-5" />
+                  )}
+                  {isGeneratingReport ? "Generating..." : "View Payroll Report"}
+                </Button>
+              )}
+              {(permissions.full_access || permissions.manage_payroll) && (
+                <Button
+                  className="bg-orange-500 hover:bg-orange-600 gap-2 flex items-center h-14 rounded-full"
+                  onClick={handleGeneratePayslips}
+                  disabled={isGeneratingPayslips}
+                >
+                  {isGeneratingPayslips ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileCheck className="h-5 w-5" />
+                  )}
+                  {isGeneratingPayslips ? "Generating..." : "Generate Payslips"}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -1097,10 +1151,7 @@ export default function AttendancePayroll() {
                           Total Budget Baseline
                         </div>
                         <div className="text-xl font-bold">
-                          {currencyShort}
-                          {(
-                            totals.totalBaseline * currencyValue
-                          ).toLocaleString()}
+                          {<ConvertedAmount amount={totals.totalBaseline} currency={sessionData.user.currency} sessionData={sessionData} />}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4 flex-1">
@@ -1108,10 +1159,7 @@ export default function AttendancePayroll() {
                           Total Actual Payroll
                         </div>
                         <div className="text-xl font-bold">
-                          {currencyShort}
-                          {(
-                            totals.totalActualPayroll * currencyValue
-                          ).toLocaleString()}
+                          {<ConvertedAmount amount={totals.totalActualPayroll} currency={sessionData.user.currency} sessionData={sessionData} />}
                         </div>
                       </div>
                     </div>
@@ -1145,10 +1193,12 @@ export default function AttendancePayroll() {
                           </th>
                           <th className="px-4 py-3 text-left border-r">
                             Remaining Days
-                          </th>
-                          <th className="px-4 py-3 text-left border-r">
-                            Attendance Today
-                          </th>
+                            </th>
+                            {(permissions.full_access || permissions.approve_attendance || permissions.mark_attendance) && (
+                              <th className="px-4 py-3 text-left border-r">
+                                Attendance Today
+                              </th>
+                            )}
                           <th className="w-10 px-4 py-3 text-center"></th>
                         </tr>
                       </thead>
@@ -1203,148 +1253,90 @@ export default function AttendancePayroll() {
                                     : employee.remaining_days}
                                 </Badge>
                               </td>
-                              <td className="px-4 py-3 border-r">
-                                <Popover
-                                  open={openAttendanceDropdown === employee.id}
-                                  onOpenChange={(open) => {
-                                    if (open) {
-                                      setOpenAttendanceDropdown(employee.id);
-                                    } else {
-                                      setOpenAttendanceDropdown(null);
-                                    }
-                                  }}
-                                >
-                                  <PopoverTrigger asChild>
-                                    <div className="flex items-center gap-2 cursor-pointer">
-                                      {employee?.attendance &&
-                                      Array.isArray(employee.attendance)
-                                        ? employee.attendance
-                                            .filter(
-                                              (attendance: any) =>
-                                                attendance &&
-                                                formatDate(attendance.date) ===
-                                                  getCurrentDate()
-                                            )
-                                            .map((attendance: any) => (
-                                              <Badge
-                                                key={
-                                                  attendance.id ||
-                                                  Math.random().toString()
-                                                }
-                                                className={
-                                                  attendance.status ===
-                                                  "present"
-                                                    ? "bg-green-50 text-green-700 border-0"
-                                                    : attendance.status ===
-                                                      "late"
-                                                    ? "bg-orange-50 text-orange-500 border-0"
-                                                    : "bg-red-50 text-red-700 border-0"
-                                                }
-                                              >
-                                                {attendance.status}
-                                              </Badge>
-                                            ))
-                                        : null}
-                                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                                    </div>
-                                  </PopoverTrigger>
-                                  <PopoverContent
-                                    className="w-auto p-0"
-                                    align="start"
+                              {(permissions.full_access || permissions.approve_attendance || permissions.mark_attendance) && (
+                                <td className="px-4 py-3 border-r">
+                                  <Popover
+                                    open={openAttendanceDropdown === employee.id}
+                                    onOpenChange={(open) => {
+                                      if (open) {
+                                        setOpenAttendanceDropdown(employee.id);
+                                      } else {
+                                        setOpenAttendanceDropdown(null);
+                                      }
+                                    }}
                                   >
-                                    <div className="p-4 space-y-2">
-                                      <div className="text-sm font-medium text-muted-foreground mb-2">
-                                        Attendance Dropdown
+                                    <PopoverTrigger asChild>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        className="text-xs h-8"
+                                      >
+                                        Mark Attendance
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <div className="p-4 space-y-2">
+                                        <div className="text-sm font-medium text-muted-foreground mb-2">
+                                          Mark Attendance
+                                        </div>
+                                        {!employee.attendance?.some(
+                                          (a: any) =>
+                                            formatDate(a.date) === getCurrentDate() &&
+                                            a.status === "present"
+                                        ) && (
+                                          <Button
+                                            variant="outline"
+                                            className="w-full justify-center bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-100"
+                                            onClick={() =>
+                                              updateEmployeeAttendance(employee.id, "Present")
+                                            }
+                                          >
+                                            Present
+                                          </Button>
+                                        )}
+                                        {!employee.attendance?.some(
+                                          (a: any) =>
+                                            formatDate(a.date) === getCurrentDate() &&
+                                            a.status === "late"
+                                        ) && (
+                                          <Button
+                                            variant="outline"
+                                            className="w-full justify-center bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 border-orange-100"
+                                            onClick={() =>
+                                              updateEmployeeAttendance(employee.id, "Late")
+                                            }
+                                          >
+                                            Late
+                                          </Button>
+                                        )}
+                                        {!employee.attendance?.some(
+                                          (a: any) =>
+                                            formatDate(a.date) === getCurrentDate() &&
+                                            a.status === "absent"
+                                        ) && (
+                                          <Button
+                                            variant="outline"
+                                            className="w-full justify-center bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 border-red-100"
+                                            onClick={() =>
+                                              updateEmployeeAttendance(employee.id, "Absent")
+                                            }
+                                          >
+                                            Absent
+                                          </Button>
+                                        )}
                                       </div>
-                                      {!employee.attendance.some(
-                                        (a: any) =>
-                                          formatDate(a.date) ===
-                                            getCurrentDate() &&
-                                          a.status === "present"
-                                      ) && (
-                                        <Button
-                                          variant="outline"
-                                          className="w-full justify-center bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-100"
-                                          onClick={() =>
-                                            updateEmployeeAttendance(
-                                              employee.id,
-                                              "Present"
-                                            )
-                                          }
-                                        >
-                                          Present
-                                        </Button>
-                                      )}
-                                      {!employee.attendance.some(
-                                        (a: any) =>
-                                          formatDate(a.date) ===
-                                            getCurrentDate() &&
-                                          a.status === "late"
-                                      ) && (
-                                        <Button
-                                          variant="outline"
-                                          className="w-full justify-center bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 border-orange-100"
-                                          onClick={() =>
-                                            updateEmployeeAttendance(
-                                              employee.id,
-                                              "Late"
-                                            )
-                                          }
-                                        >
-                                          late
-                                        </Button>
-                                      )}
-                                      {!employee.attendance.some(
-                                        (a: any) =>
-                                          formatDate(a.date) ===
-                                            getCurrentDate() &&
-                                          a.status === "absent"
-                                      ) && (
-                                        <Button
-                                          variant="outline"
-                                          className="w-full justify-center bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 border-red-100"
-                                          onClick={() =>
-                                            updateEmployeeAttendance(
-                                              employee.id,
-                                              "Absent"
-                                            )
-                                          }
-                                        >
-                                          Absent
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </PopoverContent>
-                                </Popover>
-                              </td>
+                                    </PopoverContent>
+                                  </Popover>
+                                </td>
+                              )}
                               <td className="px-4 py-3 text-center">
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    setExpandedEmployee(
-                                      employee.id === expandedEmployee
-                                        ? null
-                                        : employee.id
-                                    )
-                                  }
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => router.push(`/attendance-history/${employee.id}`)}
+                                  className="text-sm"
                                 >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-muted-foreground"
-                                  >
-                                    <circle cx="12" cy="12" r="1" />
-                                    <circle cx="12" cy="5" r="1" />
-                                    <circle cx="12" cy="19" r="1" />
-                                  </svg>
+                                  View History
                                 </Button>
                               </td>
                             </tr>
@@ -1381,7 +1373,7 @@ export default function AttendancePayroll() {
                                               strokeLinecap="round"
                                               strokeLinejoin="round"
                                             >
-                                              <path d="m15 18-6-6 6-6" />
+                                              <path d="m15 18-6-6 6-6"></path>
                                             </svg>
                                           </Button>
                                           <Button
@@ -1407,7 +1399,7 @@ export default function AttendancePayroll() {
                                               strokeLinecap="round"
                                               strokeLinejoin="round"
                                             >
-                                              <path d="m9 18 6-6-6-6" />
+                                              <path d="m9 18 6-6-6-6"></path>
                                             </svg>
                                           </Button>
                                         </div>
@@ -1459,7 +1451,7 @@ export default function AttendancePayroll() {
                                                 day.status === "present"
                                                   ? "bg-green-50 text-green-700 border-0"
                                                   : day.status === "late"
-                                                  ? "bg-yellow-50 text-yellow-700 border-0"
+                                                  ? "bg-orange-50 text-orange-500 border-0"
                                                   : "bg-red-50 text-red-700 border-0"
                                               }
                                             >
@@ -1471,8 +1463,8 @@ export default function AttendancePayroll() {
                                                 className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
                                                 onClick={() => {
                                                   if (
-                                                    permissions.approve_attendance ||
                                                     permissions.full_access ||
+                                                    permissions.approve_attendance ||
                                                     permissions.mark_attendance
                                                   ) {
                                                     updateAttendance({
@@ -1517,8 +1509,8 @@ export default function AttendancePayroll() {
                                                 className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
                                                 onClick={() => {
                                                   if (
-                                                    permissions.approve_attendance ||
                                                     permissions.full_access ||
+                                                    permissions.approve_attendance ||
                                                     permissions.mark_attendance
                                                   ) {
                                                     updateAttendance({
@@ -1563,8 +1555,8 @@ export default function AttendancePayroll() {
                                                 className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
                                                 onClick={() => {
                                                   if (
-                                                    permissions.approve_attendance ||
                                                     permissions.full_access ||
+                                                    permissions.approve_attendance ||
                                                     permissions.mark_attendance
                                                   ) {
                                                     updateAttendance({
@@ -1646,10 +1638,9 @@ export default function AttendancePayroll() {
                           Total Budget Baseline
                         </div>
                         <div className="text-xl font-bold">
-                          {currencyShort}
-                          {(
-                            totals.totalBaseline * currencyValue
-                          ).toLocaleString()}
+                            {(
+                              <ConvertedAmount amount={totals.totalBaseline} currency={sessionData.user.currency} sessionData={sessionData} />
+                            )}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
@@ -1657,10 +1648,9 @@ export default function AttendancePayroll() {
                           Total Actual Payroll
                         </div>
                         <div className="text-xl font-bold">
-                          {currencyShort}
-                          {(
-                            totals.totalActualPayroll * currencyValue
-                          ).toLocaleString()}
+                            {(
+                              <ConvertedAmount amount={totals.totalActualPayroll} currency={sessionData.user.currency} sessionData={sessionData} />
+                            )}
                         </div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
@@ -1668,10 +1658,9 @@ export default function AttendancePayroll() {
                           Daily Actual Payroll
                         </div>
                         <div className="text-xl font-bold">
-                          {currencyShort}
-                          {(
-                            totals.totalDailyActuallPayroll * currencyValue
-                          ).toLocaleString()}
+                            {(
+                              <ConvertedAmount amount={totals.totalDailyActuallPayroll} currency={sessionData.user.currency} sessionData={sessionData} />
+                            )}
                         </div>
                       </div>
                     </div>
@@ -1738,25 +1727,22 @@ export default function AttendancePayroll() {
                               </div>
                             </td>
                             <td className="px-4 py-3 border-r">
-                              {currencyShort}
                               {(
-                                employee.daily_rate * currencyValue
-                              ).toLocaleString()}
+                                <ConvertedAmount amount={employee.daily_rate} currency={sessionData.user.currency} sessionData={sessionData} />
+                              )}
                             </td>
                             <td className="px-4 py-3 border-r">
                               {employee.days_worked}
                             </td>
                             <td className="px-4 py-3 border-r">
-                              {currencyShort}
                               {(
-                                employee.budget_baseline * currencyValue
-                              )?.toLocaleString()}
+                                <ConvertedAmount amount={employee.budget_baseline} currency={sessionData.user.currency} sessionData={sessionData} />
+                              )}
                             </td>
                             <td className="px-4 py-3 border-r">
-                              {currencyShort}
                               {(
-                                employee.totalActualPayroll * currencyValue
-                              )?.toLocaleString()}
+                                <ConvertedAmount amount={employee.totalActualPayroll} currency={sessionData.user.currency} sessionData={sessionData} />
+                              )}
                             </td>
                             <td className="px-4 py-3 border-r">
                               {employee.plannedVsActual?.includes(
