@@ -15,6 +15,8 @@ import {
   MoreHorizontal,
   Loader2,
   RefreshCw,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
@@ -105,8 +107,6 @@ export default function EmployeeManagement() {
         (setting: any) =>
           setting.role.toLowerCase() ===
           sessionData.user.current_role.toLowerCase()
-        // &&
-        // (setting.company_id === sessionData.user.company_id)
       );
 
       if (userPermission) {
@@ -151,7 +151,8 @@ export default function EmployeeManagement() {
   // State for modals
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [showEditEmployee, setShowEditEmployee] = useState(false);
-  const [showDeleteEmployee, setShowDeleteEmployee] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [filters, setFilters] = useState({
     trade: "",
@@ -159,6 +160,7 @@ export default function EmployeeManagement() {
     dailyRate: "",
     search: "",
   });
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
 
   // Enhanced employees fetch with better caching strategy and error handling
   const {
@@ -175,10 +177,8 @@ export default function EmployeeManagement() {
     // Skip fetch if session isn't loaded yet to prevent unnecessary requests
     skip: isSessionLoading,
   });
+
   // Function to map trade names to trade_position_id from DB
-  // Utility: map trade names to db ids
-  // ✅ Updated mapTradeToPositionId function to work with trade_name
-  // ✅ Improved mapTradeToPositionId function with better fuzzy matching
   async function mapTradeToPositionId(
     tradeName: string,
     dbTrades: any[]
@@ -418,8 +418,6 @@ export default function EmployeeManagement() {
       refreshAllData();
     }
   };
-  // Using keepUnusedDataFor option in RTK Query would be ideal to keep data for longer
-  // but can't do it inline, would need to be in the API slice configuration
 
   // Improved mutations with better optimistic updates
   const [addEmployee, { isLoading: isAdding }] = useAddEmployeeMutation({
@@ -608,7 +606,7 @@ export default function EmployeeManagement() {
     trade_position_id: "",
     daily_rate: "",
     monthly_rate: "",
-    contract_start_date: "", // <-- add this property
+    contract_start_date: "",
     contract_finish_date: "",
     days_projection: "",
     budget_baseline: "",
@@ -633,9 +631,7 @@ export default function EmployeeManagement() {
     const fetchCompanies = async () => {
       setIsLoadingCompanies(true);
       try {
-        const response = await fetch(
-          "https://dse-backend-uv5d.onrender.com/company/companies"
-        );
+        const response = await fetch("http://localhost:4000/company/companies");
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
@@ -704,6 +700,15 @@ export default function EmployeeManagement() {
     return true;
   });
 
+  const sortedEmployees = sortOrder
+    ? [...filteredEmployees].sort((a, b) => {
+        if (sortOrder === "asc") {
+          return a.username.localeCompare(b.username);
+        }
+        return b.username.localeCompare(b.username);
+      })
+    : filteredEmployees;
+
   // Handle edit employee
   const handleEditEmployee = (employee: any) => {
     setSelectedEmployee(employee);
@@ -723,9 +728,37 @@ export default function EmployeeManagement() {
 
   // Handle delete employee
   const handleDeleteEmployee = (employee: any) => {
-    setSelectedEmployee(employee);
-    setShowDeleteEmployee(true);
+    setSelectedIds([employee.id]);
+    setShowDeleteConfirm(true);
   };
+
+  const toggleSort = () => {
+    setSortOrder((prev) =>
+      prev === null ? "asc" : prev === "asc" ? "desc" : null
+    );
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredEmployees.map((e: any) => e.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const allSelected =
+    selectedIds.length === filteredEmployees.length &&
+    filteredEmployees.length > 0;
+
+  const selectedEmployees = filteredEmployees.filter((e: any) =>
+    selectedIds.includes(e.id)
+  );
 
   // Handle form submission for adding new employee
   const handleSubmit = async (e: React.FormEvent) => {
@@ -879,24 +912,19 @@ export default function EmployeeManagement() {
 
   // Handle delete employee confirmation
   const handleDeleteConfirm = async () => {
-    if (!selectedEmployee) return;
-
     try {
-      // Send the delete request using RTK Query mutation
-      await deleteEmployee(selectedEmployee.id).unwrap();
-
-      // Close the delete modal
-      setShowDeleteEmployee(false);
-
-      // Show success notification
+      for (const id of selectedIds) {
+        await deleteEmployee(id).unwrap();
+      }
+      setSelectedIds([]);
+      setShowDeleteConfirm(false);
       toast({
         title: "Success",
-        description: "Employee deleted successfully!",
+        description: "Employee(s) deleted successfully!",
       });
       refreshAllData();
     } catch (error) {
-      console.error("Failed to delete employee:", error);
-      // Error notification is handled in the mutation now
+      console.error("Failed to delete employee(s):", error);
     }
   };
 
@@ -955,14 +983,25 @@ export default function EmployeeManagement() {
                 )}
                 Refresh
               </Button>
+              {(permissions.full_access || permissions.manage_employees) &&
+                selectedIds.length > 0 && (
+                  <Button
+                    variant="destructive"
+                    className="gap-2 h-12 rounded-full"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Selected ({selectedIds.length})
+                  </Button>
+                )}
             </div>
           </div>
 
           <div className="bg-white rounded-lg border">
             {/* Filters */}
-            <div className="p-4 flex gap-4 rounded-lg">
+            <div className="p-4 flex gap-4 rounded-lg items-center">
               <div className="relative w-64 ml-auto">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground " />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Search username..."
@@ -972,6 +1011,11 @@ export default function EmployeeManagement() {
                   }
                   value={filters.search}
                 />
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {sortOrder
+                  ? `Sorting usernames ${sortOrder === "asc" ? "A-Z" : "Z-A"}`
+                  : "Click 'Username' to sort alphabetically"}
               </div>
             </div>
 
@@ -1019,9 +1063,27 @@ export default function EmployeeManagement() {
                 <table className="w-full text-[12px]">
                   <thead>
                     <tr className="border-t border-b text-sm text-muted-foreground">
-                      <th className="w-10 px-4 py-3 text-left"></th>
-                      <th className="px-4 py-3 text-left text-[10px]">
+                      <th className="w-10 px-4 py-3 text-left">
+                        {(permissions.full_access ||
+                          permissions.manage_employees) && (
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            onChange={handleSelectAll}
+                          />
+                        )}
+                      </th>
+                      <th
+                        className="px-4 py-3 text-left text-[10px] cursor-pointer flex items-center gap-1"
+                        onClick={toggleSort}
+                      >
                         Username
+                        {sortOrder === "asc" && (
+                          <ChevronUp className="h-4 w-4" />
+                        )}
+                        {sortOrder === "desc" && (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
                       </th>
                       <th className="px-4 py-3 text-left text-[10px]">
                         Trade Position
@@ -1045,14 +1107,23 @@ export default function EmployeeManagement() {
                     </tr>
                   </thead>
                   <tbody className="text-[11px]">
-                    {filteredEmployees.map((employee: any) => (
+                    {sortedEmployees.map((employee: any) => (
                       <tr
                         key={employee.id}
                         className={`border-b hover:bg-gray-50 ${
                           employee._isOptimistic ? "opacity-70" : ""
                         } ${employee._isUpdating ? "bg-yellow-50" : ""}`}
                       >
-                        <td className="px-4 py-3"></td>
+                        <td className="px-4 py-3">
+                          {(permissions.full_access ||
+                            permissions.manage_employees) && (
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(employee.id)}
+                              onChange={() => toggleSelect(employee.id)}
+                            />
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
@@ -1339,7 +1410,7 @@ export default function EmployeeManagement() {
                     </div>
                   </div>
 
-                  {/* Contract Start Date ✅ Added */}
+                  {/* Contract Start Date */}
                   <div className="space-y-2">
                     <label
                       htmlFor="contract_start_date"
@@ -1644,7 +1715,7 @@ export default function EmployeeManagement() {
                 variant="outline"
                 onClick={() => setShowEditEmployee(false)}
               >
-                module Cancel
+                Cancel
               </Button>
               <Button
                 type="submit"
@@ -1666,23 +1737,30 @@ export default function EmployeeManagement() {
       </Dialog>
 
       {/* Delete Employee Dialog */}
-      <Dialog open={showDeleteEmployee} onOpenChange={setShowDeleteEmployee}>
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Employee</DialogTitle>
+            <DialogTitle>Delete Employee(s)</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            <p>
-              Are you sure you want to delete the employee "
-              {selectedEmployee?.username}"?
-            </p>
+            {selectedEmployees.length === 1 ? (
+              <p>
+                Are you sure you want to delete the employee "
+                {selectedEmployees[0]?.username}"?
+              </p>
+            ) : (
+              <p>
+                Are you sure you want to delete {selectedEmployees.length}{" "}
+                employees?
+              </p>
+            )}
             <p className="text-sm text-gray-500">
               This action cannot be undone.
             </p>
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
-                onClick={() => setShowDeleteEmployee(false)}
+                onClick={() => setShowDeleteConfirm(false)}
               >
                 Cancel
               </Button>
