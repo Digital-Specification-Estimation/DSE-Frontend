@@ -8,11 +8,10 @@ import Image from "next/image";
 import { Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { useToast } from "@/hooks/use-toast";
-import { useLoginMutation, useSessionQuery } from "@/lib/redux/authSlice";
+import { useLoginMutation } from "@/lib/redux/authSlice";
 
 export default function SignIn() {
   const [login] = useLoginMutation();
-  const { data: sessionData, refetch: refetchSession } = useSessionQuery();
   const router = useRouter();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);

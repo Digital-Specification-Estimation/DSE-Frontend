@@ -102,7 +102,7 @@ function LocationForm({
       }
 
       // Use RTK Query mutation
-      await addLocation(newLocatiosetpermissionsn).unwrap();
+      await addLocation(newLocation).unwrap();
 
       // Explicitly refetch locations after successful addition
       refetchLocations();
