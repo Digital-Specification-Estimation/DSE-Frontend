@@ -76,14 +76,9 @@ export default function Settings() {
     avatar: "/placeholder.svg?height=40&width=40",
   });
 
-  const { data: previelegesFetched } = useGetPrevielegesQuery();
+
 
   const [userSettings, setUserSettings] = useState<any[]>([]);
-  useEffect(() => {
-    if (previelegesFetched) {
-      setUserSettings(previelegesFetched);
-    }
-  }, [previelegesFetched]);
 
   const [activeTab, setActiveTab] = useState("company");
   const [isLoading, setIsLoading] = useState(true);
