@@ -74,11 +74,15 @@ export default function AttendancePayroll() {
   const [permissions, setPermissions] = useState({
     approve_attendance: false,
     approve_leaves: false,
+    approve_leaves: false,
     full_access: false,
+    generate_reports: false,
     generate_reports: false,
     id: "",
     manage_employees: false,
+    manage_employees: false,
     manage_payroll: false,
+    mark_attendance: false,
     mark_attendance: false,
     role: "",
     view_payslip: false,
@@ -162,6 +166,7 @@ export default function AttendancePayroll() {
   })
 
   // Updated filters state to include remainingDays
+  // Updated filters state to include remainingDays
   const [filters, setFilters] = useState({
     trade: "",
     project: "",
@@ -226,6 +231,7 @@ export default function AttendancePayroll() {
   const updateEmployeeAttendance = async (employeeId: number, status: "Present" | "Absent" | "Late") => {
     try {
       if (permissions.full_access || permissions.approve_attendance || permissions.mark_attendance) {
+      if (permissions.full_access || permissions.approve_attendance || permissions.mark_attendance) {
         // Use RTK Query mutation instead of fetch
         await updateAttendance({
           employeeId,
@@ -243,6 +249,8 @@ export default function AttendancePayroll() {
         })
       } else {
         toast({
+          title: "Access Denied",
+          description: "You don't have permission to update attendance.",
           title: "Access Denied",
           description: "You don't have permission to update attendance.",
           variant: "destructive",
@@ -331,6 +339,7 @@ export default function AttendancePayroll() {
       setShowAddReason(false)
 
       toast({
+        title: "Reason Added",
         title: "Reason Added",
         description: `Successfully added the reason to the user`,
       })
@@ -432,6 +441,7 @@ export default function AttendancePayroll() {
 
     const netPayStartY = (doc as any).lastAutoTable.finalY + 10
     autoTable(doc, {
+      startY: netPayStartY,
       startY: netPayStartY,
       head: [["Net Pay", formatCurrency(netPay)]],
       body: [],
@@ -1056,6 +1066,12 @@ export default function AttendancePayroll() {
                                   className="text-sm"
                                 >
                                   View History
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => router.push(`/attendance-history/${employee.id}`)}
+                                  className="text-sm"
+                                >
+                                  View History
                                 </Button>
                               </td>
                             </tr>
@@ -1090,6 +1106,7 @@ export default function AttendancePayroll() {
                                               strokeLinejoin="round"
                                             >
                                               <path d="m15 18-6-6 6-6"></path>
+                                              <path d="m15 18-6-6 6-6"></path>
                                             </svg>
                                           </Button>
                                           <Button
@@ -1114,6 +1131,7 @@ export default function AttendancePayroll() {
                                               strokeLinecap="round"
                                               strokeLinejoin="round"
                                             >
+                                              <path d="m9 18 6-6-6-6"></path>
                                               <path d="m9 18 6-6-6-6"></path>
                                             </svg>
                                           </Button>

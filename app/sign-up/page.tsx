@@ -36,10 +36,12 @@ import {
   useAddCompanyMutation,
   useGetCompaniesQuery,
   useDeleteCompanyMutation,
+  useDeleteCompanyMutation,
 } from "@/lib/redux/companySlice";
 
 export default function SignUp() {
   const [createCompany] = useAddCompanyMutation();
+  const [deleteCompany] = useDeleteCompanyMutation();
   const [deleteCompany] = useDeleteCompanyMutation();
   const { data: companiesFetched = [], refetch: refetchCompanies } =
     useGetCompaniesQuery();
@@ -51,12 +53,14 @@ export default function SignUp() {
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [isCreatingNewCompany, setIsCreatingNewCompany] = useState(false);
+  const [isCreatingNewCompany, setIsCreatingNewCompany] = useState(false);
 
   const [formData, setFormData] = useState({
     company_id: "",
     username: "",
     email: "",
     password: "",
+    role: "EMPLOYEE", // Default to EMPLOYEE for existing companies
     role: "EMPLOYEE", // Default to EMPLOYEE for existing companies
     agreeToTerms: false,
   });
@@ -90,6 +94,8 @@ export default function SignUp() {
         name === "weekly_work_limit" ||
         name === "overtime_rate"
           ? value
+        name === "overtime_rate"
+          ? value
           : value,
     });
   };
@@ -103,10 +109,16 @@ export default function SignUp() {
       // Validate all required fields
       if (
         (!isCreatingNewCompany && !formData.company_id) ||
+        (!isCreatingNewCompany && !formData.company_id) ||
         !formData.username ||
         !formData.email ||
         !formData.password
       ) {
+        throw new Error(
+          isCreatingNewCompany
+            ? "Please fill all required fields."
+            : "Please select a company and fill all required fields."
+        );
         throw new Error(
           isCreatingNewCompany
             ? "Please fill all required fields."
@@ -187,7 +199,78 @@ export default function SignUp() {
         }
         throw err;
       }
+      let createdCompanyId: string | null = null;
+      try {
+        if (isCreatingNewCompany) {
+          // Validate company data
+          if (
+            !companyData.company_name ||
+            !companyData.business_type ||
+            !companyData.standard_work_hours ||
+            !companyData.weekly_work_limit ||
+            !companyData.overtime_rate
+          ) {
+            throw new Error("Please fill all company details.");
+          }
+
+          // Create company
+          const companyResponse = await createCompany({
+            company_name: companyData.company_name,
+            business_type: companyData.business_type,
+            standard_work_hours: parseFloat(companyData.standard_work_hours),
+            weekly_work_limit: parseFloat(companyData.weekly_work_limit),
+            overtime_rate: parseFloat(companyData.overtime_rate),
+          }).unwrap();
+          createdCompanyId = companyResponse.id;
+          if (!createdCompanyId) {
+            throw new Error("Failed to create company");
+          }
+          await refetchCompanies(); // Refresh company list
+        }
+
+        // Map frontend role to backend role
+        const roleMap: Record<string, string> = {
+          ADMIN: "admin",
+          HR_MANAGER: "hr_manager",
+          DEPARTURE_MANAGER: "departure_manager",
+          EMPLOYEE: "employee",
+        };
+        const userRole = isCreatingNewCompany
+          ? "admin"
+          : roleMap[formData.role] || "employee";
+
+        // Perform signup
+        const signupResponse = await signup({
+          username: formData.username,
+          password: formData.password,
+          email: formData.email,
+          company_id: createdCompanyId || formData.company_id,
+          role: userRole,
+        }).unwrap();
+
+        // Redirect to sign-in page
+        toast({
+          title: "Success",
+          description: isCreatingNewCompany
+            ? "Company and admin account created successfully!"
+            : "Account created successfully! Please sign in.",
+        });
+        router.push("/sign-in");
+      } catch (err) {
+        // Rollback company creation if signup fails
+        if (createdCompanyId) {
+          try {
+            await deleteCompany(createdCompanyId).unwrap();
+            await refetchCompanies();
+          } catch (deleteError) {
+            console.error("Failed to rollback company creation:", deleteError);
+          }
+        }
+        throw err;
+      }
     } catch (err: any) {
+      const errorMessage =
+        err?.data?.message || err?.message || "Registration failed";
       const errorMessage =
         err?.data?.message || err?.message || "Registration failed";
       setError(errorMessage);
@@ -210,13 +293,42 @@ export default function SignUp() {
       !companyData.weekly_work_limit ||
       !companyData.overtime_rate
     ) {
+  const handleCreateCompany = () => {
+    // Validate company data before proceeding
+    if (
+      !companyData.company_name ||
+      !companyData.business_type ||
+      !companyData.standard_work_hours ||
+      !companyData.weekly_work_limit ||
+      !companyData.overtime_rate
+    ) {
       toast({
+        title: "Missing details",
+        description: "Please fill all company details before continuing.",
         title: "Missing details",
         description: "Please fill all company details before continuing.",
         variant: "destructive",
       });
       return;
+      return;
     }
+    setIsCreatingNewCompany(true);
+    setModalOpen(false);
+    toast({
+      title: "Company details saved",
+      description:
+        "Your company will be created together with your admin account.",
+    });
+  };
+
+  const handleCompanySelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const companyId = e.target.value;
+    setFormData({ ...formData, company_id: companyId });
+    if (companyId) {
+      setIsCreatingNewCompany(false);
+    }
+  };
+
     setIsCreatingNewCompany(true);
     setModalOpen(false);
     toast({

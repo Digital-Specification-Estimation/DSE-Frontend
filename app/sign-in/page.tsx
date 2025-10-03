@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -21,7 +22,9 @@ export default function SignIn() {
     password: "",
     rememberMe: false,
     role: "admin", // Default role
+    role: "admin", // Default role
   });
+  const [error, setError] = useState("");
   const [error, setError] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -41,6 +44,7 @@ export default function SignIn() {
       if (!formData.email || !formData.password) {
         throw new Error("Email and password are required");
       }
+      const data = await login({
       const data = await login({
         email: formData.email,
         password: formData.password,
@@ -82,9 +86,51 @@ export default function SignIn() {
           router.push("/dashboard");
         }
       }, 1000);
+        role: formData.role, // Include role in login request
+      }).unwrap();
+      console.log("Login Response:", data);
+
+      // Store authToken for session persistence
+      if (data.access_token) {
+        localStorage.setItem("authToken", data.access_token);
+        console.log("authToken stored:", data.access_token);
+      } else {
+        console.warn("No access_token in login response");
+      }
+
+      // // Refetch session to get role_request_approval
+      // const sessionResult = await refetchSession().unwrap();
+      // console.log("Session Refetch Result:", sessionResult);
+
+      // const roleStatus = sessionResult?.user?.role_request_approval;
+      // console.log("Role Status:", roleStatus);
+
+      // if (!sessionResult?.user) {
+      //   throw new Error("Session data missing user information");
+      // }
+
+      toast({
+        title: "Login Successful",
+        description: "Welcome back! You've been logged in successfully.",
+      });
+
+      // Delay redirect to ensure toast is visible
+      setTimeout(() => {
+        if (data.user.role_request_approval !== "APPROVED") {
+          console.log("Redirecting to /pending-role");
+          router.push("/pending-role");
+        } else {
+          console.log("Redirecting to /dashboard");
+          router.push("/dashboard");
+        }
+      }, 1000);
     } catch (err: any) {
       console.error("Login Error:", err, "Stack:", err.stack);
+      console.error("Login Error:", err, "Stack:", err.stack);
       const errorMessage =
+        err?.data?.message ||
+        err?.message ||
+        "An unexpected error occurred during login. Please try again.";
         err?.data?.message ||
         err?.message ||
         "An unexpected error occurred during login. Please try again.";
