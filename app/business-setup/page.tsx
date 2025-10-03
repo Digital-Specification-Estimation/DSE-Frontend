@@ -616,7 +616,8 @@ function DataTable({
     }
   };
 
-  const allSelected = selectedIds && selectedIds.length === data.length && data.length > 0;
+  const allSelected =
+    selectedIds && selectedIds.length === data.length && data.length > 0;
 
   return (
     <div className="overflow-x-auto">
@@ -1588,7 +1589,7 @@ export default function BusinessSetup() {
   const currencyShort = splitCurrencyValue(sessionData.user.currency)?.currency;
 
   const { toast } = useToast();
-  
+
   // Delete mutations
   const [deleteLocation] = useDeleteLocationMutation();
   const [deleteTrade] = useDeleteTradeMutation();
@@ -1816,13 +1817,16 @@ export default function BusinessSetup() {
       projectId: projectId.toString(), // Ensure projectId is a string
     };
     try {
-      const response = await fetch(`http://localhost:4000/project/budget`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+      const response = await fetch(
+        `https://dse-backend-uv5d.onrender.com/project/budget`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        }
+      );
       refetchProjects();
     } catch (error) {
       console.error("Error updating budget:", error);
@@ -2333,17 +2337,22 @@ export default function BusinessSetup() {
       </Dialog>
 
       {/* Bulk Delete Confirmation Modal */}
-      <Dialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+      <Dialog
+        open={showBulkDeleteConfirm}
+        onOpenChange={setShowBulkDeleteConfirm}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Bulk Delete</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-600">
             Are you sure you want to delete{" "}
-            {activeTab === "locations" && `${selectedLocationIds.length} location(s)`}
+            {activeTab === "locations" &&
+              `${selectedLocationIds.length} location(s)`}
             {activeTab === "trades" && `${selectedTradeIds.length} trade(s)`}
-            {activeTab === "projects" && `${selectedProjectIds.length} project(s)`}?
-            This action cannot be undone.
+            {activeTab === "projects" &&
+              `${selectedProjectIds.length} project(s)`}
+            ? This action cannot be undone.
           </p>
           <DialogFooter>
             <Button
@@ -2352,10 +2361,7 @@ export default function BusinessSetup() {
             >
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleBulkDelete}
-            >
+            <Button variant="destructive" onClick={handleBulkDelete}>
               Delete
             </Button>
           </DialogFooter>

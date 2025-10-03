@@ -109,7 +109,7 @@ export default function SignIn() {
       const top = (window.innerHeight - height) / 2;
 
       const popup = window.open(
-        "http://localhost:4000/auth/google",
+        "https://dse-backend-uv5d.onrender.com/auth/google",
         "GoogleAuth",
         `width=${width},height=${height},top=${top},left=${left}`
       );
@@ -120,9 +120,12 @@ export default function SignIn() {
         if (event.data.type === "google-auth-success") {
           localStorage.setItem("authToken", event.data.token);
           try {
-            const response = await fetch("http://localhost:4000/auth/session", {
-              headers: { Authorization: `Bearer ${event.data.token}` },
-            });
+            const response = await fetch(
+              "https://dse-backend-uv5d.onrender.com/auth/session",
+              {
+                headers: { Authorization: `Bearer ${event.data.token}` },
+              }
+            );
             const sessionData = await response.json();
             console.log("Google Login Session Data:", sessionData);
             const roleStatus = sessionData?.user?.role_request_approval;

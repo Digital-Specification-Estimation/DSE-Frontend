@@ -297,18 +297,23 @@ export default function EmployeeManagement() {
     try {
       // Create FormData to send file to backend
       const formData = new FormData();
-      formData.append('file', csvFile);
+      formData.append("file", csvFile);
 
       // Send to backend bulk upload endpoint
-      const response = await fetch('http://localhost:4000/employee/bulk-upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include', // Important for session-based auth
-      });
+      const response = await fetch(
+        "https://dse-backend-uv5d.onrender.com/employee/bulk-upload",
+        {
+          method: "POST",
+          body: formData,
+          credentials: "include", // Important for session-based auth
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Upload failed with status ${response.status}`);
+        throw new Error(
+          errorData.message || `Upload failed with status ${response.status}`
+        );
       }
 
       const result = await response.json();
@@ -319,16 +324,20 @@ export default function EmployeeManagement() {
         result.projects.created > 0 && `${result.projects.created} projects`,
         result.trades.created > 0 && `${result.trades.created} trades`,
         result.employees.created > 0 && `${result.employees.created} employees`,
-      ].filter(Boolean).join(', ');
+      ]
+        .filter(Boolean)
+        .join(", ");
 
       const skippedMessage = [
         result.locations.skipped > 0 && `${result.locations.skipped} locations`,
         result.projects.skipped > 0 && `${result.projects.skipped} projects`,
         result.trades.skipped > 0 && `${result.trades.skipped} trades`,
         result.employees.skipped > 0 && `${result.employees.skipped} employees`,
-      ].filter(Boolean).join(', ');
+      ]
+        .filter(Boolean)
+        .join(", ");
 
-      const hasErrors = 
+      const hasErrors =
         result.locations.errors.length > 0 ||
         result.projects.errors.length > 0 ||
         result.trades.errors.length > 0 ||
@@ -337,7 +346,9 @@ export default function EmployeeManagement() {
       if (successMessage) {
         toast({
           title: "Bulk Upload Successful",
-          description: `Created: ${successMessage}${skippedMessage ? `. Skipped (already exist): ${skippedMessage}` : ''}`,
+          description: `Created: ${successMessage}${
+            skippedMessage ? `. Skipped (already exist): ${skippedMessage}` : ""
+          }`,
         });
       }
 
@@ -348,7 +359,7 @@ export default function EmployeeManagement() {
           ...result.trades.errors,
           ...result.employees.errors,
         ];
-        console.error('Upload errors:', allErrors);
+        console.error("Upload errors:", allErrors);
         toast({
           title: "Partial Success",
           description: `Some items had errors. Check console for details.`,
@@ -584,7 +595,9 @@ export default function EmployeeManagement() {
     const fetchCompanies = async () => {
       setIsLoadingCompanies(true);
       try {
-        const response = await fetch("http://localhost:4000/company/companies");
+        const response = await fetch(
+          "https://dse-backend-uv5d.onrender.com/company/companies"
+        );
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
@@ -1206,8 +1219,9 @@ export default function EmployeeManagement() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Upload a CSV file with locations, projects, trades, and employees. 
-                  The system will automatically create all related entities. Download the template below.
+                  Upload a CSV file with locations, projects, trades, and
+                  employees. The system will automatically create all related
+                  entities. Download the template below.
                 </p>
                 <a
                   href="/master-upload-template.csv"
