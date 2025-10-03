@@ -40,7 +40,7 @@ export type ApproveUserPayload = {
 export const userApi = createApi({
   reducerPath: "userApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "https://dse-backend-uv5d.onrender.com/users",
+    baseUrl: "http://localhost:4000/users",
     credentials: "include",
   }),
   tagTypes: ["Users", "Privileges"],
