@@ -5,7 +5,7 @@ export const attendanceApi = createApi({
   baseQuery: fetchBaseQuery({
     // baseUrl: "https://dse-backend-production.up.railway.app/location",
 
-    baseUrl: "https://dse-backend-uv5d.onrender.com/attendance",
+    baseUrl: "http://localhost:4000/attendance",
     credentials: "include",
   }),
   endpoints: (builder) => ({
@@ -18,8 +18,8 @@ export const attendanceApi = createApi({
     }),
     editAttendance: builder.mutation({
       query: (data) => ({
-        url: "edit",
-        method: "PUT",
+        url: "update",
+        method: "PATCH",
         body: data,
       }),
     }),
@@ -68,6 +68,16 @@ export const attendanceApi = createApi({
         return `history/${employeeId}${queryString ? `?${queryString}` : ''}`;
       },
     }),
+    getAttendancesWithReasons: builder.query({
+      query: ({ employeeId, startDate, endDate }: { employeeId: string; startDate?: string; endDate?: string }) => {
+        const params = new URLSearchParams();
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        
+        const queryString = params.toString();
+        return `with-reasons/${employeeId}${queryString ? `?${queryString}` : ''}`;
+      },
+    }),
   }),
 });
 
@@ -82,4 +92,5 @@ export const {
   useDeleteManyAttendancesMutation,
   useGetDailyAttendanceMonthlyQuery,
   useGetAttendanceHistoryQuery,
+  useGetAttendancesWithReasonsQuery,
 } = attendanceApi;

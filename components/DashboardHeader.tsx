@@ -18,7 +18,7 @@ import type { RootState } from "@/lib/store";
 
 const SOCKET_SERVER_URL =
   process.env.NEXT_PUBLIC_SOCKET_SERVER_URL ||
-  "https://dse-backend-uv5d.onrender.com";
+  "http://localhost:4000";
 
 const DashboardHeader = () => {
   const dispatch = useDispatch();
