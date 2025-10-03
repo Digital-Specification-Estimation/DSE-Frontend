@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Sidebar } from "@/components/sidebar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -218,17 +217,13 @@ export default function AttendancePayroll() {
           return numA - numB
         })
 
-        if (JSON.stringify(uniqueRates) !== JSON.stringify(dailyRates)) {
-          setDailyRates(uniqueRates)
-        }
+        setDailyRates(uniqueRates)
       } catch (error) {
         console.error("Error processing daily rates:", error)
-        if (dailyRates.length === 0) {
-          setDailyRates([])
-        }
+        setDailyRates([])
       }
     }
-  }, [employees, currencyShort]) // Removed dailyRates from dependencies to fix infinite loop
+  }, [employees, currencyShort])
 
   // Add this useEffect to calculate totals
   const totals = useMemo(() => {
@@ -1415,7 +1410,6 @@ export default function AttendancePayroll() {
                           <tr key={employee.id} className="border-b hover:bg-gray-50">
                             <td className="px-4 py-3 border-r">
                               <div className="flex items-center gap-2">
-                           
                                 <span className="font-medium">{employee.username}</span>
                               </div>
                             </td>

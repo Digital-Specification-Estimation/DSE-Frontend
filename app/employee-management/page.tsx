@@ -232,7 +232,7 @@ export default function EmployeeManagement() {
 
     // 1. Exact match (case insensitive)
     let match = dbTrades.find(
-      (t) => t.trade_name?.toLowerCase().trim() === lower
+      (t: any) => t.trade_name?.toLowerCase().trim() === lower
     );
     if (match) return match.id;
 
@@ -251,7 +251,7 @@ export default function EmployeeManagement() {
     for (const [baseTrade, variations] of Object.entries(commonVariations)) {
       if (variations.includes(lower) || lower === baseTrade) {
         match = dbTrades.find(
-          (t) => t.trade_name?.toLowerCase().trim() === baseTrade
+          (t: any) => t.trade_name?.toLowerCase().trim() === baseTrade
         );
         if (match) return match.id;
       }
@@ -300,7 +300,7 @@ export default function EmployeeManagement() {
       formData.append('file', csvFile);
 
       // Send to backend bulk upload endpoint
-      const response = await fetch('https://dse-backend-uv5d.onrender.com/employee/bulk-upload', {
+      const response = await fetch('http://localhost:4000/employee/bulk-upload', {
         method: 'POST',
         body: formData,
         credentials: 'include', // Important for session-based auth
@@ -584,7 +584,7 @@ export default function EmployeeManagement() {
     const fetchCompanies = async () => {
       setIsLoadingCompanies(true);
       try {
-        const response = await fetch("https://dse-backend-uv5d.onrender.com/company/companies");
+        const response = await fetch("http://localhost:4000/company/companies");
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
@@ -1023,7 +1023,7 @@ export default function EmployeeManagement() {
               ) : (
                 <table className="w-full text-[12px]">
                   <thead>
-                    <tr className="border-t border-b text-sm text-muted-foreground">
+                    <tr className="border-t border-b text-[14px] text-muted-foreground">
                       <th className="w-10 px-4 py-3 text-left">
                         {(permissions.full_access ||
                           permissions.manage_employees) && (
@@ -1035,7 +1035,7 @@ export default function EmployeeManagement() {
                         )}
                       </th>
                       <th
-                        className="px-4 py-3 text-left text-[10px] cursor-pointer flex items-center gap-1"
+                        className="px-4 py-3 text-left text-[14px] cursor-pointer flex items-center gap-1"
                         onClick={toggleSort}
                       >
                         Username
@@ -1046,28 +1046,28 @@ export default function EmployeeManagement() {
                           <ChevronDown className="h-4 w-4" />
                         )}
                       </th>
-                      <th className="px-4 py-3 text-left text-[10px]">
+                      <th className="px-4 py-3 text-left text-[14px]">
                         Trade Position
                       </th>
-                      <th className="px-4 py-3 text-left text-[10px]">
+                      <th className="px-4 py-3 text-left text-[14px]">
                         {isMonthlyRate ? "Monthly Rate" : "Daily Rate"}
                       </th>
-                      <th className="px-4 py-3 text-left text-[10px]">
+                      <th className="px-4 py-3 text-left text-[14px]">
                         Contract Finish Date
                       </th>
-                      <th className="px-4 py-3 text-left text-[10px]">
+                      <th className="px-4 py-3 text-left text-[14px]">
                         Days Projection
                       </th>
-                      <th className="px-4 py-3 text-left text-[10px]">
+                      <th className="px-4 py-3 text-left text-[14px]">
                         Budget Baseline
                       </th>
-                      <th className="px-4 py-3 text-left text-[10px]">
+                      <th className="px-4 py-3 text-left text-[14px]">
                         Company
                       </th>
-                      <th className="w-10 px-4 py-3 text-left"></th>
+                      <th className="w-10 px-4 py-3 text-left">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="text-[11px]">
+                  <tbody className="text-[14px]">
                     {sortedEmployees.map((employee: any) => (
                       <tr
                         key={employee.id}
@@ -1087,11 +1087,6 @@ export default function EmployeeManagement() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback>
-                                {employee.username.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
                             <span className="font-medium">
                               {employee.username}
                               {employee._isOptimistic && (
@@ -1140,34 +1135,29 @@ export default function EmployeeManagement() {
                         <td className="px-4 py-3">
                           {employee.company?.company_name || "N/A"}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3">
                           {(permissions.manage_employees ||
                             permissions.full_access) &&
                             !employee._isOptimistic &&
                             !employee._isUpdating && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => handleEditEmployee(employee)}
-                                  >
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleDeleteEmployee(employee)
-                                    }
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8"
+                                  onClick={() => handleEditEmployee(employee)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-red-500 hover:text-red-600"
+                                  onClick={() => handleDeleteEmployee(employee)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             )}
                         </td>
                       </tr>
