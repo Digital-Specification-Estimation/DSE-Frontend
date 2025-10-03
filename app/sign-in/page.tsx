@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, Loader2, ArrowLeft, ChevronLeft, ShieldCheck, Check, ChevronDown } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { useToast } from "@/hooks/use-toast";
 import { useLoginMutation } from "@/lib/redux/authSlice";
@@ -24,7 +24,7 @@ export default function SignIn() {
   });
   const [error, setError] = useState("");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
@@ -99,74 +99,6 @@ export default function SignIn() {
     }
   };
 
-  const handleSocialLogin = (provider: "google" | "apple") => {
-    setIsLoading(true);
-
-    if (provider === "google") {
-      const width = 500;
-      const height = 600;
-      const left = (window.innerWidth - width) / 2;
-      const top = (window.innerHeight - height) / 2;
-
-      const popup = window.open(
-        "http://localhost:4000/auth/google",
-        "GoogleAuth",
-        `width=${width},height=${height},top=${top},left=${left}`
-      );
-
-      const handleMessage = async (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return;
-
-        if (event.data.type === "google-auth-success") {
-          localStorage.setItem("authToken", event.data.token);
-          try {
-            const response = await fetch("http://localhost:4000/auth/session", {
-              headers: { Authorization: `Bearer ${event.data.token}` },
-            });
-            const sessionData = await response.json();
-            console.log("Google Login Session Data:", sessionData);
-            const roleStatus = sessionData?.user?.role_request_approval;
-            toast({
-              title: "Success!",
-              description: "Logged in with Google",
-            });
-            setTimeout(() => {
-              if (roleStatus && roleStatus !== "APPROVED") {
-                router.push("/pending-role");
-              } else {
-                router.push("/dashboard");
-              }
-            }, 1000);
-          } catch (err) {
-            toast({
-              title: "Error",
-              description: "Failed to verify Google authentication",
-              variant: "destructive",
-            });
-          }
-        } else if (event.data.type === "google-auth-error") {
-          toast({
-            title: "Error",
-            description: "Google authentication failed",
-            variant: "destructive",
-          });
-        }
-
-        window.removeEventListener("message", handleMessage);
-        setIsLoading(false);
-      };
-
-      window.addEventListener("message", handleMessage);
-    } else {
-      toast({
-        title: "Social Login",
-        description:
-          "Apple login is not available yet. Please use email login.",
-      });
-      setIsLoading(false);
-    }
-  };
-
   const handleForgotPassword = (e: React.MouseEvent) => {
     e.preventDefault();
     toast({
@@ -176,172 +108,163 @@ export default function SignIn() {
   };
 
   return (
-    <div className="w-full h-full lg:grid lg:grid-cols-2 bg-white">
-      <div className="flex flex-col items-center justify-center py-3 bg-white h-screen">
-        <div className="mb-8 mt-0 mr-[400px]">
-          <Logo />
-        </div>
-        <div className="mx-auto w-full px-24 space-y-6">
-          <div className="space-y-2 flex flex-col items-center justify-center">
-            <h1 className="text-3xl font-bold">Sign in to LCM</h1>
-            <p className="text-muted-foreground">
-              Smart Attendance & Payroll Management
-            </p>
-          </div>
-
-          {error && (
-            <div className="bg-red-100 text-red-700 p-2 rounded mb-4 text-center">
-              {error}
+    <div className="min-h-screen bg-white ">
+      <div className="container mx-auto px-4 py-12">
+        <div className="flex flex-col items-center justify-center">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-8">
+            <Link 
+                    href="/" 
+                    className="flex w-full mb-[50px] justify-start items-center text-sm font-medium text-gray-600 hover:text-orange-600 transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Back to Home
+                  </Link>
+              <div className="flex justify-center mb-4">
+                <Logo className="h-12 w-auto" />
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+              <p className="text-gray-600">Sign in to your account to continue</p>
             </div>
-          )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                  <Mail className="h-4 w-4 text-gray-400" />
+            <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg text-sm flex items-start">
+                  <ShieldCheck className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
                 </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="johndoe@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="role" className="text-sm font-medium">
-                Role
-              </label>
-              <div className="relative">
-                <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={(e) =>
-                    setFormData({ ...formData, role: e.target.value })
-                  }
-                  className="w-full pl-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  disabled={isLoading}
-                >
-                  <option value="admin">Admin</option>
-                  <option value="hr_manager">HR Manager</option>
-                  <option value="departure_manager">Departure Manager</option>
-                  <option value="employee">Employee</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                  <Lock className="h-4 w-4 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  required
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="rememberMe"
-                  name="rememberMe"
-                  type="checkbox"
-                  checked={formData.rememberMe}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                  disabled={isLoading}
-                />
-                <label
-                  htmlFor="rememberMe"
-                  className="ml-2 block text-sm text-gray-600"
-                >
-                  Remember me
-                </label>
-              </div>
-              <Link
-                href="#"
-                onClick={handleForgotPassword}
-                className="text-sm text-primary hover:underline"
-              >
-                Forgot Password?
-              </Link>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-2 px-4 bg-orange-500 text-white font-medium rounded-full hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 flex items-center justify-center"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Signing In...
-                </>
-              ) : (
-                "Sign In"
               )}
-            </button>
-          </form>
-          <div className="text-center text-sm">
-            Need an account?{" "}
-            <Link href="/sign-up" className="text-orange-500 font-medium">
-              Get started
-            </Link>
-          </div>
-        </div>
-      </div>
 
-      <div className="hidden lg:block bg-blue-900 relative h-full m-3 mb-3 rounded-lg">
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-white py-5">
-          <div className="w-full max-w-2xl max-h-xl mx-auto h-full lg:px-3 flex flex-col items-center justify-center">
-            <Image
-              src="/home.png"
-              alt="Dashboard Preview"
-              width={600}
-              height={600}
-              className="h-2/3 w-[500px] rounded-lg shadow-lg mb-10"
-            />
-            <h2 className="text-3xl font-bold mb-4 flex items-center justify-center">
-              Welcome to Digital Specification Estimation
-            </h2>
-            <p className="text-sm">
-              A Smart Attendance & Payroll Management to track attendance,
-              automate payroll, and optimize costs with ease!
-            </p>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Email address
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition duration-150"
+                      placeholder="Enter your email"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                      Password
+                    </label>
+                    <Link href="/forgot-password" className="text-sm font-medium text-orange-600 hover:text-orange-500">
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition duration-150"
+                      placeholder="Enter your password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+                    Role
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <ShieldCheck className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <select
+                      id="role"
+                      name="role"
+                      value={formData.role}
+                      onChange={handleChange}
+                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition duration-150 appearance-none bg-white"
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="hr_manager">HR Manager</option>
+                      <option value="employee">Employee</option>
+                      <option value="department_manager">Department Manager</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <ChevronDown className="h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <input
+                      id="rememberMe"
+                      name="rememberMe"
+                      type="checkbox"
+                      checked={formData.rememberMe}
+                      onChange={handleChange}
+                      className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
+                      Remember me
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition duration-150 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" />
+                        Signing in...
+                      </>
+                    ) : (
+                      'Sign in'
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-600">
+                  Don't have an account?{' '}
+                  <Link href="/sign-up" className="font-medium text-orange-600 hover:text-orange-500">
+                    Sign up
+                  </Link>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
