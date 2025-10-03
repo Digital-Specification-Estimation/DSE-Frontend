@@ -67,27 +67,31 @@ export interface NewEmployee {
 
 // Sample data for projects
 const projects = ["Metro Bridge", "Mall Construction"];
-function ConvertedAmount({ 
-  amount, 
-  currency, 
+function ConvertedAmount({
+  amount,
+  currency,
   showCurrency = true,
-  sessionData
-}: { 
-  amount: number; 
-  currency: string; 
+  sessionData,
+}: {
+  amount: number;
+  currency: string;
   showCurrency?: boolean;
   sessionData: any;
 }) {
-  const [convertedAmount, setConvertedAmount] = useState<string>('...');
+  const [convertedAmount, setConvertedAmount] = useState<string>("...");
 
   useEffect(() => {
     const convert = async () => {
       try {
-        const result = await convertCurrency(amount, currency, sessionData.user.companies[0].base_currency);
+        const result = await convertCurrency(
+          amount,
+          currency,
+          sessionData.user.companies[0].base_currency
+        );
         setConvertedAmount(result);
       } catch (error) {
-        console.error('Error converting currency:', error);
-        setConvertedAmount('Error');
+        console.error("Error converting currency:", error);
+        setConvertedAmount("Error");
       }
     };
 
@@ -95,8 +99,14 @@ function ConvertedAmount({
       convert();
     }
   }, [amount, currency]);
-console.log("convertedAmount", convertedAmount)
-  return <>{showCurrency ? `${currency} ${Number(convertedAmount).toLocaleString()}` : Number(convertedAmount).toLocaleString()}</>;
+  console.log("convertedAmount", convertedAmount);
+  return (
+    <>
+      {showCurrency
+        ? `${currency} ${Number(convertedAmount).toLocaleString()}`
+        : Number(convertedAmount).toLocaleString()}
+    </>
+  );
 }
 export default function EmployeeManagement() {
   const [csvUploadModal, setCsvUploadModal] = useState(false);
@@ -132,14 +142,14 @@ export default function EmployeeManagement() {
     refetchOnReconnect: true,
     skip: false,
   });
-  console.log("sessionData",sessionData)
-  console.log("settings",sessionData?.user?.settings)
+  console.log("sessionData", sessionData);
+  console.log("settings", sessionData?.user?.settings);
   useEffect(() => {
     if (sessionData?.user?.settings && sessionData.user.current_role) {
       const userPermission = sessionData.user.settings.find(
         (setting: any) =>
-          setting.company_id === sessionData.user.company_id
-      && setting.role === sessionData.user.current_role
+          setting.company_id === sessionData.user.company_id &&
+          setting.role === sessionData.user.current_role
       );
 
       if (userPermission) {
@@ -284,171 +294,81 @@ export default function EmployeeManagement() {
     setIsUploading(true);
     setCsvParseError(null);
 
-    // helper: parse dd/MM/yyyy → ISO
-    function parseDate(dateStr: string): string {
-      if (!dateStr) return new Date().toISOString();
-      const [day, month, year] = dateStr.split("/");
-      return new Date(`${year}-${month}-${day}`).toISOString();
-    }
-
     try {
-      // Use FileReader for more reliable file reading
-      const text = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.onerror = () => reject(new Error("Failed to read file"));
-        reader.readAsText(csvFile);
+      // Create FormData to send file to backend
+      const formData = new FormData();
+      formData.append('file', csvFile);
+
+      // Send to backend bulk upload endpoint
+      const response = await fetch('http://localhost:4000/employee/bulk-upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include', // Important for session-based auth
       });
 
-      const results = parse(text, { header: true, skipEmptyLines: true });
-
-      if (results.errors.length > 0) {
-        throw new Error(results.errors[0].message || "CSV parsing error");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Upload failed with status ${response.status}`);
       }
 
-      // Updated required headers - changed "trade" to "trade_position_id"
-      const requiredHeaders = [
-        "username",
-        "trade", // Fixed from "trade"
-        "daily_rate",
-        "contract_start_date",
-        "contract_finish_date",
-        "days_projection",
-        "budget_baseline",
-      ];
+      const result = await response.json();
 
-      const missingHeaders = requiredHeaders.filter(
-        (h) => !results.meta.fields?.includes(h)
-      );
-      if (missingHeaders.length > 0) {
-        throw new Error(
-          `Missing required columns: ${missingHeaders.join(", ")}`
-        );
-      }
+      // Show detailed results
+      const successMessage = [
+        result.locations.created > 0 && `${result.locations.created} locations`,
+        result.projects.created > 0 && `${result.projects.created} projects`,
+        result.trades.created > 0 && `${result.trades.created} trades`,
+        result.employees.created > 0 && `${result.employees.created} employees`,
+      ].filter(Boolean).join(', ');
 
-      const dbTrades = tradesFetched;
-      if (!dbTrades || dbTrades.length === 0) {
-        if (isTradesLoading) {
-          throw new Error("Trades are still loading. Please wait a moment.");
-        }
-        throw new Error(
-          "No trade positions available. Please check your trades configuration."
-        );
-      }
+      const skippedMessage = [
+        result.locations.skipped > 0 && `${result.locations.skipped} locations`,
+        result.projects.skipped > 0 && `${result.projects.skipped} projects`,
+        result.trades.skipped > 0 && `${result.trades.skipped} trades`,
+        result.employees.skipped > 0 && `${result.employees.skipped} employees`,
+      ].filter(Boolean).join(', ');
 
-      console.log(
-        "Available trades:",
-        dbTrades.map((t) => t.trade_name)
-      );
+      const hasErrors = 
+        result.locations.errors.length > 0 ||
+        result.projects.errors.length > 0 ||
+        result.trades.errors.length > 0 ||
+        result.employees.errors.length > 0;
 
-      const employeesToAdd = await Promise.all(
-        results.data.map(async (row: any, index: number) => {
-          // Use trade_position_id instead of trade
-          const tradeId = await mapTradeToPositionId(row.trade, dbTrades);
-
-          if (!tradeId) {
-            console.warn(
-              `Row ${index + 1}: Could not find trade position for "${
-                row.trade_position_id
-              }"`
-            );
-            return null;
-          }
-
-          const dailyRate = parseFloat(row.daily_rate) || 0;
-          const monthlyRate = dailyRate * 30;
-          const daysProjection = parseInt(row.days_projection) || 0;
-          const budgetBaseline = parseFloat(row.budget_baseline) || 0;
-
-          const contractFinishDate = parseDate(row.contract_finish_date);
-          const contractStartDate = parseDate(row.contract_start_date);
-
-          return {
-            username: row.username,
-            trade_position_id: tradeId,
-            daily_rate: dailyRate.toString(), // as string
-            monthly_rate: monthlyRate.toString(), // as string
-            contract_finish_date: contractFinishDate,
-            contract_start_date: contractStartDate,
-            days_projection: daysProjection,
-            budget_baseline: budgetBaseline.toString(),
-            company_id: sessionData.user.company_id, // assign from logged-in user instead of CSV
-            created_date: new Date(), // real Date object
-          };
-        })
-      );
-
-      const validEmployees = employeesToAdd.filter(
-        (emp) => emp?.trade_position_id
-      );
-      const invalidEmployees = employeesToAdd.filter(
-        (emp) => !emp?.trade_position_id
-      );
-
-      if (invalidEmployees.length > 0) {
-        console.warn(
-          `${invalidEmployees.length} employees had invalid trade positions`
-        );
-      }
-
-      const addedEmployees = [];
-      for (const employee of validEmployees) {
-        try {
-          const result = await addEmployee(employee).unwrap();
-          addedEmployees.push(result);
-        } catch (error) {
-          console.error(
-            `Error adding employee ${employee.username}:`,
-            JSON.stringify(error, null, 2)
-          );
-          if (
-            typeof error === "object" &&
-            error !== null &&
-            "data" in error &&
-            typeof (error as any).data === "object" &&
-            (error as any).data !== null &&
-            "message" in (error as any).data
-          ) {
-            console.error("Validation errors:", (error as any).data.message);
-          }
-        }
-      }
-
-      if (addedEmployees.length > 0) {
+      if (successMessage) {
         toast({
-          title: "Success",
-          description: `${addedEmployees.length} employees added successfully!`,
+          title: "Bulk Upload Successful",
+          description: `Created: ${successMessage}${skippedMessage ? `. Skipped (already exist): ${skippedMessage}` : ''}`,
         });
       }
-      refreshAllData();
 
-      if (invalidEmployees.length > 0) {
+      if (hasErrors) {
+        const allErrors = [
+          ...result.locations.errors,
+          ...result.projects.errors,
+          ...result.trades.errors,
+          ...result.employees.errors,
+        ];
+        console.error('Upload errors:', allErrors);
         toast({
           title: "Partial Success",
-          description: `Added ${addedEmployees.length} employees. ${invalidEmployees.length} skipped due to invalid trade positions.`,
+          description: `Some items had errors. Check console for details.`,
+          variant: "destructive",
         });
-      }
-
-      if (addedEmployees.length === 0 && invalidEmployees.length > 0) {
-        throw new Error(
-          `No employees added. All ${invalidEmployees.length} employees had invalid trade positions.`
-        );
       }
 
       setCsvUploadModal(false);
       setCsvFile(null);
-      refetchEmployees();
+      refreshAllData();
     } catch (error: any) {
       console.error("CSV upload error:", error);
-      setCsvParseError(error.message || "Failed to parse CSV file");
+      setCsvParseError(error.message || "Failed to upload CSV file");
       toast({
         title: "Error",
-        description: error.message || "Failed to upload employees from CSV",
+        description: error.message || "Failed to upload CSV file",
         variant: "destructive",
       });
     } finally {
       setIsUploading(false);
-      refreshAllData();
     }
   };
 
@@ -664,9 +584,7 @@ export default function EmployeeManagement() {
     const fetchCompanies = async () => {
       setIsLoadingCompanies(true);
       try {
-        const response = await fetch(
-          "https://dse-backend-uv5d.onrender.com/company/companies"
-        );
+        const response = await fetch("http://localhost:4000/company/companies");
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
@@ -751,8 +669,8 @@ export default function EmployeeManagement() {
       id: employee.id,
       username: employee.username,
       trade_position_id: employee.trade_position_id,
-      daily_rate: employee.daily_rate ,
-      monthly_rate: employee.monthly_rate ,
+      daily_rate: employee.daily_rate,
+      monthly_rate: employee.monthly_rate,
       contract_finish_date: formatDateForInput(employee.contract_finish_date),
       days_projection: employee.days_projection?.toString() || "",
       budget_baseline: employee.budget_baseline,
@@ -839,7 +757,10 @@ export default function EmployeeManagement() {
         Math.ceil((finish.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
       );
     }
-      let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
+    let exchangeRate = await getExchangeRate(
+      sessionData.user.currency,
+      sessionData.user.companies?.[0]?.base_currency
+    );
 
     // --- Build employee object ---
     const employeeToAdd: NewEmployee = {
@@ -907,8 +828,10 @@ export default function EmployeeManagement() {
       });
       return;
     }
-    let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
-
+    let exchangeRate = await getExchangeRate(
+      sessionData.user.currency,
+      sessionData.user.companies?.[0]?.base_currency
+    );
 
     try {
       // Create an updated employee object formatted for the API
@@ -1190,8 +1113,10 @@ export default function EmployeeManagement() {
                         <td className="px-4 py-3">
                           {
                             <ConvertedAmount
-                              amount={employee[getRateFieldName()] ||
-                              employee.daily_rate}
+                              amount={
+                                employee[getRateFieldName()] ||
+                                employee.daily_rate
+                              }
                               currency={sessionData.user.currency}
                               showCurrency={true}
                               sessionData={sessionData}
@@ -1199,9 +1124,7 @@ export default function EmployeeManagement() {
                           }
                         </td>
                         <td className="px-4 py-3">
-                          {
-                            formatDate(employee.contract_finish_date)
-                          }
+                          {formatDate(employee.contract_finish_date)}
                         </td>
                         <td className="px-4 py-3">
                           {employee.days_projection || "N/A"}
@@ -1218,7 +1141,8 @@ export default function EmployeeManagement() {
                           {employee.company?.company_name || "N/A"}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {(permissions.manage_employees || permissions.full_access) &&
+                          {(permissions.manage_employees ||
+                            permissions.full_access) &&
                             !employee._isOptimistic &&
                             !employee._isUpdating && (
                               <DropdownMenu>
@@ -1282,15 +1206,15 @@ export default function EmployeeManagement() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Upload a CSV file with employee data. Download the template
-                  below.
+                  Upload a CSV file with locations, projects, trades, and employees. 
+                  The system will automatically create all related entities. Download the template below.
                 </p>
                 <a
-                  href="/employee-template.csv"
-                  download="employee-template.csv"
+                  href="/master-upload-template.csv"
+                  download="master-upload-template.csv"
                   className="text-primary underline text-sm"
                 >
-                  Download CSV Template
+                  Download Master CSV Template
                 </a>
               </div>
 

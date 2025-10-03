@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const companyApi = createApi({
 	reducerPath: "companyApi",
 	baseQuery: fetchBaseQuery({
-		baseUrl: "https://dse-backend-uv5d.onrender.com/company",
+		baseUrl: "http://localhost:4000/company",
 		credentials: "include",
 	}),
 	endpoints: (builder) => ({
