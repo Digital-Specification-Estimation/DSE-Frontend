@@ -2,7 +2,6 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -25,7 +24,6 @@ export default function SignIn() {
     role: "admin", // Default role
   });
   const [error, setError] = useState("");
-  const [error, setError] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type, checked } = e.target;
@@ -44,7 +42,6 @@ export default function SignIn() {
       if (!formData.email || !formData.password) {
         throw new Error("Email and password are required");
       }
-      const data = await login({
       const data = await login({
         email: formData.email,
         password: formData.password,
@@ -86,9 +83,6 @@ export default function SignIn() {
           router.push("/dashboard");
         }
       }, 1000);
-        role: formData.role, // Include role in login request
-      }).unwrap();
-      console.log("Login Response:", data);
 
       // Store authToken for session persistence
       if (data.access_token) {
@@ -125,7 +119,6 @@ export default function SignIn() {
         }
       }, 1000);
     } catch (err: any) {
-      console.error("Login Error:", err, "Stack:", err.stack);
       console.error("Login Error:", err, "Stack:", err.stack);
       const errorMessage =
         err?.data?.message ||

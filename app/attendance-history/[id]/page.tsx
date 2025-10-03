@@ -221,7 +221,7 @@ export default function AttendanceHistory() {
               <div className="grid gap-6">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   {[1, 2, 3, 4].map((i) => (
-                    <Skeleton key={i} className="h-28 rounded-xl" />
+                    <Skeleton key={`skeleton-${i}`} className="h-28 rounded-xl" />
                   ))}
                 </div>
                 
@@ -233,7 +233,7 @@ export default function AttendanceHistory() {
                 
                 <div className="space-y-4">
                   {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                    <Skeleton key={`skeleton-${i}`} className="h-16 w-full rounded-lg" />
                   ))}
                 </div>
               </div>
@@ -354,14 +354,14 @@ export default function AttendanceHistory() {
                           {Object.entries(groupedAttendance)
                             .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
                             .map(([monthYear, records]) => (
-                              <div key={monthYear} className="space-y-3">
+                              <div key={`month-${monthYear}`} className="space-y-3">
                                 <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">
                                   {monthYear}
                                 </h4>
                                 <div className="space-y-2">
                                   {(records as any[]).map((record) => (
                                     <div
-                                      key={record.id}
+                                      key={`record-${record._id || record.date}`}
                                       className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border ${
                                         isToday(record.date) 
                                           ? 'border-blue-200 bg-blue-50' 
@@ -500,13 +500,13 @@ export default function AttendanceHistory() {
                       {isLoadingAttendance ? (
                         <div className="space-y-4">
                           {[1, 2, 3].map((i) => (
-                            <Skeleton key={i} className="h-20 w-full" />
+                            <Skeleton key={`skeleton-${i}`} className="h-20 w-full" />
                           ))}
                         </div>
                       ) : attendancesWithReasons?.length > 0 ? (
                         <div className="space-y-4">
                           {attendancesWithReasons.map((record: any) => (
-                            <Card key={record._id}>
+                            <Card key={`attendance-${record._id}-${record.date}`}>
                               <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                   <div>

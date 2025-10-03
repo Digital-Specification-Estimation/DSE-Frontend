@@ -36,12 +36,10 @@ import {
   useAddCompanyMutation,
   useGetCompaniesQuery,
   useDeleteCompanyMutation,
-  useDeleteCompanyMutation,
 } from "@/lib/redux/companySlice";
 
 export default function SignUp() {
   const [createCompany] = useAddCompanyMutation();
-  const [deleteCompany] = useDeleteCompanyMutation();
   const [deleteCompany] = useDeleteCompanyMutation();
   const { data: companiesFetched = [], refetch: refetchCompanies } =
     useGetCompaniesQuery();
@@ -53,15 +51,13 @@ export default function SignUp() {
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [isCreatingNewCompany, setIsCreatingNewCompany] = useState(false);
-  const [isCreatingNewCompany, setIsCreatingNewCompany] = useState(false);
 
   const [formData, setFormData] = useState({
     company_id: "",
     username: "",
     email: "",
     password: "",
-    role: "EMPLOYEE", // Default to EMPLOYEE for existing companies
-    role: "EMPLOYEE", // Default to EMPLOYEE for existing companies
+    role: "EMPLOYEE",
     agreeToTerms: false,
   });
 
@@ -89,14 +85,11 @@ export default function SignUp() {
     const { name, value } = e.target;
     setCompanyData({
       ...companyData,
-      [name]:
-        name === "standard_work_hours" ||
+      [name]: (name === "standard_work_hours" ||
         name === "weekly_work_limit" ||
-        name === "overtime_rate"
-          ? value
-        name === "overtime_rate"
-          ? value
-          : value,
+        name === "overtime_rate")
+        ? value
+        : value,
     });
   };
 
@@ -109,16 +102,10 @@ export default function SignUp() {
       // Validate all required fields
       if (
         (!isCreatingNewCompany && !formData.company_id) ||
-        (!isCreatingNewCompany && !formData.company_id) ||
         !formData.username ||
         !formData.email ||
         !formData.password
       ) {
-        throw new Error(
-          isCreatingNewCompany
-            ? "Please fill all required fields."
-            : "Please select a company and fill all required fields."
-        );
         throw new Error(
           isCreatingNewCompany
             ? "Please fill all required fields."
@@ -199,78 +186,7 @@ export default function SignUp() {
         }
         throw err;
       }
-      let createdCompanyId: string | null = null;
-      try {
-        if (isCreatingNewCompany) {
-          // Validate company data
-          if (
-            !companyData.company_name ||
-            !companyData.business_type ||
-            !companyData.standard_work_hours ||
-            !companyData.weekly_work_limit ||
-            !companyData.overtime_rate
-          ) {
-            throw new Error("Please fill all company details.");
-          }
-
-          // Create company
-          const companyResponse = await createCompany({
-            company_name: companyData.company_name,
-            business_type: companyData.business_type,
-            standard_work_hours: parseFloat(companyData.standard_work_hours),
-            weekly_work_limit: parseFloat(companyData.weekly_work_limit),
-            overtime_rate: parseFloat(companyData.overtime_rate),
-          }).unwrap();
-          createdCompanyId = companyResponse.id;
-          if (!createdCompanyId) {
-            throw new Error("Failed to create company");
-          }
-          await refetchCompanies(); // Refresh company list
-        }
-
-        // Map frontend role to backend role
-        const roleMap: Record<string, string> = {
-          ADMIN: "admin",
-          HR_MANAGER: "hr_manager",
-          DEPARTURE_MANAGER: "departure_manager",
-          EMPLOYEE: "employee",
-        };
-        const userRole = isCreatingNewCompany
-          ? "admin"
-          : roleMap[formData.role] || "employee";
-
-        // Perform signup
-        const signupResponse = await signup({
-          username: formData.username,
-          password: formData.password,
-          email: formData.email,
-          company_id: createdCompanyId || formData.company_id,
-          role: userRole,
-        }).unwrap();
-
-        // Redirect to sign-in page
-        toast({
-          title: "Success",
-          description: isCreatingNewCompany
-            ? "Company and admin account created successfully!"
-            : "Account created successfully! Please sign in.",
-        });
-        router.push("/sign-in");
-      } catch (err) {
-        // Rollback company creation if signup fails
-        if (createdCompanyId) {
-          try {
-            await deleteCompany(createdCompanyId).unwrap();
-            await refetchCompanies();
-          } catch (deleteError) {
-            console.error("Failed to rollback company creation:", deleteError);
-          }
-        }
-        throw err;
-      }
     } catch (err: any) {
-      const errorMessage =
-        err?.data?.message || err?.message || "Registration failed";
       const errorMessage =
         err?.data?.message || err?.message || "Registration failed";
       setError(errorMessage);
@@ -293,42 +209,13 @@ export default function SignUp() {
       !companyData.weekly_work_limit ||
       !companyData.overtime_rate
     ) {
-  const handleCreateCompany = () => {
-    // Validate company data before proceeding
-    if (
-      !companyData.company_name ||
-      !companyData.business_type ||
-      !companyData.standard_work_hours ||
-      !companyData.weekly_work_limit ||
-      !companyData.overtime_rate
-    ) {
       toast({
-        title: "Missing details",
-        description: "Please fill all company details before continuing.",
         title: "Missing details",
         description: "Please fill all company details before continuing.",
         variant: "destructive",
       });
       return;
-      return;
     }
-    setIsCreatingNewCompany(true);
-    setModalOpen(false);
-    toast({
-      title: "Company details saved",
-      description:
-        "Your company will be created together with your admin account.",
-    });
-  };
-
-  const handleCompanySelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const companyId = e.target.value;
-    setFormData({ ...formData, company_id: companyId });
-    if (companyId) {
-      setIsCreatingNewCompany(false);
-    }
-  };
-
     setIsCreatingNewCompany(true);
     setModalOpen(false);
     toast({
@@ -352,7 +239,6 @@ export default function SignUp() {
         <div className="flex flex-col items-center justify-center">
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
-         
               <div className="flex justify-center mb-4">
                 <Logo className="h-12 w-auto" />
               </div>
@@ -699,34 +585,49 @@ export default function SignUp() {
                   </div>
                 </div>
 
-                <div>
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition duration-150 disabled:opacity-70 disabled:cursor-not-allowed"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" />
-                        {isCreatingNewCompany ? "Creating Account..." : "Signing up..."}
-                      </>
-                    ) : isCreatingNewCompany ? (
-                      "Create Account"
-                    ) : (
-                      "Sign Up"
-                    )}
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 px-4 bg-primary text-white font-medium rounded-full hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 flex items-center justify-center"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating Account...
+                    </>
+                  ) : (
+                    "Sign Up"
+                  )}
+                </button>
               </form>
 
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
-                  Already have an account?{" "}
-                  <Link href="/sign-in" className="font-medium text-orange-600 hover:text-orange-500">
-                    Sign in
-                  </Link>
-                </p>
+              <div className="text-center text-sm">
+                Already have an account?{" "}
+                <Link href="/sign-in" className="text-primary font-medium">
+                  Sign In
+                </Link>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden lg:block bg-blue-900 relative h-full m-3 mb-3 rounded-lg">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-white py-5">
+            <div className="w-full max-w-2xl max-h-xl mx-auto h-full px-5">
+              <Image
+                src="/home.png"
+                alt="Dashboard Preview"
+                width={600}
+                height={600}
+                className=" h-2/3 rounded-lg shadow-lg mb-10 xx-10"
+              />
+              <h2 className="text-3xl font-bold mb-4">
+                Welcome to Digital Specification Estimation
+              </h2>
+              <p className="text-sm">
+                A Smart Attendance & Payroll Management to track attendance,
+                automate payroll, and optimize costs with ease!
+              </p>
             </div>
           </div>
         </div>

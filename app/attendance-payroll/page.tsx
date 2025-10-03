@@ -231,40 +231,37 @@ export default function AttendancePayroll() {
   const updateEmployeeAttendance = async (employeeId: number, status: "Present" | "Absent" | "Late") => {
     try {
       if (permissions.full_access || permissions.approve_attendance || permissions.mark_attendance) {
-      if (permissions.full_access || permissions.approve_attendance || permissions.mark_attendance) {
         // Use RTK Query mutation instead of fetch
         await updateAttendance({
           employeeId,
           status,
           date: getCurrentDate(),
           time: "today",
-        }).unwrap()
-        setOpenAttendanceDropdown(null)
+        }).unwrap();
+        setOpenAttendanceDropdown(null);
 
-        await refetch()
+        await refetch();
 
         toast({
           title: "Attendance Updated",
           description: `Employee attendance has been marked as ${status}.`,
-        })
+        });
       } else {
         toast({
           title: "Access Denied",
           description: "You don't have permission to update attendance.",
-          title: "Access Denied",
-          description: "You don't have permission to update attendance.",
           variant: "destructive",
-        })
+        });
       }
     } catch (error) {
-      console.error("Error updating attendance:", error)
+      console.error("Error updating attendance:", error);
       toast({
         title: "Error",
         description: "Failed to update attendance. Please try again.",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   // Generate payslips using fetch
   const handleGeneratePayslips = async () => {
@@ -852,7 +849,9 @@ export default function AttendancePayroll() {
                   value={filters.project}
                   onValueChange={(value) => setFilters((prev) => ({ ...prev, project: value }))}
                 >
-           
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Project" />
+                  </SelectTrigger>
                   <SelectContent>
                     {isLoadingProjects ? (
                       <div className="flex items-center justify-center p-2">
@@ -1060,12 +1059,6 @@ export default function AttendancePayroll() {
                               )}
                               <td className="px-4 py-3 text-center">
                                 <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => router.push(`/attendance-history/${employee.id}`)}
-                                  className="text-sm"
-                                >
-                                  View History
                                   variant="outline"
                                   size="sm"
                                   onClick={() => router.push(`/attendance-history/${employee.id}`)}

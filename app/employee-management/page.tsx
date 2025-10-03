@@ -17,8 +17,6 @@ import {
   RefreshCw,
   ChevronUp,
   ChevronDown,
-  ChevronUp,
-  ChevronDown,
 } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
@@ -55,7 +53,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useSessionQuery } from "@/lib/redux/authSlice";
 import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
 import { convertCurrency, getExchangeRate } from "@/lib/utils";
-import { convertCurrency, getExchangeRate } from "@/lib/utils";
 
 export interface NewEmployee {
   username: string;
@@ -70,47 +67,6 @@ export interface NewEmployee {
 
 // Sample data for projects
 const projects = ["Metro Bridge", "Mall Construction"];
-function ConvertedAmount({
-  amount,
-  currency,
-  showCurrency = true,
-  sessionData,
-}: {
-  amount: number;
-  currency: string;
-  showCurrency?: boolean;
-  sessionData: any;
-}) {
-  const [convertedAmount, setConvertedAmount] = useState<string>("...");
-
-  useEffect(() => {
-    const convert = async () => {
-      try {
-        const result = await convertCurrency(
-          amount,
-          currency,
-          sessionData.user.companies[0].base_currency
-        );
-        setConvertedAmount(result);
-      } catch (error) {
-        console.error("Error converting currency:", error);
-        setConvertedAmount("Error");
-      }
-    };
-
-    if (amount !== undefined) {
-      convert();
-    }
-  }, [amount, currency]);
-  console.log("convertedAmount", convertedAmount);
-  return (
-    <>
-      {showCurrency
-        ? `${currency} ${Number(convertedAmount).toLocaleString()}`
-        : Number(convertedAmount).toLocaleString()}
-    </>
-  );
-}
 function ConvertedAmount({
   amount,
   currency,
@@ -188,14 +144,10 @@ export default function EmployeeManagement() {
   });
   console.log("sessionData", sessionData);
   console.log("settings", sessionData?.user?.settings);
-  console.log("sessionData", sessionData);
-  console.log("settings", sessionData?.user?.settings);
   useEffect(() => {
     if (sessionData?.user?.settings && sessionData.user.current_role) {
       const userPermission = sessionData.user.settings.find(
         (setting: any) =>
-          setting.company_id === sessionData.user.company_id &&
-          setting.role === sessionData.user.current_role
           setting.company_id === sessionData.user.company_id &&
           setting.role === sessionData.user.current_role
       );
@@ -205,8 +157,6 @@ export default function EmployeeManagement() {
       }
     }
   }, [sessionData.user.settings, sessionData.user.current_role]);
-  console.log("permissions", permissions);
-  console.log("sessionData", sessionData);
   console.log("permissions", permissions);
   console.log("sessionData", sessionData);
   const splitCurrencyValue = (str: string | undefined | null) => {
@@ -246,8 +196,6 @@ export default function EmployeeManagement() {
   const [showEditEmployee, setShowEditEmployee] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [filters, setFilters] = useState({
     trade: "",
@@ -255,7 +203,6 @@ export default function EmployeeManagement() {
     dailyRate: "",
     search: "",
   });
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
 
   // Enhanced employees fetch with better caching strategy and error handling
@@ -285,7 +232,7 @@ export default function EmployeeManagement() {
 
     // 1. Exact match (case insensitive)
     let match = dbTrades.find(
-      (t: any) => t.trade_name?.toLowerCase().trim() === lower
+      (t) => t.trade_name?.toLowerCase().trim() === lower
     );
     if (match) return match.id;
 
@@ -304,7 +251,7 @@ export default function EmployeeManagement() {
     for (const [baseTrade, variations] of Object.entries(commonVariations)) {
       if (variations.includes(lower) || lower === baseTrade) {
         match = dbTrades.find(
-          (t: any) => t.trade_name?.toLowerCase().trim() === baseTrade
+          (t) => t.trade_name?.toLowerCase().trim() === baseTrade
         );
         if (match) return match.id;
       }
@@ -350,30 +297,23 @@ export default function EmployeeManagement() {
     try {
       // Create FormData to send file to backend
       const formData = new FormData();
-      formData.append('file', csvFile);
+      formData.append("file", csvFile);
 
       // Send to backend bulk upload endpoint
-      const response = await fetch('http://localhost:4000/employee/bulk-upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include', // Important for session-based auth
-      // Create FormData to send file to backend
-      const formData = new FormData();
-      formData.append('file', csvFile);
-
-      // Send to backend bulk upload endpoint
-      const response = await fetch('http://localhost:4000/employee/bulk-upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include', // Important for session-based auth
-      });
+      const response = await fetch(
+        "https://dse-backend-uv5d.onrender.com/employee/bulk-upload",
+        {
+          method: "POST",
+          body: formData,
+          credentials: "include", // Important for session-based auth
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Upload failed with status ${response.status}`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Upload failed with status ${response.status}`);
+        throw new Error(
+          errorData.message || `Upload failed with status ${response.status}`
+        );
       }
 
       const result = await response.json();
@@ -384,40 +324,20 @@ export default function EmployeeManagement() {
         result.projects.created > 0 && `${result.projects.created} projects`,
         result.trades.created > 0 && `${result.trades.created} trades`,
         result.employees.created > 0 && `${result.employees.created} employees`,
-      ].filter(Boolean).join(', ');
+      ]
+        .filter(Boolean)
+        .join(", ");
 
       const skippedMessage = [
         result.locations.skipped > 0 && `${result.locations.skipped} locations`,
         result.projects.skipped > 0 && `${result.projects.skipped} projects`,
         result.trades.skipped > 0 && `${result.trades.skipped} trades`,
         result.employees.skipped > 0 && `${result.employees.skipped} employees`,
-      ].filter(Boolean).join(', ');
+      ]
+        .filter(Boolean)
+        .join(", ");
 
-      const hasErrors = 
-        result.locations.errors.length > 0 ||
-        result.projects.errors.length > 0 ||
-        result.trades.errors.length > 0 ||
-        result.employees.errors.length > 0;
-
-      if (successMessage) {
-      const result = await response.json();
-
-      // Show detailed results
-      const successMessage = [
-        result.locations.created > 0 && `${result.locations.created} locations`,
-        result.projects.created > 0 && `${result.projects.created} projects`,
-        result.trades.created > 0 && `${result.trades.created} trades`,
-        result.employees.created > 0 && `${result.employees.created} employees`,
-      ].filter(Boolean).join(', ');
-
-      const skippedMessage = [
-        result.locations.skipped > 0 && `${result.locations.skipped} locations`,
-        result.projects.skipped > 0 && `${result.projects.skipped} projects`,
-        result.trades.skipped > 0 && `${result.trades.skipped} trades`,
-        result.employees.skipped > 0 && `${result.employees.skipped} employees`,
-      ].filter(Boolean).join(', ');
-
-      const hasErrors = 
+      const hasErrors =
         result.locations.errors.length > 0 ||
         result.projects.errors.length > 0 ||
         result.trades.errors.length > 0 ||
@@ -426,9 +346,9 @@ export default function EmployeeManagement() {
       if (successMessage) {
         toast({
           title: "Bulk Upload Successful",
-          description: `Created: ${successMessage}${skippedMessage ? `. Skipped (already exist): ${skippedMessage}` : ''}`,
-          title: "Bulk Upload Successful",
-          description: `Created: ${successMessage}${skippedMessage ? `. Skipped (already exist): ${skippedMessage}` : ''}`,
+          description: `Created: ${successMessage}${
+            skippedMessage ? `. Skipped (already exist): ${skippedMessage}` : ""
+          }`,
         });
       }
 
@@ -439,19 +359,9 @@ export default function EmployeeManagement() {
           ...result.trades.errors,
           ...result.employees.errors,
         ];
-        console.error('Upload errors:', allErrors);
-      if (hasErrors) {
-        const allErrors = [
-          ...result.locations.errors,
-          ...result.projects.errors,
-          ...result.trades.errors,
-          ...result.employees.errors,
-        ];
-        console.error('Upload errors:', allErrors);
+        console.error("Upload errors:", allErrors);
         toast({
           title: "Partial Success",
-          description: `Some items had errors. Check console for details.`,
-          variant: "destructive",
           description: `Some items had errors. Check console for details.`,
           variant: "destructive",
         });
@@ -460,14 +370,11 @@ export default function EmployeeManagement() {
       setCsvUploadModal(false);
       setCsvFile(null);
       refreshAllData();
-      refreshAllData();
     } catch (error: any) {
       console.error("CSV upload error:", error);
       setCsvParseError(error.message || "Failed to upload CSV file");
-      setCsvParseError(error.message || "Failed to upload CSV file");
       toast({
         title: "Error",
-        description: error.message || "Failed to upload CSV file",
         description: error.message || "Failed to upload CSV file",
         variant: "destructive",
       });
@@ -602,7 +509,6 @@ export default function EmployeeManagement() {
           )
         );
         refreshAllData();
-        refreshAllData();
       } catch (error) {
         // Update failed - undo changes
         patchResult.undo();
@@ -635,7 +541,6 @@ export default function EmployeeManagement() {
           )
         );
         refreshAllData();
-        refreshAllData();
 
         try {
           await queryFulfilled;
@@ -666,7 +571,6 @@ export default function EmployeeManagement() {
     daily_rate: "",
     monthly_rate: "",
     contract_start_date: "",
-    contract_start_date: "",
     contract_finish_date: "",
     days_projection: "",
     budget_baseline: "",
@@ -691,7 +595,9 @@ export default function EmployeeManagement() {
     const fetchCompanies = async () => {
       setIsLoadingCompanies(true);
       try {
-        const response = await fetch("http://localhost:4000/company/companies");
+        const response = await fetch(
+          "https://dse-backend-uv5d.onrender.com/company/companies"
+        );
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
@@ -769,15 +675,6 @@ export default function EmployeeManagement() {
       })
     : filteredEmployees;
 
-  const sortedEmployees = sortOrder
-    ? [...filteredEmployees].sort((a, b) => {
-        if (sortOrder === "asc") {
-          return a.username.localeCompare(b.username);
-        }
-        return b.username.localeCompare(b.username);
-      })
-    : filteredEmployees;
-
   // Handle edit employee
   const handleEditEmployee = (employee: any) => {
     setSelectedEmployee(employee);
@@ -787,11 +684,8 @@ export default function EmployeeManagement() {
       trade_position_id: employee.trade_position_id,
       daily_rate: employee.daily_rate,
       monthly_rate: employee.monthly_rate,
-      daily_rate: employee.daily_rate,
-      monthly_rate: employee.monthly_rate,
       contract_finish_date: formatDateForInput(employee.contract_finish_date),
       days_projection: employee.days_projection?.toString() || "",
-      budget_baseline: employee.budget_baseline,
       budget_baseline: employee.budget_baseline,
       company_id: employee.company_id,
     });
@@ -831,43 +725,11 @@ export default function EmployeeManagement() {
   const selectedEmployees = filteredEmployees.filter((e: any) =>
     selectedIds.includes(e.id)
   );
-    setSelectedIds([employee.id]);
-    setShowDeleteConfirm(true);
-  };
-
-  const toggleSort = () => {
-    setSortOrder((prev) =>
-      prev === null ? "asc" : prev === "asc" ? "desc" : null
-    );
-  };
-
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedIds(filteredEmployees.map((e: any) => e.id));
-    } else {
-      setSelectedIds([]);
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
-  const allSelected =
-    selectedIds.length === filteredEmployees.length &&
-    filteredEmployees.length > 0;
-
-  const selectedEmployees = filteredEmployees.filter((e: any) =>
-    selectedIds.includes(e.id)
-  );
 
   // Handle form submission for adding new employee
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // --- Validation ---
     // --- Validation ---
     if (!newEmployee.username) {
       toast({
@@ -920,49 +782,6 @@ export default function EmployeeManagement() {
       [getRateFieldName()]:
         Number(newEmployee[getRateFieldName()]) > 0
           ? (Number(newEmployee[getRateFieldName()]) * exchangeRate).toString()
-    if (!newEmployee.trade_position_id) {
-      toast({
-        title: "Validation Error",
-        description: "Please select a trade position",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // --- Dates ---
-    const startDate = newEmployee.contract_start_date
-      ? new Date(newEmployee.contract_start_date).toISOString()
-      : new Date().toISOString(); // default to today
-
-    const finishDate = newEmployee.contract_finish_date
-      ? new Date(newEmployee.contract_finish_date).toISOString()
-      : undefined;
-
-    // --- Days projection ---
-    let daysProjection = newEmployee.days_projection
-      ? parseInt(newEmployee.days_projection.toString())
-      : undefined;
-
-    if (!daysProjection && startDate && finishDate) {
-      const start = new Date(startDate);
-      const finish = new Date(finishDate);
-      daysProjection = Math.max(
-        0,
-        Math.ceil((finish.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-      );
-    }
-    let exchangeRate = await getExchangeRate(
-      sessionData.user.currency,
-      sessionData.user.companies?.[0]?.base_currency
-    );
-
-    // --- Build employee object ---
-    const employeeToAdd: NewEmployee = {
-      username: newEmployee.username,
-      trade_position_id: newEmployee.trade_position_id,
-      [getRateFieldName()]:
-        Number(newEmployee[getRateFieldName()]) > 0
-          ? (Number(newEmployee[getRateFieldName()]) * exchangeRate).toString()
           : undefined,
       contract_start_date: startDate,
       contract_finish_date: finishDate,
@@ -973,30 +792,17 @@ export default function EmployeeManagement() {
           : undefined,
       company_id: newEmployee.company_id || sessionData.user.company_id,
     };
-      contract_start_date: startDate,
-      contract_finish_date: finishDate,
-      days_projection: daysProjection,
-      budget_baseline:
-        Number(newEmployee.budget_baseline) > 0
-          ? (Number(newEmployee.budget_baseline) * exchangeRate).toString()
-          : undefined,
-      company_id: newEmployee.company_id || sessionData.user.company_id,
-    };
 
-    try {
-      // --- Send to backend ---
     try {
       // --- Send to backend ---
       await addEmployee(employeeToAdd).unwrap();
 
-      // --- Reset form ---
       // --- Reset form ---
       setNewEmployee({
         username: "",
         trade_position_id: "",
         daily_rate: "",
         monthly_rate: "",
-        contract_start_date: "",
         contract_start_date: "",
         contract_finish_date: "",
         days_projection: "",
@@ -1007,20 +813,13 @@ export default function EmployeeManagement() {
       setShowAddEmployee(false);
 
       // --- Success notification ---
-      // --- Success notification ---
       toast({
         title: "Success",
         description: "Employee added successfully!",
       });
       refreshAllData();
-      refreshAllData();
     } catch (error) {
       console.error("Failed to add employee:", error);
-      toast({
-        title: "Error",
-        description: (error as any)?.data?.message || "Failed to add employee",
-        variant: "destructive",
-      });
       toast({
         title: "Error",
         description: (error as any)?.data?.message || "Failed to add employee",
@@ -1046,10 +845,6 @@ export default function EmployeeManagement() {
       sessionData.user.currency,
       sessionData.user.companies?.[0]?.base_currency
     );
-    let exchangeRate = await getExchangeRate(
-      sessionData.user.currency,
-      sessionData.user.companies?.[0]?.base_currency
-    );
 
     try {
       // Create an updated employee object formatted for the API
@@ -1059,7 +854,6 @@ export default function EmployeeManagement() {
         trade_position_id: editedEmployee.trade_position_id || undefined,
         [getRateFieldName()]:
           (editedEmployee[getRateFieldName()] * exchangeRate).toString() ||
-          (editedEmployee[getRateFieldName()] * exchangeRate).toString() ||
           undefined,
         contract_finish_date: editedEmployee.contract_finish_date
           ? new Date(editedEmployee.contract_finish_date).toISOString()
@@ -1068,7 +862,6 @@ export default function EmployeeManagement() {
           ? Number.parseInt(editedEmployee.days_projection)
           : undefined,
         budget_baseline:
-          (editedEmployee.budget_baseline * exchangeRate).toString() ||
           (editedEmployee.budget_baseline * exchangeRate).toString() ||
           undefined,
         company_id: editedEmployee.company_id || undefined,
@@ -1099,21 +892,12 @@ export default function EmployeeManagement() {
       }
       setSelectedIds([]);
       setShowDeleteConfirm(false);
-    try {
-      for (const id of selectedIds) {
-        await deleteEmployee(id).unwrap();
-      }
-      setSelectedIds([]);
-      setShowDeleteConfirm(false);
       toast({
         title: "Success",
         description: "Employee(s) deleted successfully!",
-        description: "Employee(s) deleted successfully!",
       });
       refreshAllData();
-      refreshAllData();
     } catch (error) {
-      console.error("Failed to delete employee(s):", error);
       console.error("Failed to delete employee(s):", error);
     }
   };
@@ -1147,7 +931,6 @@ export default function EmployeeManagement() {
                   Upload CSV
                 </Button>
               )}
-              {(permissions.manage_employees || permissions.full_access) && (
               {(permissions.manage_employees || permissions.full_access) && (
                 <Button
                   onClick={() => setShowAddEmployee(true)}
@@ -1185,26 +968,13 @@ export default function EmployeeManagement() {
                     Delete Selected ({selectedIds.length})
                   </Button>
                 )}
-              {(permissions.full_access || permissions.manage_employees) &&
-                selectedIds.length > 0 && (
-                  <Button
-                    variant="destructive"
-                    className="gap-2 h-12 rounded-full"
-                    onClick={() => setShowDeleteConfirm(true)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete Selected ({selectedIds.length})
-                  </Button>
-                )}
             </div>
           </div>
 
           <div className="bg-white rounded-lg border">
             {/* Filters */}
             <div className="p-4 flex gap-4 rounded-lg items-center">
-            <div className="p-4 flex gap-4 rounded-lg items-center">
               <div className="relative w-64 ml-auto">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
@@ -1215,11 +985,6 @@ export default function EmployeeManagement() {
                   }
                   value={filters.search}
                 />
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {sortOrder
-                  ? `Sorting usernames ${sortOrder === "asc" ? "A-Z" : "Z-A"}`
-                  : "Click 'Username' to sort alphabetically"}
               </div>
               <div className="text-sm text-muted-foreground">
                 {sortOrder
@@ -1271,7 +1036,7 @@ export default function EmployeeManagement() {
               ) : (
                 <table className="w-full text-[12px]">
                   <thead>
-                    <tr className="border-t border-b text-[14px] text-muted-foreground">
+                    <tr className="border-t border-b text-sm text-muted-foreground">
                       <th className="w-10 px-4 py-3 text-left">
                         {(permissions.full_access ||
                           permissions.manage_employees) && (
@@ -1287,12 +1052,6 @@ export default function EmployeeManagement() {
                         onClick={toggleSort}
                       >
                         Username
-                        {sortOrder === "asc" && (
-                          <ChevronUp className="h-4 w-4" />
-                        )}
-                        {sortOrder === "desc" && (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
                         {sortOrder === "asc" && (
                           <ChevronUp className="h-4 w-4" />
                         )}
@@ -1340,17 +1099,8 @@ export default function EmployeeManagement() {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          {(permissions.full_access ||
-                            permissions.manage_employees) && (
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.includes(employee.id)}
-                              onChange={() => toggleSelect(employee.id)}
-                            />
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
+                       
                             <span className="font-medium">
                               {employee.username}
                               {employee._isOptimistic && (
@@ -1381,17 +1131,6 @@ export default function EmployeeManagement() {
                               sessionData={sessionData}
                             />
                           }
-                          {
-                            <ConvertedAmount
-                              amount={
-                                employee[getRateFieldName()] ||
-                                employee.daily_rate
-                              }
-                              currency={sessionData.user.currency}
-                              showCurrency={true}
-                              sessionData={sessionData}
-                            />
-                          }
                         </td>
                         <td className="px-4 py-3">
                           {formatDate(employee.contract_finish_date)}
@@ -1406,40 +1145,36 @@ export default function EmployeeManagement() {
                             showCurrency={true}
                             sessionData={sessionData}
                           />
-                          <ConvertedAmount
-                            amount={employee.budget_baseline}
-                            currency={sessionData.user.currency}
-                            showCurrency={true}
-                            sessionData={sessionData}
-                          />
                         </td>
                         <td className="px-4 py-3">
                           {employee.company?.company_name || "N/A"}
                         </td>
-                        <td className="px-4 py-3">
-                          {(permissions.manage_employees ||
-                            permissions.full_access) &&
-                            !employee._isOptimistic &&
-                            !employee._isUpdating && (
-                              <div className="flex items-center gap-2">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8"
-                                  onClick={() => handleEditEmployee(employee)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 text-red-500 hover:text-red-600"
-                                  onClick={() => handleDeleteEmployee(employee)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {(permissions.manage_employees ||
+                              permissions.full_access) &&
+                              !employee._isOptimistic &&
+                              !employee._isUpdating && (
+                                <>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8"
+                                    onClick={() => handleEditEmployee(employee)}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 text-red-500 hover:text-red-600"
+                                    onClick={() => handleDeleteEmployee(employee)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1477,19 +1212,15 @@ export default function EmployeeManagement() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Upload a CSV file with locations, projects, trades, and employees. 
-                  The system will automatically create all related entities. Download the template below.
-                  Upload a CSV file with locations, projects, trades, and employees. 
-                  The system will automatically create all related entities. Download the template below.
+                  Upload a CSV file with locations, projects, trades, and
+                  employees. The system will automatically create all related
+                  entities. Download the template below.
                 </p>
                 <a
                   href="/master-upload-template.csv"
                   download="master-upload-template.csv"
-                  href="/master-upload-template.csv"
-                  download="master-upload-template.csv"
                   className="text-primary underline text-sm"
                 >
-                  Download Master CSV Template
                   Download Master CSV Template
                 </a>
               </div>
@@ -1563,7 +1294,6 @@ export default function EmployeeManagement() {
 
                 <div className="space-y-4">
                   {/* Username */}
-                  {/* Username */}
                   <div className="space-y-2">
                     <label htmlFor="username" className="text-sm font-medium">
                       Username
@@ -1590,7 +1320,6 @@ export default function EmployeeManagement() {
                     </div>
                   </div>
 
-                  {/* Trade Position */}
                   {/* Trade Position */}
                   <div className="space-y-2">
                     <label
@@ -1631,7 +1360,6 @@ export default function EmployeeManagement() {
                   </div>
 
                   {/* Daily / Monthly Rate */}
-                  {/* Daily / Monthly Rate */}
                   <div className="space-y-2">
                     <label
                       htmlFor={getRateFieldName()}
@@ -1643,14 +1371,11 @@ export default function EmployeeManagement() {
                       <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
                         {sessionData.user.currency}
                       </p>
-                        {sessionData.user.currency}
-                      </p>
                       <input
                         id={getRateFieldName()}
                         name={getRateFieldName()}
                         type="number"
                         placeholder="100.00"
-                        value={newEmployee[getRateFieldName()] || ""}
                         value={newEmployee[getRateFieldName()] || ""}
                         onChange={(e) =>
                           setNewEmployee({
@@ -1664,29 +1389,22 @@ export default function EmployeeManagement() {
                   </div>
 
                   {/* Contract Start Date */}
-                  {/* Contract Start Date */}
                   <div className="space-y-2">
                     <label
                       htmlFor="contract_start_date"
-                      htmlFor="contract_start_date"
                       className="text-sm font-medium"
                     >
-                      Contract Start Date
                       Contract Start Date
                     </label>
                     <div className="relative">
                       <input
                         id="contract_start_date"
                         name="contract_start_date"
-                        id="contract_start_date"
-                        name="contract_start_date"
                         type="date"
-                        value={newEmployee.contract_start_date}
                         value={newEmployee.contract_start_date}
                         onChange={(e) =>
                           setNewEmployee({
                             ...newEmployee,
-                            contract_start_date: e.target.value,
                             contract_start_date: e.target.value,
                           })
                         }
@@ -1696,14 +1414,11 @@ export default function EmployeeManagement() {
                   </div>
 
                   {/* Contract Finish Date */}
-                  {/* Contract Finish Date */}
                   <div className="space-y-2">
                     <label
                       htmlFor="contract_finish_date"
-                      htmlFor="contract_finish_date"
                       className="text-sm font-medium"
                     >
-                      Contract Finish Date
                       Contract Finish Date
                     </label>
                     <div className="relative">
@@ -1712,14 +1427,9 @@ export default function EmployeeManagement() {
                         name="contract_finish_date"
                         type="date"
                         value={newEmployee.contract_finish_date}
-                        id="contract_finish_date"
-                        name="contract_finish_date"
-                        type="date"
-                        value={newEmployee.contract_finish_date}
                         onChange={(e) =>
                           setNewEmployee({
                             ...newEmployee,
-                            contract_finish_date: e.target.value,
                             contract_finish_date: e.target.value,
                           })
                         }
@@ -1728,7 +1438,6 @@ export default function EmployeeManagement() {
                     </div>
                   </div>
 
-                  {/* Budget Baseline */}
                   {/* Budget Baseline */}
                   <div className="space-y-2">
                     <label
@@ -1739,8 +1448,6 @@ export default function EmployeeManagement() {
                     </label>
                     <div className="relative">
                       <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
-                        {sessionData.user.currency}
-                      </p>
                         {sessionData.user.currency}
                       </p>
                       <input
@@ -1859,7 +1566,6 @@ export default function EmployeeManagement() {
               <div className="relative">
                 <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
                   {sessionData.user.currency}
-                  {sessionData.user.currency}
                 </p>{" "}
                 <input
                   id="edit-daily-rate"
@@ -1937,7 +1643,6 @@ export default function EmployeeManagement() {
               <div className="relative">
                 <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
                   {sessionData.user.currency}
-                  {sessionData.user.currency}
                 </p>{" "}
                 <input
                   id="edit-budget-baseline"
@@ -1989,7 +1694,6 @@ export default function EmployeeManagement() {
                 onClick={() => setShowEditEmployee(false)}
               >
                 Cancel
-                Cancel
               </Button>
               <Button
                 type="submit"
@@ -2012,24 +1716,11 @@ export default function EmployeeManagement() {
 
       {/* Delete Employee Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Employee(s)</DialogTitle>
-            <DialogTitle>Delete Employee(s)</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            {selectedEmployees.length === 1 ? (
-              <p>
-                Are you sure you want to delete the employee "
-                {selectedEmployees[0]?.username}"?
-              </p>
-            ) : (
-              <p>
-                Are you sure you want to delete {selectedEmployees.length}{" "}
-                employees?
-              </p>
-            )}
             {selectedEmployees.length === 1 ? (
               <p>
                 Are you sure you want to delete the employee "
@@ -2047,7 +1738,6 @@ export default function EmployeeManagement() {
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
-                onClick={() => setShowDeleteConfirm(false)}
                 onClick={() => setShowDeleteConfirm(false)}
               >
                 Cancel
