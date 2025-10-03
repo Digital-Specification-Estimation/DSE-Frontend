@@ -207,12 +207,15 @@ function TradeForm({
         });
         return;
       }
-      let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
+      let exchangeRate = await getExchangeRate(
+        sessionData.user.currency,
+        sessionData.user.companies?.[0]?.base_currency
+      );
       let monthlyPlannedCost = newTrade.monthly_planned_cost || 0;
       let dailyPlannedCost = newTrade.daily_planned_cost || 0;
       // If the currency is not RWF, convert the values
-        monthlyPlannedCost = Number(monthlyPlannedCost) * Number(exchangeRate);
-        dailyPlannedCost = Number(dailyPlannedCost) * Number(exchangeRate);
+      monthlyPlannedCost = Number(monthlyPlannedCost) * Number(exchangeRate);
+      dailyPlannedCost = Number(dailyPlannedCost) * Number(exchangeRate);
 
       const newTradeToAdd: any = {
         location_name: newTrade.location_name,
@@ -319,7 +322,14 @@ function TradeForm({
             }
             onKeyDown={(e) => {
               // Prevent negative numbers and multiple decimal points
-              if (e.key === '-' || (e.key === '.' && (sessionData?.user?.salary_calculation === "monthly rate" ? newTrade.monthly_planned_cost : newTrade.daily_planned_cost).includes('.'))) {
+              if (
+                e.key === "-" ||
+                (e.key === "." &&
+                  (sessionData?.user?.salary_calculation === "monthly rate"
+                    ? newTrade.monthly_planned_cost
+                    : newTrade.daily_planned_cost
+                  ).includes("."))
+              ) {
                 e.preventDefault();
               }
             }}
@@ -382,11 +392,14 @@ function ProjectForm({
       }
 
       let budget = newProject.budget || 0;
-      const exchangeRate = await getExchangeRate(sessionData?.user?.currency,sessionData?.user?.companies?.[0]?.base_currency);
+      const exchangeRate = await getExchangeRate(
+        sessionData?.user?.currency,
+        sessionData?.user?.companies?.[0]?.base_currency
+      );
       console.log("exchangeRate", exchangeRate);
       // Convert the budget to RWF if needed
-     budget = budget * exchangeRate;
-      
+      budget = budget * exchangeRate;
+
       // Use RTK Query mutation
       await addProject({
         ...newProject,
@@ -507,6 +520,9 @@ function DataTable({
   onEditRate,
   sessionData,
   activeTab,
+  selectedIds,
+  onSelectAll,
+  onToggleSelect,
 }: {
   headers: string[];
   data: any[];
@@ -520,6 +536,9 @@ function DataTable({
   onEditRate: (item: any) => void;
   sessionData: any;
   activeTab: string;
+  selectedIds?: string[];
+  onSelectAll?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onToggleSelect?: (id: string) => void;
 }) {
   const { toast } = useToast();
 
@@ -581,24 +600,39 @@ function DataTable({
   }
 
   const renderCurrency = async (value: number) => {
-    if (!value) return '0';
-    if (sessionData?.user?.currency === 'RWF') return value.toLocaleString();
-    
+    if (!value) return "0";
+    if (sessionData?.user?.currency === "RWF") return value.toLocaleString();
+
     try {
-      const converted = await convertCurrency(value, sessionData.user.currency,sessionData.user.company.base_currency);
+      const converted = await convertCurrency(
+        value,
+        sessionData.user.currency,
+        sessionData.user.company.base_currency
+      );
       return converted.toLocaleString();
     } catch (error) {
-      console.error('Error converting currency:', error);
+      console.error("Error converting currency:", error);
       return value.toLocaleString();
     }
   };
+
+  const allSelected = selectedIds && selectedIds.length === data.length && data.length > 0;
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-t border-b text-sm text-gray-500">
-            <th className="w-10 px-4 py-3 text-left"></th>
+            <th className="w-10 px-4 py-3 text-left">
+              {onSelectAll && (
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300"
+                  checked={allSelected}
+                  onChange={onSelectAll}
+                />
+              )}
+            </th>
             <th className="px-4 py-3 text-left">SN</th>
             {headers.map((header, index) => (
               <th key={index} className="px-4 py-3 text-left">
@@ -612,23 +646,24 @@ function DataTable({
           {data.map((item, index) => (
             <tr key={item.id} className="border-b hover:bg-gray-50">
               <td className="px-4 py-3">
-                {/* <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300"
-                  onChange={() => {
-                    toast({
-                      title: "Item Selected",
-                      description: `Selected item ${index + 1}`,
-                    });
-                  }}
-                /> */}
+                {onToggleSelect && (
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-gray-300"
+                    checked={selectedIds?.includes(item.id) || false}
+                    onChange={() => onToggleSelect(item.id)}
+                  />
+                )}
               </td>
               <td className="px-4 py-3">{index + 1}</td>
               {renderRow(item)}
               <td className="px-4 py-3 text-right">
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild >
-                    <Button variant="ghost" className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white hover:text-white">
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white hover:text-white"
+                    >
                       Actions
                       <ChevronDown className="h-4 w-4" />
                     </Button>
@@ -844,16 +879,16 @@ function EditTradeForm({
       const tradeToUpdate = {
         id: trade.id,
         trade_name: editedTrade.trade_name,
-        location_name: editedTrade.location_name
+        location_name: editedTrade.location_name,
       };
 
       await updateTrade(tradeToUpdate).unwrap();
-      
+
       toast({
         title: "Success",
         description: "Trade updated successfully",
       });
-      
+
       refetchTrades();
       onClose();
     } catch (error: any) {
@@ -1006,10 +1041,13 @@ function EditProjectForm({
   useEffect(() => {
     const fetchExchangeRate = async () => {
       try {
-        const rate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
+        const rate = await getExchangeRate(
+          sessionData.user.currency,
+          sessionData.user.companies?.[0]?.base_currency
+        );
         setExchangeRate(rate);
       } catch (error) {
-        console.error('Failed to fetch exchange rate:', error);
+        console.error("Failed to fetch exchange rate:", error);
         toast({
           title: "Error",
           description: "Failed to load exchange rate. Using default rate of 1.",
@@ -1047,8 +1085,8 @@ function EditProjectForm({
       // Format dates for API
       const formattedStartDate = formatDateForApi(editedProject.start_date);
       const formattedEndDate = formatDateForApi(editedProject.end_date);
-      console.log("formattedStartDate", formattedStartDate)
-      console.log("formattedEndDate", formattedEndDate)
+      console.log("formattedStartDate", formattedStartDate);
+      console.log("formattedEndDate", formattedEndDate);
       // Create date objects for validation
       const startDate = new Date(formattedStartDate);
       const endDate = new Date(formattedEndDate);
@@ -1083,7 +1121,6 @@ function EditProjectForm({
         return;
       }
 
-      
       const payload = {
         id: project.id,
         project_name: editedProject.project_name,
@@ -1278,12 +1315,11 @@ function EditTradeRateForm({
 }) {
   const { toast } = useToast();
   const [editedRate, setEditedRate] = useState(
-    sessionData?.user?.salary_calculation === "monthly rate"
-      ? ""
-      : ""
+    sessionData?.user?.salary_calculation === "monthly rate" ? "" : ""
   );
 
-  const [updateTradeRate, { isLoading: isUpdatingRate }] = useEditTradeMutation();
+  const [updateTradeRate, { isLoading: isUpdatingRate }] =
+    useEditTradeMutation();
 
   const handleUpdateRate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1302,7 +1338,10 @@ function EditTradeRateForm({
       }
 
       // Get exchange rate if needed
-      let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
+      let exchangeRate = await getExchangeRate(
+        sessionData.user.currency,
+        sessionData.user.companies?.[0]?.base_currency
+      );
       let updatedRate = Number(editedRate) * Number(exchangeRate);
 
       const tradeToUpdate: any = {
@@ -1316,19 +1355,20 @@ function EditTradeRateForm({
       }
 
       await updateTradeRate(tradeToUpdate).unwrap();
-      
+
       toast({
         title: "Success",
         description: "Trade rate updated successfully",
       });
-      
+
       refetchTrades();
       onClose();
     } catch (error: any) {
       console.error("Error updating trade rate:", error);
       toast({
         title: "Error",
-        description: error?.data?.message?.[0] || "Failed to update trade rate.",
+        description:
+          error?.data?.message?.[0] || "Failed to update trade rate.",
         variant: "destructive",
       });
     }
@@ -1356,13 +1396,16 @@ function EditTradeRateForm({
             onChange={(e) => {
               const value = e.target.value;
               // Only update if the value is a valid number or empty string
-              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+              if (value === "" || /^\d*\.?\d*$/.test(value)) {
                 setEditedRate(value);
               }
             }}
             onKeyDown={(e) => {
               // Prevent negative numbers and multiple decimal points
-              if (e.key === '-' || (e.key === '.' && editedRate.includes('.'))) {
+              if (
+                e.key === "-" ||
+                (e.key === "." && editedRate.includes("."))
+              ) {
                 e.preventDefault();
               }
             }}
@@ -1396,8 +1439,8 @@ const formatDateForInput = (dateString: string) => {
   }
   // If the date is in DD/MM/YYYY format, convert to YYYY-MM-DD
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
-    const [day, month, year] = dateString.split('/');
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    const [day, month, year] = dateString.split("/");
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
   }
   return "";
 };
@@ -1406,25 +1449,27 @@ const formatDateForInput = (dateString: string) => {
 const formatDateForApi = (dateString: string) => {
   if (!dateString) return "";
   let date: Date;
-  
+
   // If the date is in YYYY-MM-DD format
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
     date = new Date(dateString);
   }
   // If the date is in DD/MM/YYYY format
   else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
-    const [day, month, year] = dateString.split('/');
-    date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
-  } 
+    const [day, month, year] = dateString.split("/");
+    date = new Date(
+      `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
+    );
+  }
   // If it's already in ISO format
-  else if (dateString.includes('T')) {
+  else if (dateString.includes("T")) {
     date = new Date(dateString);
   }
   // If we can't parse it, return as is
   else {
     return dateString;
   }
-  
+
   // Return in ISO format with timezone (e.g., "2025-09-24T00:00:00.000Z")
   return date.toISOString();
 };
@@ -1543,6 +1588,11 @@ export default function BusinessSetup() {
   const currencyShort = splitCurrencyValue(sessionData.user.currency)?.currency;
 
   const { toast } = useToast();
+  
+  // Delete mutations
+  const [deleteLocation] = useDeleteLocationMutation();
+  const [deleteTrade] = useDeleteTradeMutation();
+  const [deleteProject] = useDeleteProjectMutation();
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
@@ -1566,35 +1616,51 @@ export default function BusinessSetup() {
   const [showEditTradeRate, setShowEditTradeRate] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
-function ConvertedAmount({ 
-  amount, 
-  currency, 
-  showCurrency = true 
-}: { 
-  amount: number; 
-  currency: string; 
-  showCurrency?: boolean;
-}) {
-  const [convertedAmount, setConvertedAmount] = useState<string>('...');
+  // Bulk delete states
+  const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([]);
+  const [selectedTradeIds, setSelectedTradeIds] = useState<string[]>([]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
-  useEffect(() => {
-    const convert = async () => {
-      try {
-        const result = await convertCurrency(amount, currency, sessionData.user.companies[0].base_currency);
-        setConvertedAmount(result);
-      } catch (error) {
-        console.error('Error converting currency:', error);
-        setConvertedAmount('Error');
+  function ConvertedAmount({
+    amount,
+    currency,
+    showCurrency = true,
+  }: {
+    amount: number;
+    currency: string;
+    showCurrency?: boolean;
+  }) {
+    const [convertedAmount, setConvertedAmount] = useState<string>("...");
+
+    useEffect(() => {
+      const convert = async () => {
+        try {
+          const result = await convertCurrency(
+            amount,
+            currency,
+            sessionData.user.companies[0].base_currency
+          );
+          setConvertedAmount(result);
+        } catch (error) {
+          console.error("Error converting currency:", error);
+          setConvertedAmount("Error");
+        }
+      };
+
+      if (amount !== undefined) {
+        convert();
       }
-    };
-
-    if (amount !== undefined) {
-      convert();
-    }
-  }, [amount, currency]);
-console.log("convertedAmount", convertedAmount)
-  return <>{showCurrency ? `${currency} ${Number(convertedAmount).toLocaleString()}` : Number(convertedAmount).toLocaleString()}</>;
-}
+    }, [amount, currency]);
+    console.log("convertedAmount", convertedAmount);
+    return (
+      <>
+        {showCurrency
+          ? `${currency} ${Number(convertedAmount).toLocaleString()}`
+          : Number(convertedAmount).toLocaleString()}
+      </>
+    );
+  }
 
   // RTK Query hooks
   const {
@@ -1617,7 +1683,7 @@ console.log("convertedAmount", convertedAmount)
     isError: isErrorProjects,
     refetch: refetchProjects,
   } = useGetProjectsQuery();
-console.log("projects", projects)
+  console.log("projects", projects);
   // Check if any data is loading
   const isLoading = isLoadingLocations || isLoadingTrades || isLoadingProjects;
 
@@ -1645,24 +1711,121 @@ console.log("projects", projects)
     });
   };
 
+  // Bulk delete handlers
+  const handleSelectAllLocations = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedLocationIds(locations.map((loc: any) => loc.id));
+    } else {
+      setSelectedLocationIds([]);
+    }
+  };
+
+  const handleSelectAllTrades = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedTradeIds(trades.map((trade: any) => trade.id));
+    } else {
+      setSelectedTradeIds([]);
+    }
+  };
+
+  const handleSelectAllProjects = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedProjectIds(projects.map((proj: any) => proj.id));
+    } else {
+      setSelectedProjectIds([]);
+    }
+  };
+
+  const toggleLocationSelect = (id: string) => {
+    setSelectedLocationIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleTradeSelect = (id: string) => {
+    setSelectedTradeIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleProjectSelect = (id: string) => {
+    setSelectedProjectIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      let idsToDelete: string[] = [];
+      let deleteFunction: any;
+      let entityName = "";
+
+      switch (activeTab) {
+        case "locations":
+          idsToDelete = selectedLocationIds;
+          deleteFunction = deleteLocation;
+          entityName = "location";
+          break;
+        case "trades":
+          idsToDelete = selectedTradeIds;
+          deleteFunction = deleteTrade;
+          entityName = "trade";
+          break;
+        case "projects":
+          idsToDelete = selectedProjectIds;
+          deleteFunction = deleteProject;
+          entityName = "project";
+          break;
+      }
+
+      for (const id of idsToDelete) {
+        await deleteFunction(id).unwrap();
+      }
+
+      // Clear selections
+      setSelectedLocationIds([]);
+      setSelectedTradeIds([]);
+      setSelectedProjectIds([]);
+      setShowBulkDeleteConfirm(false);
+
+      toast({
+        title: "Success",
+        description: `${idsToDelete.length} ${entityName}(s) deleted successfully!`,
+      });
+
+      // Refresh data
+      handleRefresh();
+    } catch (error) {
+      console.error("Failed to delete items:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete some items",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleUpdateBudget = async (projectId: string, budget: number) => {
-    let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
+    let exchangeRate = await getExchangeRate(
+      sessionData.user.currency,
+      sessionData.user.companies?.[0]?.base_currency
+    );
     budget = budget * exchangeRate;
     const body = {
       budget: budget.toString(), // Convert number to string to match IsDecimal()
-      projectId: projectId.toString() // Ensure projectId is a string
+      projectId: projectId.toString(), // Ensure projectId is a string
     };
     try {
-    const response = await fetch(`https://dse-backend-uv5d.onrender.com/project/budget`, {
-        method: 'PATCH',
+      const response = await fetch(`http://localhost:4000/project/budget`, {
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
-    });
+      });
       refetchProjects();
     } catch (error) {
-      console.error('Error updating budget:', error);
+      console.error("Error updating budget:", error);
       throw error;
     }
   };
@@ -1758,13 +1921,25 @@ console.log("projects", projects)
                             Define different locations where employees work.
                           </p>
                         </div>
-                        <Button
-                          onClick={() => setShowAddLocation(true)}
-                          className="bg-orange-400 hover:bg-orange-500"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add New Location
-                        </Button>
+                        <div className="flex gap-2">
+                          {selectedLocationIds.length > 0 && (
+                            <Button
+                              variant="destructive"
+                              onClick={() => setShowBulkDeleteConfirm(true)}
+                              className="gap-2"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete Selected ({selectedLocationIds.length})
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => setShowAddLocation(true)}
+                            className="bg-orange-400 hover:bg-orange-500"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add New Location
+                          </Button>
+                        </div>
                       </div>
                       <DataTable
                         headers={["Location Name"]}
@@ -1780,6 +1955,8 @@ console.log("projects", projects)
                           setSelectedItem(location);
                           setShowDeleteLocation(true);
                         }}
+                        onEditBudget={() => {}}
+                        onEditRate={() => {}}
                         renderRow={(location) => (
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
@@ -1790,6 +1967,9 @@ console.log("projects", projects)
                         )}
                         sessionData={sessionData}
                         activeTab={activeTab}
+                        selectedIds={selectedLocationIds}
+                        onSelectAll={handleSelectAllLocations}
+                        onToggleSelect={toggleLocationSelect}
                       />
                     </>
                   )}
@@ -1806,13 +1986,25 @@ console.log("projects", projects)
                             Define different roles and set daily rates for each.
                           </p>
                         </div>
-                        <Button
-                          onClick={() => setShowAddTrade(true)}
-                          className="bg-orange-400 hover:bg-orange-500"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add New Trade
-                        </Button>
+                        <div className="flex gap-2">
+                          {selectedTradeIds.length > 0 && (
+                            <Button
+                              variant="destructive"
+                              onClick={() => setShowBulkDeleteConfirm(true)}
+                              className="gap-2"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete Selected ({selectedTradeIds.length})
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => setShowAddTrade(true)}
+                            className="bg-orange-400 hover:bg-orange-500"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add New Trade
+                          </Button>
+                        </div>
                       </div>
                       <DataTable
                         headers={[
@@ -1841,6 +2033,12 @@ console.log("projects", projects)
                           setSelectedItem(trade);
                           setShowEditTradeRate(true);
                         }}
+                        onEditBudget={() => {}}
+                        sessionData={sessionData}
+                        activeTab={activeTab}
+                        selectedIds={selectedTradeIds}
+                        onSelectAll={handleSelectAllTrades}
+                        onToggleSelect={toggleTradeSelect}
                         renderRow={(trade: NewTrade) => (
                           <>
                             <td className="px-4 py-3">
@@ -1855,25 +2053,20 @@ console.log("projects", projects)
                             <td className="px-4 py-3">
                               {currencyShort}
                               {sessionData?.user?.salary_calculation ===
-                              "monthly rate"
-                                ? (
-                              
-                                <ConvertedAmount 
-                                amount={trade.monthly_planned_cost || 0} 
-                                currency={sessionData.user.currency} 
-                              />
-                                )
-                                : (
-                                <ConvertedAmount 
-                                amount={trade.daily_planned_cost || 0} 
-                                currency={sessionData.user.currency} 
-                              />
-                                )}
+                              "monthly rate" ? (
+                                <ConvertedAmount
+                                  amount={trade.monthly_planned_cost || 0}
+                                  currency={sessionData.user.currency}
+                                />
+                              ) : (
+                                <ConvertedAmount
+                                  amount={trade.daily_planned_cost || 0}
+                                  currency={sessionData.user.currency}
+                                />
+                              )}
                             </td>
                           </>
                         )}
-                        sessionData={sessionData}
-                        activeTab={activeTab}
                       />
                     </>
                   )}
@@ -1890,13 +2083,25 @@ console.log("projects", projects)
                             Set up projects and assign locations.
                           </p>
                         </div>
-                        <Button
-                          onClick={() => setShowAddProject(true)}
-                          className="bg-orange-400 hover:bg-orange-500"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add New Project
-                        </Button>
+                        <div className="flex gap-2">
+                          {selectedProjectIds.length > 0 && (
+                            <Button
+                              variant="destructive"
+                              onClick={() => setShowBulkDeleteConfirm(true)}
+                              className="gap-2"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete Selected ({selectedProjectIds.length})
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => setShowAddProject(true)}
+                            className="bg-orange-400 hover:bg-orange-500"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add New Project
+                          </Button>
+                        </div>
                       </div>
                       <DataTable
                         headers={[
@@ -1922,6 +2127,12 @@ console.log("projects", projects)
                           setSelectedItem(project);
                           setShowEditBudget(true);
                         }}
+                        onEditRate={() => {}}
+                        sessionData={sessionData}
+                        activeTab={activeTab}
+                        selectedIds={selectedProjectIds}
+                        onSelectAll={handleSelectAllProjects}
+                        onToggleSelect={toggleProjectSelect}
                         renderRow={(project: NewProject) => (
                           <>
                             <td className="px-4 py-3">
@@ -1933,11 +2144,16 @@ console.log("projects", projects)
 
                             <td className="px-4 py-3">{project.start_date}</td>
                             <td className="px-4 py-3">{project.end_date}</td>
-                            <td className="px-4 py-3">{<ConvertedAmount amount={project.budget || 0} currency={sessionData.user.currency} />}</td>
+                            <td className="px-4 py-3">
+                              {
+                                <ConvertedAmount
+                                  amount={project.budget || 0}
+                                  currency={sessionData.user.currency}
+                                />
+                              }
+                            </td>
                           </>
                         )}
-                        sessionData={sessionData}
-                        activeTab={activeTab}
                       />
                     </>
                   )}
@@ -2094,7 +2310,7 @@ console.log("projects", projects)
             project={selectedItem}
             onClose={() => setShowEditBudget(false)}
             onSave={handleUpdateBudget}
-            currency={sessionData?.user?.currency || 'RWF'}
+            currency={sessionData?.user?.currency || "RWF"}
           />
         )}
       </Dialog>
@@ -2113,6 +2329,36 @@ console.log("projects", projects)
               sessionData={sessionData}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Modal */}
+      <Dialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Bulk Delete</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            Are you sure you want to delete{" "}
+            {activeTab === "locations" && `${selectedLocationIds.length} location(s)`}
+            {activeTab === "trades" && `${selectedTradeIds.length} trade(s)`}
+            {activeTab === "projects" && `${selectedProjectIds.length} project(s)`}?
+            This action cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkDeleteConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

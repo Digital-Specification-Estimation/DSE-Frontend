@@ -34,7 +34,7 @@ export default function Settings() {
   const [newHoliday, setNewHoliday] = useState<string>("");
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [newPrivilege, setNewPrivilege] = useState<string>("");
- const {
+  const {
     data: sessionData = { user: {} },
     isLoading: isSessionLoading,
     isError,
@@ -69,14 +69,11 @@ export default function Settings() {
     "Generate reports",
   ]);
 
-
   const [user] = useState({
     name: "Kristin Watson",
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
   });
-
-
 
   const [userSettings, setUserSettings] = useState<any[]>([]);
 
@@ -228,12 +225,8 @@ export default function Settings() {
           overtimeRate: company.overtime_rate,
         });
         if (company.company_profile) {
-          console.log(
-            `https://dse-backend-uv5d.onrender.com/${company.company_profile}`
-          );
-          setCompanyLogo(
-            `https://dse-backend-uv5d.onrender.com/${company.company_profile}`
-          );
+          console.log(`http://localhost:4000/${company.company_profile}`);
+          setCompanyLogo(`http://localhost:4000/${company.company_profile}`);
         }
       }
 
@@ -431,19 +424,17 @@ export default function Settings() {
         updatedFields.payslip_format = payrollSettings.payslip_format;
         hasChanges = true;
       }
-      
+
       const formData = new FormData();
-      if(payrollSettings.baseCurrency){
+      if (payrollSettings.baseCurrency) {
         formData.append("base_currency", payrollSettings.baseCurrency);
         hasChanges = true;
       }
       if (hasChanges) {
-     
-
         // Add company ID
         formData.append("id", companyId);
-       const result =  await updateCompany(formData);
-       console.log("updatedFields being sent to updateUser:", updatedFields);
+        const result = await updateCompany(formData);
+        console.log("updatedFields being sent to updateUser:", updatedFields);
         try {
           const result2 = await updateUser(updatedFields);
           console.log("result2", result2);
@@ -456,7 +447,7 @@ export default function Settings() {
           });
         }
         console.log("result", result);
-     
+
         toast({
           title: "Payroll Settings Saved",
           description: "Your payroll settings have been updated successfully.",
