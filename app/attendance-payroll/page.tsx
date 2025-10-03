@@ -199,31 +199,6 @@ export default function AttendancePayroll() {
     }
   }, [tradesData, projectsFetched])
 
-  // Add a separate useEffect for dailyRates that only runs when employees or currencyShort changes
-  useEffect(() => {
-    if (employees && employees.length > 0 && currencyShort) {
-      try {
-        const uniqueRates = [
-          ...new Set(
-            employees.map((employee: any) => {
-              const rate = employee?.daily_rate || 0
-              return `${currencyShort}${Math.round(rate)}`
-            }),
-          ),
-        ] as string[]
-        uniqueRates.sort((a, b) => {
-          const numA = Number.parseFloat(a.replace(/[^0-9.]/g, "")) || 0
-          const numB = Number.parseFloat(b.replace(/[^0-9.]/g, "")) || 0
-          return numA - numB
-        })
-
-        setDailyRates(uniqueRates)
-      } catch (error) {
-        console.error("Error processing daily rates:", error)
-        setDailyRates([])
-      }
-    }
-  }, [employees, currencyShort])
 
   // Add this useEffect to calculate totals
   const totals = useMemo(() => {
@@ -867,9 +842,7 @@ export default function AttendancePayroll() {
                   value={filters.project}
                   onValueChange={(value) => setFilters((prev) => ({ ...prev, project: value }))}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Project" />
-                  </SelectTrigger>
+           
                   <SelectContent>
                     {isLoadingProjects ? (
                       <div className="flex items-center justify-center p-2">
@@ -886,23 +859,6 @@ export default function AttendancePayroll() {
                         ))}
                       </>
                     )}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={filters.dailyRate}
-                  onValueChange={(value) => setFilters((prev) => ({ ...prev, dailyRate: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select by Daily Rate" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Rates</SelectItem>
-                    {dailyRates.map((rate) => (
-                      <SelectItem key={rate} value={rate}>
-                        {rate}
-                      </SelectItem>
-                    ))}
                   </SelectContent>
                 </Select>
 
