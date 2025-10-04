@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import Cookie from "js-cookie";
 import { usePathname, useRouter } from "next/navigation";
@@ -16,6 +15,7 @@ import {
   LayoutDashboard,
   BriefcaseBusiness,
   NotepadText,
+  Calculator,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
@@ -24,7 +24,6 @@ import { useDispatch } from "react-redux";
 import { clearCredentials } from "@/lib/redux/authSlice";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-
 interface SidebarProps {
   user: {
     name: string;
@@ -32,7 +31,6 @@ interface SidebarProps {
     avatar?: string;
   };
 }
-
 export function Sidebar({ user }: SidebarProps) {
   const [userData, setUserData] = useState({
     username: "Guest",
@@ -56,12 +54,10 @@ export function Sidebar({ user }: SidebarProps) {
     // Skip caching to always get fresh data
     skip: false,
   });
-
   const [logout] = useLogoutMutation();
   const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
-
   // Effect to update user data when session data changes
   useEffect(() => {
     if (sessionData && sessionData.user) {
@@ -69,23 +65,19 @@ export function Sidebar({ user }: SidebarProps) {
     }
   }, [sessionData]);
   // console.log(sessionData);
-
   // Effect to check authentication on mount and reload
   // useEffect(() => {
   //   // Force refetch on mount
   //   refetch();
   //   console.log("user cookie",Cookie.get("connect.sid"));
-
   //   // Check if user is authenticated
   //   const checkAuth = () => {
   //     if (!Cookie.get("connect.sid")) {
   //       router.push("/sign-in");
   //     }
   //   };
-
   //   // Check auth on mount
   //  // checkAuth();
-
   //   // Add event listener for page visibility changes
   //   const handleVisibilityChange = () => {
   //     if (document.visibilityState === "visible") {
@@ -93,39 +85,31 @@ export function Sidebar({ user }: SidebarProps) {
   //       checkAuth();
   //     }
   //   };
-
   //   document.addEventListener("visibilitychange", handleVisibilityChange);
-
   //   // Clean up
   //   return () => {
   //     document.removeEventListener("visibilitychange", handleVisibilityChange);
   //   };
   // }, [refetch, router]);
-
   const handleLogout = async () => {
     try {
       // Call the logout mutation first
       await logout().unwrap();
-
       // Then clear the cookie and local state
       if (Cookie.get("connect.sid")) {
         Cookie.remove("connect.sid");
       }
-
       // Clear Redux state
       dispatch(clearCredentials());
-
       // Redirect to sign-in
       router.push("/sign-in");
     } catch (error) {
       console.error("Logout failed", error);
     }
   };
-
   const handleRetry = () => {
     refetch();
   };
-
   // Derive user permissions from session
   const userPermissions: Record<string, any> = (() => {
     const settings = (sessionData as any)?.user?.settings || [];
@@ -136,7 +120,6 @@ export function Sidebar({ user }: SidebarProps) {
     );
     return found || {};
   })();
-
   // Base menu
   const allMenuItems = [
     {
@@ -161,6 +144,12 @@ export function Sidebar({ user }: SidebarProps) {
       name: "Budget Planning",
       href: "/budget-planning",
       icon: Wallet,
+      required: "view_reports",
+    },
+    {
+      name: "Cost Control",
+      href: "/cost-control",
+      icon: Calculator,
       required: "view_reports",
     },
     {
@@ -189,7 +178,6 @@ export function Sidebar({ user }: SidebarProps) {
       required: null,
     },
   ];
-
   const menuItems = allMenuItems.filter((item) => {
     if (!item.required) return true;
     return userPermissions[item.required] === true;
@@ -200,7 +188,6 @@ export function Sidebar({ user }: SidebarProps) {
       <div className="px-6 py-6 flex justify-center">
         <Logo />
       </div>
-
       {/* User Info */}
       <div className="px-4">
         {isLoading ? (
@@ -255,7 +242,6 @@ export function Sidebar({ user }: SidebarProps) {
           </div>
         )}
       </div>
-
       {/* Menu */}
       <nav className="space-y-1 px-4 mt-6">
         {menuItems.map((item) => (
@@ -279,7 +265,6 @@ export function Sidebar({ user }: SidebarProps) {
           </Link>
         ))}
       </nav>
-
       {/* Footer */}
       <div className="p-4 mt-auto text-center text-xs text-gray-500">
         ©Copyright 2025
