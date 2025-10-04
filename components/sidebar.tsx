@@ -16,6 +16,7 @@ import {
   LayoutDashboard,
   BriefcaseBusiness,
   NotepadText,
+  Calculator,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
@@ -161,6 +162,12 @@ export function Sidebar({ user }: SidebarProps) {
       name: "Budget Planning",
       href: "/budget-planning",
       icon: Wallet,
+      required: "view_reports",
+    },
+    {
+      name: "Cost Control",
+      href: "/cost-control",
+      icon: Calculator,
       required: "view_reports",
     },
     {

@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { authApi } from "./redux/authSlice";
+import authSlice from "./redux/authSlice";
 import { employeeApi } from "./redux/employeeSlice";
 import { tradePositionApi } from "./redux/tradePositionSlice";
 import { locationApi } from "./redux/locationSlice";
@@ -16,6 +17,7 @@ import { userSettingsApi } from "./redux/userSettingsSlice";
 export const makeStore = () => {
   return configureStore({
     reducer: {
+      auth: authSlice,
       notificationsState: notificationsSlice.reducer,
       [authApi.reducerPath]: authApi.reducer,
       [employeeApi.reducerPath]: employeeApi.reducer,
@@ -39,7 +41,7 @@ export const makeStore = () => {
         .concat(attendanceApi.middleware)
         .concat(companyApi.middleware)
         .concat(userApi.middleware) // ✅ userApi middleware
-        .concat(notificationsApi.middleware),
+        .concat(notificationsApi.middleware)
   });
 };
 
