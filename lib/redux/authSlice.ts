@@ -119,7 +119,6 @@ export default authSlice.reducer;
 export const {
   useLoginMutation,
   useSignupMutation,
-  useGoogleLoginMutation,
   useLogoutMutation,
   useSessionQuery,
 } = authApi;

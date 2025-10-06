@@ -33,6 +33,10 @@ export type ApproveUserPayload = {
   id: string;
   role: string; // Add role to match UpdateRoleRequestDto
 };
+export type DeleteUserPayload = {
+  id: string;
+  company_id: string;
+};
 
 // -----------------------------
 // API Slice

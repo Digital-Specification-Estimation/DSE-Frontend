@@ -34,6 +34,10 @@ import {
   Edit,
   Trash2,
   ChevronDown,
+  AlertTriangle,
+  Clock,
+  Calendar,
+  X,
 } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
@@ -75,6 +79,7 @@ import {
 import { useSessionQuery } from "@/lib/redux/authSlice";
 import { convertCurrency, getExchangeRate } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import EnhancedProjectForm from "@/components/project/EnhancedProjectForm";
 
 function LocationForm({
   onClose,
@@ -175,7 +180,6 @@ function TradeForm({
   });
 
   const { data: locations = [] } = useGetLocationsQuery();
-  console.log(locations);
   const [addTrade, { isLoading: isAddingTrade }] = useAddTradeMutation();
 
   const handleAddTrade = async () => {
@@ -396,7 +400,6 @@ function ProjectForm({
         sessionData?.user?.currency,
         sessionData?.user?.companies?.[0]?.base_currency
       );
-      console.log("exchangeRate", exchangeRate);
       // Convert the budget to RWF if needed
       budget = budget * exchangeRate;
 
@@ -620,11 +623,11 @@ function DataTable({
     selectedIds && selectedIds.length === data.length && data.length > 0;
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-t border-b text-sm text-gray-500">
-            <th className="w-10 px-4 py-3 text-left">
+    <div className="shadow-sm border border-gray-200 rounded-lg">
+      <table className="w-full table-fixed">
+        <thead className="bg-gray-50">
+          <tr className="border-b text-sm text-gray-600 font-medium">
+            <th className="w-10 px-2 py-3 text-left">
               {onSelectAll && (
                 <input
                   type="checkbox"
@@ -634,19 +637,49 @@ function DataTable({
                 />
               )}
             </th>
-            <th className="px-4 py-3 text-left">SN</th>
-            {headers.map((header, index) => (
-              <th key={index} className="px-4 py-3 text-left">
-                {header}
-              </th>
-            ))}
-            <th className="w-10 px-4 py-3 text-left"></th>
+            <th className="w-12 px-2 py-3 text-left text-sm">SN</th>
+            {headers.map((header, index) => {
+              // Define specific widths for each column based on content and tab
+              let columnClass = "px-2 py-3 text-left text-sm font-medium";
+
+              // Projects tab column widths
+              if (activeTab === "projects") {
+                if (header === "Project Name") columnClass += " w-[28%]";
+                else if (header === "Location Name") columnClass += " w-[22%]";
+                else if (header === "Start Date") columnClass += " w-[16%]";
+                else if (header === "End Date") columnClass += " w-[16%]";
+                else if (header === "Budget") columnClass += " w-[18%]";
+                else columnClass += " flex-1";
+              }
+              // Trades tab column widths - Location Name gets more space
+              else if (activeTab === "trades") {
+                if (header === "Role/Trade") columnClass += " w-[25%]";
+                else if (header === "Location Name")
+                  columnClass += " w-[35%]"; // Wider for full visibility
+                else if (header === "Daily Rate") columnClass += " w-[20%]";
+                else if (header === "Monthly Rate") columnClass += " w-[20%]";
+                else columnClass += " flex-1";
+              }
+              // Default for other tabs
+              else {
+                if (header === "Location Name")
+                  columnClass += " w-[60%]"; // Locations tab
+                else columnClass += " flex-1";
+              }
+
+              return (
+                <th key={index} className={columnClass}>
+                  {header}
+                </th>
+              );
+            })}
+            <th className="w-20 px-2 py-3 text-left text-sm">Actions</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-white divide-y divide-gray-200">
           {data.map((item, index) => (
-            <tr key={item.id} className="border-b hover:bg-gray-50">
-              <td className="px-4 py-3">
+            <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+              <td className="px-2 py-3">
                 {onToggleSelect && (
                   <input
                     type="checkbox"
@@ -656,17 +689,19 @@ function DataTable({
                   />
                 )}
               </td>
-              <td className="px-4 py-3">{index + 1}</td>
+              <td className="px-2 py-3 text-gray-900 font-medium text-sm">
+                {index + 1}
+              </td>
               {renderRow(item)}
-              <td className="px-4 py-3 text-right">
+              <td className="px-2 py-3">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
-                      className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white hover:text-white"
+                      size="sm"
+                      className="flex items-center gap-1 bg-orange-500 hover:bg-orange-600 text-white hover:text-white px-2 py-1 text-xs"
                     >
-                      Actions
-                      <ChevronDown className="h-4 w-4" />
+                      <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -1086,8 +1121,6 @@ function EditProjectForm({
       // Format dates for API
       const formattedStartDate = formatDateForApi(editedProject.start_date);
       const formattedEndDate = formatDateForApi(editedProject.end_date);
-      console.log("formattedStartDate", formattedStartDate);
-      console.log("formattedEndDate", formattedEndDate);
       // Create date objects for validation
       const startDate = new Date(formattedStartDate);
       const endDate = new Date(formattedEndDate);
@@ -1130,7 +1163,6 @@ function EditProjectForm({
         end_date: formattedEndDate,
       };
 
-      console.log("Updating project with payload:", payload);
       await updateProject(payload).unwrap();
       refetchProjects();
       onClose();
@@ -1253,7 +1285,6 @@ function DeleteProjectConfirmation({
     useDeleteProjectMutation();
 
   const handleDeleteProject = async () => {
-    console.log("project id", project.id);
     try {
       await deleteProject(project.id).unwrap();
       refetchProjects();
@@ -1495,7 +1526,6 @@ function EditBudgetModal({
       setIsSaving(true);
       try {
         const response = await onSave(project.id, budget);
-        console.log("response", response);
         setBudget(0);
       } catch (error) {
         console.error("Error updating budget:", error);
@@ -1588,6 +1618,38 @@ export default function BusinessSetup() {
   );
   const currencyShort = splitCurrencyValue(sessionData.user.currency)?.currency;
 
+  // Format date for display in table
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return "";
+
+    try {
+      let date;
+      if (typeof dateString === "string") {
+        if (dateString.includes("/")) {
+          // Handle dd/MM/yyyy format (old format)
+          const [day, month, year] = dateString.split("/");
+          date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        } else {
+          // Handle ISO string format (new format)
+          date = new Date(dateString);
+        }
+      } else {
+        date = new Date(dateString);
+      }
+
+      if (isNaN(date.getTime())) return dateString; // Return original if invalid
+
+      // Format as DD/MM/YYYY for display
+      return date.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    } catch (error) {
+      return dateString; // Return original if parsing fails
+    }
+  };
+
   const { toast } = useToast();
 
   // Delete mutations
@@ -1623,6 +1685,12 @@ export default function BusinessSetup() {
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
+  // Expired projects management states
+  const [showExpiredProjects, setShowExpiredProjects] = useState(false);
+  const [expiredProjectIds, setExpiredProjectIds] = useState<string[]>([]);
+  const [showExpiredDeleteConfirm, setShowExpiredDeleteConfirm] =
+    useState(false);
+
   function ConvertedAmount({
     amount,
     currency,
@@ -1653,7 +1721,6 @@ export default function BusinessSetup() {
         convert();
       }
     }, [amount, currency]);
-    console.log("convertedAmount", convertedAmount);
     return (
       <>
         {showCurrency
@@ -1684,7 +1751,8 @@ export default function BusinessSetup() {
     isError: isErrorProjects,
     refetch: refetchProjects,
   } = useGetProjectsQuery();
-  console.log("projects", projects);
+
+
   // Check if any data is loading
   const isLoading = isLoadingLocations || isLoadingTrades || isLoadingProjects;
 
@@ -1817,17 +1885,211 @@ export default function BusinessSetup() {
       projectId: projectId.toString(), // Ensure projectId is a string
     };
     try {
-      const response = await fetch(`https://dse-backend-uv5d.onrender.com/project/budget`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+      const response = await fetch(
+        `https://dse-backend-uv5d.onrender.com/project/budget`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        }
+      );
       refetchProjects();
     } catch (error) {
       console.error("Error updating budget:", error);
       throw error;
+    }
+  };
+
+  // Get projects with expired end dates
+  const getExpiredProjects = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+
+    return projects.filter((project: any) => {
+      if (!project.end_date) return false;
+
+      // Handle different date formats that might come from backend
+      let projectEndDate;
+      try {
+        if (typeof project.end_date === "string") {
+          // Handle different string formats
+          if (project.end_date.includes("/")) {
+            // Handle dd/MM/yyyy format (old format)
+            const [day, month, year] = project.end_date.split("/");
+            projectEndDate = new Date(
+              parseInt(year),
+              parseInt(month) - 1,
+              parseInt(day)
+            );
+          } else {
+            // Handle ISO string format (new format)
+            projectEndDate = new Date(project.end_date);
+          }
+        } else if (project.end_date instanceof Date) {
+          // If it's already a Date object
+          projectEndDate = new Date(project.end_date);
+        } else {
+          // If it's something else, try to convert
+          projectEndDate = new Date(project.end_date);
+        }
+
+        // Check if the date is valid
+        if (isNaN(projectEndDate.getTime())) return false;
+
+        projectEndDate.setHours(0, 0, 0, 0);
+      } catch (error) {
+        return false;
+      }
+
+      return projectEndDate < today;
+    });
+  };
+
+  // Get projects with end dates expiring soon (within 30 days)
+  const getExpiringSoonProjects = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(today.getDate() + 30);
+    thirtyDaysFromNow.setHours(0, 0, 0, 0);
+
+    return projects.filter((project: any) => {
+      if (!project.end_date) return false;
+
+      let projectEndDate;
+      try {
+        if (typeof project.end_date === "string") {
+          // Handle different string formats
+          if (project.end_date.includes("/")) {
+            // Handle dd/MM/yyyy format (old format)
+            const [day, month, year] = project.end_date.split("/");
+            projectEndDate = new Date(
+              parseInt(year),
+              parseInt(month) - 1,
+              parseInt(day)
+            );
+          } else {
+            // Handle ISO string format (new format)
+            projectEndDate = new Date(project.end_date);
+          }
+        } else {
+          projectEndDate = new Date(project.end_date);
+        }
+
+        if (isNaN(projectEndDate.getTime())) return false;
+        projectEndDate.setHours(0, 0, 0, 0);
+
+        return projectEndDate >= today && projectEndDate <= thirtyDaysFromNow;
+      } catch (error) {
+        return false;
+      }
+    });
+  };
+
+  // Calculate days until project expiry
+  const getDaysUntilExpiry = (endDate: string) => {
+    if (!endDate) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let projectEndDate;
+    try {
+      if (typeof endDate === "string") {
+        if (endDate.includes("/")) {
+          // Handle dd/MM/yyyy format (old format)
+          const [day, month, year] = endDate.split("/");
+          projectEndDate = new Date(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day)
+          );
+        } else {
+          // Handle ISO string format (new format)
+          projectEndDate = new Date(endDate);
+        }
+      } else {
+        projectEndDate = new Date(endDate);
+      }
+
+      if (isNaN(projectEndDate.getTime())) return null;
+      projectEndDate.setHours(0, 0, 0, 0);
+
+      const timeDiff = projectEndDate.getTime() - today.getTime();
+      const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+      return daysDiff;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  // Handle bulk deletion of expired projects
+  const handleBulkDeleteExpired = async () => {
+    if (expiredProjectIds.length === 0) {
+      toast({
+        title: "No Selection",
+        description: "Please select projects to delete",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      let successCount = 0;
+      let failedProjects: string[] = [];
+
+      // Delete projects one by one and track results
+      for (const projectId of expiredProjectIds) {
+        try {
+          await deleteProject(projectId).unwrap();
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to delete project ${projectId}:`, error);
+          const project = projects.find((proj: any) => proj.id === projectId);
+          failedProjects.push(project?.project_name || `ID: ${projectId}`);
+        }
+      }
+
+      // Show appropriate success/error messages
+      if (successCount === expiredProjectIds.length) {
+        toast({
+          title: "Success",
+          description: `${successCount} expired project(s) deleted successfully`,
+        });
+      } else if (successCount > 0) {
+        toast({
+          title: "Partial Success",
+          description: `${successCount} project(s) deleted successfully. ${failedProjects.length} failed to delete.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: `Failed to delete projects: ${failedProjects.join(
+            ", "
+          )}`,
+          variant: "destructive",
+        });
+      }
+
+      // Reset selections and close modal
+      setExpiredProjectIds([]);
+      setShowExpiredDeleteConfirm(false);
+      setShowExpiredProjects(false);
+
+      // Refresh project data to reflect changes
+      refetchProjects();
+    } catch (error) {
+      console.error("Error during bulk deletion:", error);
+      toast({
+        title: "Error",
+        description:
+          "An unexpected error occurred during deletion. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1856,27 +2118,18 @@ export default function BusinessSetup() {
         <DashboardHeader />
         {/* Main Content */}
         <main className="flex-1 overflow-auto">
-          <div className="max-w-[1200px] mx-auto py-8 px-6">
-            <div className="flex items-center justify-between mb-8">
-              <h1 className="text-[22px] font-semibold text-gray-900">
+          <div className="w-full mx-auto py-4 px-3 sm:py-6 sm:px-4 lg:py-8 lg:px-6 max-w-[1400px]">
+            <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
+              <h1 className="text-lg sm:text-xl lg:text-[22px] font-semibold text-gray-900">
                 Business Setup
               </h1>
-              {/* <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Refresh Data
-              </Button> */}
             </div>
 
-            <div className="flex gap-6">
+            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
               {/* Navigation */}
-              <div className="w-60 bg-white rounded-lg border border-gray-200 overflow-hidden p-3">
+              <div className="w-full lg:w-44 xl:w-48 bg-white rounded-lg border border-gray-200 overflow-hidden p-2 sm:p-3 flex-shrink-0">
                 <button
-                  className={`w-full px-4 py-3 text-sm text-left transition-colors ${
+                  className={`w-full px-3 py-2.5 text-xs sm:text-sm text-left transition-colors rounded-lg ${
                     activeTab === "locations"
                       ? "text-gray-900 font-medium border border-gray-300 rounded-2xl bg-gray-200"
                       : "bg-gray-50 text-gray-600 hover:bg-gray-100"
@@ -1886,7 +2139,7 @@ export default function BusinessSetup() {
                   Locations
                 </button>
                 <button
-                  className={`w-full px-4 py-3 text-sm text-left transition-colors ${
+                  className={`w-full px-3 py-2.5 text-xs sm:text-sm text-left transition-colors rounded-lg ${
                     activeTab === "trades"
                       ? "text-gray-900 font-medium border border-gray-300 rounded-2xl bg-gray-200"
                       : "bg-gray-50 text-gray-600 hover:bg-gray-100"
@@ -1896,7 +2149,7 @@ export default function BusinessSetup() {
                   Trades
                 </button>
                 <button
-                  className={`w-full px-4 py-3 text-sm text-left transition-colors ${
+                  className={`w-full px-3 py-2.5 text-xs sm:text-sm text-left transition-colors rounded-lg ${
                     activeTab === "projects"
                       ? "text-gray-900 font-medium border border-gray-300 rounded-2xl bg-gray-200"
                       : "bg-gray-50 text-gray-600 hover:bg-gray-100"
@@ -1908,21 +2161,21 @@ export default function BusinessSetup() {
               </div>
 
               {/* Content Area */}
-              <div className="flex-1">
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="flex-1 min-w-0">
+                <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 lg:p-6">
                   {/* Locations Tab */}
                   {activeTab === "locations" && (
                     <>
-                      <div className="flex justify-between items-center mb-6">
-                        <div>
-                          <h2 className="text-lg font-semibold text-gray-900">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                        <div className="flex-1 min-w-0">
+                          <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
                             Work Locations
                           </h2>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-xs sm:text-sm text-gray-500">
                             Define different locations where employees work.
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                           {selectedLocationIds.length > 0 && (
                             <Button
                               variant="destructive"
@@ -2075,32 +2328,59 @@ export default function BusinessSetup() {
                   {/* Projects Tab */}
                   {activeTab === "projects" && (
                     <>
-                      <div className="flex justify-between items-center mb-6">
-                        <div>
-                          <h2 className="text-lg font-semibold text-gray-900">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                        <div className="flex-1 min-w-0">
+                          <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
                             Company Projects
                           </h2>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-xs sm:text-sm text-gray-500">
                             Set up projects and assign locations.
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                           {selectedProjectIds.length > 0 && (
                             <Button
                               variant="destructive"
+                              size="sm"
                               onClick={() => setShowBulkDeleteConfirm(true)}
-                              className="gap-2"
+                              className="gap-1.5 text-xs sm:text-sm flex-1 sm:flex-initial"
                             >
-                              <Trash2 className="h-4 w-4" />
-                              Delete Selected ({selectedProjectIds.length})
+                              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              <span className="hidden sm:inline">
+                                Delete Selected
+                              </span>
+                              <span className="sm:hidden">Delete</span> (
+                              {selectedProjectIds.length})
                             </Button>
                           )}
                           <Button
-                            onClick={() => setShowAddProject(true)}
-                            className="bg-orange-400 hover:bg-orange-500"
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 relative text-xs sm:text-sm flex-1 sm:flex-initial whitespace-nowrap"
+                            onClick={() => setShowExpiredProjects(true)}
                           >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add New Project
+                            <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            <span className="hidden sm:inline">
+                              Expired Projects
+                            </span>
+                            <span className="sm:hidden">Expired</span> (
+                            {getExpiredProjects().length})
+                            {getExpiredProjects().length > 0 && (
+                              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                {getExpiredProjects().length}
+                              </span>
+                            )}
+                          </Button>
+                          <Button
+                            onClick={() => setShowAddProject(true)}
+                            size="sm"
+                            className="bg-orange-400 hover:bg-orange-500 gap-1.5 text-xs sm:text-sm flex-1 sm:flex-initial"
+                          >
+                            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            <span className="hidden sm:inline">
+                              Add New Project
+                            </span>
+                            <span className="sm:hidden">Add</span>
                           </Button>
                         </div>
                       </div>
@@ -2136,22 +2416,33 @@ export default function BusinessSetup() {
                         onToggleSelect={toggleProjectSelect}
                         renderRow={(project: NewProject) => (
                           <>
-                            <td className="px-4 py-3">
-                              {project.project_name}
+                            <td className="px-2 py-3">
+                              <div className="text-sm font-medium text-gray-900 break-words leading-snug">
+                                {project.project_name}
+                              </div>
                             </td>
-                            <td className="px-4 py-3">
-                              {project.location_name}
+                            <td className="px-2 py-3">
+                              <div className="text-sm text-gray-700 break-words leading-snug">
+                                {project.location_name}
+                              </div>
                             </td>
-
-                            <td className="px-4 py-3">{project.start_date}</td>
-                            <td className="px-4 py-3">{project.end_date}</td>
-                            <td className="px-4 py-3">
-                              {
+                            <td className="px-2 py-3">
+                              <div className="text-sm text-gray-700 whitespace-nowrap">
+                                {formatDateForDisplay(project.start_date || "")}
+                              </div>
+                            </td>
+                            <td className="px-2 py-3">
+                              <div className="text-sm text-gray-700 whitespace-nowrap">
+                                {formatDateForDisplay(project.end_date || "")}
+                              </div>
+                            </td>
+                            <td className="px-2 py-3">
+                              <div className="text-sm font-medium text-gray-900 break-words leading-snug">
                                 <ConvertedAmount
                                   amount={project.budget || 0}
                                   currency={sessionData.user.currency}
                                 />
-                              }
+                              </div>
                             </td>
                           </>
                         )}
@@ -2193,18 +2484,12 @@ export default function BusinessSetup() {
       </Dialog>
 
       {/* Add Project Modal */}
-      <Dialog open={showAddProject} onOpenChange={setShowAddProject}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Adding New Project</DialogTitle>
-          </DialogHeader>
-          <ProjectForm
-            onClose={() => setShowAddProject(false)}
-            refetchProjects={refetchProjects}
-            sessionData={sessionData}
-          />
-        </DialogContent>
-      </Dialog>
+      <EnhancedProjectForm
+        isOpen={showAddProject}
+        onClose={() => setShowAddProject(false)}
+        onSuccess={refetchProjects}
+        mode="create"
+      />
 
       {/* Edit Location Modal */}
       <Dialog open={showEditLocation} onOpenChange={setShowEditLocation}>
@@ -2272,21 +2557,13 @@ export default function BusinessSetup() {
       </Dialog>
 
       {/* Edit Project Modal */}
-      <Dialog open={showEditProject} onOpenChange={setShowEditProject}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
-          </DialogHeader>
-          {selectedItem && (
-            <EditProjectForm
-              project={selectedItem}
-              onClose={() => setShowEditProject(false)}
-              refetchProjects={refetchProjects}
-              sessionData={sessionData}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <EnhancedProjectForm
+        isOpen={showEditProject}
+        onClose={() => setShowEditProject(false)}
+        onSuccess={refetchProjects}
+        editingProject={selectedItem}
+        mode="edit"
+      />
 
       {/* Delete Project Modal */}
       <Dialog open={showDeleteProject} onOpenChange={setShowDeleteProject}>
@@ -2360,6 +2637,254 @@ export default function BusinessSetup() {
             </Button>
             <Button variant="destructive" onClick={handleBulkDelete}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Expired Projects Modal */}
+      <Dialog open={showExpiredProjects} onOpenChange={setShowExpiredProjects}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Project Management
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Expired Projects Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-red-600 flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Expired Projects ({getExpiredProjects().length})
+                </h3>
+                {expiredProjectIds.length > 0 && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowExpiredDeleteConfirm(true)}
+                    className="gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Selected ({expiredProjectIds.length})
+                  </Button>
+                )}
+              </div>
+
+              {getExpiredProjects().length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No expired projects found</p>
+                </div>
+              ) : (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-red-50 px-4 py-2 border-b">
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="checkbox"
+                        checked={
+                          expiredProjectIds.length ===
+                          getExpiredProjects().length
+                        }
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setExpiredProjectIds(
+                              getExpiredProjects().map((proj) => proj.id)
+                            );
+                          } else {
+                            setExpiredProjectIds([]);
+                          }
+                        }}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm font-medium">Select All</span>
+                    </div>
+                  </div>
+                  <div className="divide-y">
+                    {getExpiredProjects().map((project: any) => (
+                      <div
+                        key={project.id}
+                        className="flex items-center justify-between p-4 hover:bg-gray-50"
+                      >
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="checkbox"
+                            checked={expiredProjectIds.includes(project.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setExpiredProjectIds((prev) => [
+                                  ...prev,
+                                  project.id,
+                                ]);
+                              } else {
+                                setExpiredProjectIds((prev) =>
+                                  prev.filter((id) => id !== project.id)
+                                );
+                              }
+                            }}
+                            className="h-4 w-4"
+                          />
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                              <Building2 className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium">
+                                {project.project_name}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {project.location_name}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-red-600">
+                            Expired:{" "}
+                            {new Date(project.end_date).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {Math.abs(
+                              getDaysUntilExpiry(project.end_date) || 0
+                            )}{" "}
+                            days ago
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Expiring Soon Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-amber-600 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Expiring Soon ({getExpiringSoonProjects().length})
+              </h3>
+
+              {getExpiringSoonProjects().length === 0 ? (
+                <div className="text-center py-6 text-gray-500">
+                  <p>No projects expiring in the next 30 days</p>
+                </div>
+              ) : (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="divide-y">
+                    {getExpiringSoonProjects().map((project: any) => (
+                      <div
+                        key={project.id}
+                        className="flex items-center justify-between p-4 hover:bg-gray-50"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                              <Building2 className="h-5 w-5 text-amber-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium">
+                                {project.project_name}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {project.location_name}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-amber-600">
+                            Expires:{" "}
+                            {new Date(project.end_date).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {getDaysUntilExpiry(project.end_date)} days
+                            remaining
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowExpiredProjects(false);
+                setExpiredProjectIds([]);
+              }}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Expired Projects Delete Confirmation Modal */}
+      <Dialog
+        open={showExpiredDeleteConfirm}
+        onOpenChange={setShowExpiredDeleteConfirm}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Expired Projects
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Are you sure you want to delete {expiredProjectIds.length} expired
+              project(s)?
+            </p>
+
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800 font-medium mb-2">
+                ⚠️ This action cannot be undone
+              </p>
+              <p className="text-sm text-red-700">
+                All project data, associated employees, and related information
+                will be permanently deleted.
+              </p>
+            </div>
+
+            <div className="max-h-32 overflow-y-auto">
+              <p className="text-sm font-medium mb-2">
+                Projects to be deleted:
+              </p>
+              <ul className="text-sm text-gray-600 space-y-1">
+                {expiredProjectIds.map((id) => {
+                  const project = projects.find((proj: any) => proj.id === id);
+                  return (
+                    <li key={id} className="flex items-center gap-2">
+                      <X className="h-3 w-3 text-red-500" />
+                      {project?.project_name || `Project ID: ${id}`}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowExpiredDeleteConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDeleteExpired}
+              className="gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete {expiredProjectIds.length} Project(s)
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -17,6 +17,10 @@ import {
   RefreshCw,
   ChevronUp,
   ChevronDown,
+  Calendar,
+  AlertTriangle,
+  Clock,
+  X,
 } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
@@ -197,6 +201,11 @@ export default function EmployeeManagement() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  
+  // State for expired contracts management
+  const [showExpiredContracts, setShowExpiredContracts] = useState(false);
+  const [expiredEmployeeIds, setExpiredEmployeeIds] = useState<string[]>([]);
+  const [showExpiredDeleteConfirm, setShowExpiredDeleteConfirm] = useState(false);
   const [filters, setFilters] = useState({
     trade: "",
     project: "",
@@ -360,11 +369,31 @@ export default function EmployeeManagement() {
           ...result.employees.errors,
         ];
         console.error("Upload errors:", allErrors);
-        toast({
-          title: "Partial Success",
-          description: `Some items had errors. Check console for details.`,
-          variant: "destructive",
-        });
+        
+        // Check specifically for trade rate mismatch errors
+        const tradeRateErrors = result.trades.errors.filter((error: string) => 
+          error.includes('mismatched rates') || error.includes('different rates')
+        );
+
+        if (tradeRateErrors.length > 0) {
+          toast({
+            title: "Trade Rate Validation Failed",
+            description: `${tradeRateErrors.length} trade(s) have rate mismatches. Only the first occurrence of each trade was processed.`,
+            variant: "destructive",
+          });
+          
+          // Show detailed trade rate errors
+          setCsvParseError(
+            `TRADE RATE VALIDATION ERRORS:\n${tradeRateErrors.join('\n')}\n\nOther errors: ${allErrors.filter(e => !tradeRateErrors.includes(e)).length}`
+          );
+        } else {
+          toast({
+            title: "Partial Success",
+            description: `Some items had errors. Check console for details.`,
+            variant: "destructive",
+          });
+          setCsvParseError(allErrors.join('\n'));
+        }
       }
 
       setCsvUploadModal(false);
@@ -646,6 +675,112 @@ export default function EmployeeManagement() {
     return `${currencyShort}${Number.parseFloat(amount).toLocaleString()}`;
   };
 
+  // Get employees with expired contracts
+  const getExpiredEmployees = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+    
+    return employees.filter((employee: any) => {
+      if (!employee.contract_finish_date) return false;
+      
+      const contractEndDate = new Date(employee.contract_finish_date);
+      contractEndDate.setHours(0, 0, 0, 0);
+      
+      return contractEndDate < today;
+    });
+  };
+
+  // Get employees with contracts expiring soon (within 30 days)
+  const getExpiringSoonEmployees = () => {
+    const today = new Date();
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(today.getDate() + 30);
+    
+    return employees.filter((employee: any) => {
+      if (!employee.contract_finish_date) return false;
+      
+      const contractEndDate = new Date(employee.contract_finish_date);
+      
+      return contractEndDate >= today && contractEndDate <= thirtyDaysFromNow;
+    });
+  };
+
+  // Calculate days until contract expiry
+  const getDaysUntilExpiry = (contractEndDate: string) => {
+    if (!contractEndDate) return null;
+    
+    const today = new Date();
+    const endDate = new Date(contractEndDate);
+    const timeDiff = endDate.getTime() - today.getTime();
+    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    
+    return daysDiff;
+  };
+
+  // Handle bulk deletion of expired employees
+  const handleBulkDeleteExpired = async () => {
+    if (expiredEmployeeIds.length === 0) {
+      toast({
+        title: "No Selection",
+        description: "Please select employees to delete",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      let successCount = 0;
+      let failedEmployees: string[] = [];
+
+      // Delete employees one by one and track results
+      for (const employeeId of expiredEmployeeIds) {
+        try {
+          await deleteEmployee(employeeId).unwrap();
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to delete employee ${employeeId}:`, error);
+          const employee = employees.find((emp: any) => emp.id === employeeId);
+          failedEmployees.push(employee?.username || `ID: ${employeeId}`);
+        }
+      }
+
+      // Show appropriate success/error messages
+      if (successCount === expiredEmployeeIds.length) {
+        toast({
+          title: "Success",
+          description: `${successCount} expired employee(s) deleted successfully`,
+        });
+      } else if (successCount > 0) {
+        toast({
+          title: "Partial Success",
+          description: `${successCount} employee(s) deleted successfully. ${failedEmployees.length} failed to delete.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: `Failed to delete employees: ${failedEmployees.join(", ")}`,
+          variant: "destructive",
+        });
+      }
+
+      // Reset selections and close modal
+      setExpiredEmployeeIds([]);
+      setShowExpiredDeleteConfirm(false);
+      setShowExpiredContracts(false);
+      
+      // Refresh employee data to reflect changes
+      refetchEmployees();
+    } catch (error) {
+      console.error("Error during bulk deletion:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred during deletion. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Filter employees based on selected filters
   const filteredEmployees = employees.filter((employee: any) => {
     if (filters.trade && employee.trade_position_id !== filters.trade)
@@ -773,22 +908,21 @@ export default function EmployeeManagement() {
       sessionData.user.companies?.[0]?.base_currency
     );
 
-    // --- Build employee object ---
-    const employeeToAdd: NewEmployee = {
+    // --- Build employee object with proper UUID and Date formatting ---
+    const employeeToAdd: any = {
+      id: crypto.randomUUID(), // Generate proper UUID
       username: newEmployee.username,
       trade_position_id: newEmployee.trade_position_id,
-      [getRateFieldName()]:
-        Number(newEmployee[getRateFieldName()]) > 0
-          ? (Number(newEmployee[getRateFieldName()]) * exchangeRate).toString()
-          : undefined,
-      contract_start_date: startDate,
-      contract_finish_date: finishDate,
+      contract_start_date: new Date(startDate), // Send as Date instance
+      contract_finish_date: finishDate ? new Date(finishDate) : undefined, // Send as Date instance
       days_projection: daysProjection,
       budget_baseline:
         Number(newEmployee.budget_baseline) > 0
           ? (Number(newEmployee.budget_baseline) * exchangeRate).toString()
           : undefined,
       company_id: newEmployee.company_id || sessionData.user.company_id,
+      created_date: new Date(), // Add required created_date field
+      projectId: null, // Optional project assignment
     };
 
     try {
@@ -927,6 +1061,21 @@ export default function EmployeeManagement() {
                 >
                   <Upload className="h-4 w-4" />
                   Upload CSV
+                </Button>
+              )}
+              {(permissions.manage_employees || permissions.full_access) && (
+                <Button
+                  variant="outline"
+                  className="gap-2 h-12 rounded-full relative"
+                  onClick={() => setShowExpiredContracts(true)}
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  Expired Contracts
+                  {getExpiredEmployees().length > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {getExpiredEmployees().length}
+                    </span>
+                  )}
                 </Button>
               )}
               {(permissions.manage_employees || permissions.full_access) && (
@@ -1327,12 +1476,15 @@ export default function EmployeeManagement() {
                       Trade Position
                     </label>
                     <Select
-                      onValueChange={(value) =>
+                      onValueChange={(value) => {
+                        const selectedTrade = tradesFetched.find((trade: any) => trade.id === value);
                         setNewEmployee({
                           ...newEmployee,
                           trade_position_id: value,
-                        })
-                      }
+                          daily_rate: selectedTrade?.daily_planned_cost || "",
+                          monthly_rate: selectedTrade?.monthly_planned_cost || "",
+                        });
+                      }}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select Trade Position" />
@@ -1357,13 +1509,13 @@ export default function EmployeeManagement() {
                     </Select>
                   </div>
 
-                  {/* Daily / Monthly Rate */}
+                  {/* Daily / Monthly Rate - Auto-populated from trade */}
                   <div className="space-y-2">
                     <label
                       htmlFor={getRateFieldName()}
                       className="text-sm font-medium"
                     >
-                      {isMonthlyRate ? "Monthly Rate" : "Daily Rate"}
+                      {isMonthlyRate ? "Monthly Rate" : "Daily Rate"} (Auto-filled from trade)
                     </label>
                     <div className="relative">
                       <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
@@ -1373,7 +1525,7 @@ export default function EmployeeManagement() {
                         id={getRateFieldName()}
                         name={getRateFieldName()}
                         type="number"
-                        placeholder="100.00"
+                        placeholder="Rate will be auto-filled when trade is selected"
                         value={newEmployee[getRateFieldName()] || ""}
                         onChange={(e) =>
                           setNewEmployee({
@@ -1382,8 +1534,14 @@ export default function EmployeeManagement() {
                           })
                         }
                         className="w-full pl-10 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                        disabled={!newEmployee.trade_position_id}
                       />
                     </div>
+                    {newEmployee.trade_position_id && (
+                      <p className="text-xs text-gray-500">
+                        Rate from selected trade: {newEmployee[getRateFieldName()]}. This is for reference only.
+                      </p>
+                    )}
                   </div>
 
                   {/* Contract Start Date */}
@@ -1755,6 +1913,241 @@ export default function EmployeeManagement() {
                 )}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Expired Contracts Modal */}
+      <Dialog open={showExpiredContracts} onOpenChange={setShowExpiredContracts}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Contract Management
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Expired Contracts Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-red-600 flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Expired Contracts ({getExpiredEmployees().length})
+                </h3>
+                {expiredEmployeeIds.length > 0 && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowExpiredDeleteConfirm(true)}
+                    disabled={isDeleting}
+                    className="gap-2"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4" />
+                        Delete Selected ({expiredEmployeeIds.length})
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+              
+              {getExpiredEmployees().length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No expired contracts found</p>
+                </div>
+              ) : (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-red-50 px-4 py-2 border-b">
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="checkbox"
+                        checked={expiredEmployeeIds.length === getExpiredEmployees().length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setExpiredEmployeeIds(getExpiredEmployees().map(emp => emp.id));
+                          } else {
+                            setExpiredEmployeeIds([]);
+                          }
+                        }}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm font-medium">Select All</span>
+                    </div>
+                  </div>
+                  <div className="divide-y">
+                    {getExpiredEmployees().map((employee: any) => (
+                      <div key={employee.id} className="flex items-center justify-between p-4 hover:bg-gray-50">
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="checkbox"
+                            checked={expiredEmployeeIds.includes(employee.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setExpiredEmployeeIds(prev => [...prev, employee.id]);
+                              } else {
+                                setExpiredEmployeeIds(prev => prev.filter(id => id !== employee.id));
+                              }
+                            }}
+                            className="h-4 w-4"
+                          />
+                          <Avatar className="h-10 w-10">
+                            <AvatarFallback>
+                              {employee.username?.charAt(0)?.toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{employee.username}</p>
+                            <p className="text-sm text-gray-500">
+                              {tradesFetched.find(t => t.id === employee.trade_position_id)?.trade_name || "Unknown Trade"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-red-600">
+                            Expired: {formatDate(employee.contract_finish_date)}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {Math.abs(getDaysUntilExpiry(employee.contract_finish_date) || 0)} days ago
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Expiring Soon Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-amber-600 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Expiring Soon ({getExpiringSoonEmployees().length})
+              </h3>
+              
+              {getExpiringSoonEmployees().length === 0 ? (
+                <div className="text-center py-6 text-gray-500">
+                  <p>No contracts expiring in the next 30 days</p>
+                </div>
+              ) : (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="divide-y">
+                    {getExpiringSoonEmployees().map((employee: any) => (
+                      <div key={employee.id} className="flex items-center justify-between p-4 hover:bg-gray-50">
+                        <div className="flex items-center gap-4">
+                          <Avatar className="h-10 w-10">
+                            <AvatarFallback>
+                              {employee.username?.charAt(0)?.toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{employee.username}</p>
+                            <p className="text-sm text-gray-500">
+                              {tradesFetched.find(t => t.id === employee.trade_position_id)?.trade_name || "Unknown Trade"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-amber-600">
+                            Expires: {formatDate(employee.contract_finish_date)}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {getDaysUntilExpiry(employee.contract_finish_date)} days remaining
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowExpiredContracts(false);
+                setExpiredEmployeeIds([]);
+              }}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Expired Employees Delete Confirmation Modal */}
+      <Dialog open={showExpiredDeleteConfirm} onOpenChange={setShowExpiredDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Expired Employees
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Are you sure you want to delete {expiredEmployeeIds.length} expired employee(s)?
+            </p>
+            
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800 font-medium mb-2">
+                ⚠️ This action cannot be undone
+              </p>
+              <p className="text-sm text-red-700">
+                All employee data, attendance records, and related information will be permanently deleted.
+              </p>
+            </div>
+            
+            <div className="max-h-32 overflow-y-auto">
+              <p className="text-sm font-medium mb-2">Employees to be deleted:</p>
+              <ul className="text-sm text-gray-600 space-y-1">
+                {expiredEmployeeIds.map(id => {
+                  const employee = employees.find((emp: any) => emp.id === id);
+                  return (
+                    <li key={id} className="flex items-center gap-2">
+                      <X className="h-3 w-3 text-red-500" />
+                      {employee?.username || `Employee ID: ${id}`}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setShowExpiredDeleteConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDeleteExpired}
+              disabled={isDeleting}
+              className="gap-2"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  Delete {expiredEmployeeIds.length} Employee(s)
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

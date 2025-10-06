@@ -67,11 +67,8 @@ function ConvertedAmount({
 
   useEffect(() => {
     const convert = async () => {
-      console.log("session company id",sessionData.user.companies[0].base_currency)
-
       try {
         if (!sessionData?.user?.companies[0]?.base_currency) return;
-        console.log(sessionData.user.companies[0].base_currency)
         
         const result = await convertCurrency(amount, currency, sessionData.user.companies[0].base_currency);
         setConvertedAmount(result.toLocaleString());
@@ -376,17 +373,8 @@ export default function Dashboard() {
   };
 
   const processEmployeeData = () => {
-    console.log("employees in filter", employees);
-
     // Apply filters to employees
     const filteredEmployees = employees.filter((employee: any) => {
-      console.log(
-        "check",
-        filters.search &&
-          !employee.username
-            ?.toLowerCase()
-            .includes(filters.search.toLowerCase())
-      );
       // Search filter
       if (
         filters.search &&
@@ -580,8 +568,6 @@ export default function Dashboard() {
     numberOfLateArrivals,
     payrollPercentage,
   } = processEmployeeData();
-  console.log("sessionData", sessionData);
-  console.log("permissions", permissions);
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />

@@ -5,7 +5,18 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, EyeOff, Mail, Lock, Loader2, ArrowLeft, ChevronLeft, ShieldCheck, Check, ChevronDown } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  Loader2,
+  ArrowLeft,
+  ChevronLeft,
+  ShieldCheck,
+  Check,
+  ChevronDown,
+} from "lucide-react";
 import { Logo } from "@/components/logo";
 import { useToast } from "@/hooks/use-toast";
 import { useLoginMutation } from "@/lib/redux/authSlice";
@@ -25,7 +36,9 @@ export default function SignIn() {
   });
   const [error, setError] = useState("");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
@@ -124,7 +137,7 @@ export default function SignIn() {
         err?.data?.message ||
         err?.message ||
         "An unexpected error occurred during login. Please try again.";
-        err?.data?.message ||
+      err?.data?.message ||
         err?.message ||
         "An unexpected error occurred during login. Please try again.";
       setError(errorMessage);
@@ -152,18 +165,22 @@ export default function SignIn() {
         <div className="flex flex-col items-center justify-center">
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
-            <Link 
-                    href="/" 
-                    className="flex w-full mb-[50px] justify-start items-center text-sm font-medium text-gray-600 hover:text-orange-600 transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4 mr-1" />
-                    Back to Home
-                  </Link>
+              <Link
+                href="/"
+                className="flex w-full mb-[50px] justify-start items-center text-sm font-medium text-gray-600 hover:text-orange-600 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Back to Home
+              </Link>
               <div className="flex justify-center mb-4">
                 <Logo className="h-12 w-auto" />
               </div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-              <p className="text-gray-600">Sign in to your account to continue</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Welcome Back
+              </h1>
+              <p className="text-gray-600">
+                Sign in to your account to continue
+              </p>
             </div>
 
             <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
@@ -176,7 +193,10 @@ export default function SignIn() {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Email address
                   </label>
                   <div className="relative">
@@ -199,10 +219,16 @@ export default function SignIn() {
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="password"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       Password
                     </label>
-                    <Link href="/forgot-password" className="text-sm font-medium text-orange-600 hover:text-orange-500">
+                    <Link
+                      href="/forgot-password"
+                      className="text-sm font-medium text-orange-600 hover:text-orange-500"
+                    >
                       Forgot password?
                     </Link>
                   </div>
@@ -236,7 +262,10 @@ export default function SignIn() {
                 </div>
 
                 <div>
-                  <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="role"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Role
                   </label>
                   <div className="relative">
@@ -253,7 +282,9 @@ export default function SignIn() {
                       <option value="admin">Admin</option>
                       <option value="hr_manager">HR Manager</option>
                       <option value="employee">Employee</option>
-                      <option value="department_manager">Department Manager</option>
+                      <option value="department_manager">
+                        Department Manager
+                      </option>
                     </select>
                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                       <ChevronDown className="h-5 w-5 text-gray-400" />
@@ -271,7 +302,10 @@ export default function SignIn() {
                       onChange={handleChange}
                       className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                     />
-                    <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
+                    <label
+                      htmlFor="rememberMe"
+                      className="ml-2 block text-sm text-gray-700"
+                    >
                       Remember me
                     </label>
                   </div>
@@ -289,7 +323,7 @@ export default function SignIn() {
                         Signing in...
                       </>
                     ) : (
-                      'Sign in'
+                      "Sign in"
                     )}
                   </button>
                 </div>
@@ -297,8 +331,11 @@ export default function SignIn() {
 
               <div className="mt-6 text-center">
                 <p className="text-sm text-gray-600">
-                  Don't have an account?{' '}
-                  <Link href="/sign-up" className="font-medium text-orange-600 hover:text-orange-500">
+                  Don't have an account?{" "}
+                  <Link
+                    href="/sign-up"
+                    className="font-medium text-orange-600 hover:text-orange-500"
+                  >
                     Sign up
                   </Link>
                 </p>

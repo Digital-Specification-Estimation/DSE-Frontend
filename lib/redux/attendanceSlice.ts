@@ -46,6 +46,7 @@ export const attendanceApi = createApi({
     getAttendance: builder.query({
       query: ({ daysAgo, status }) => `time/${daysAgo}/${status}`,
     }),
+    
     getAttendanceByDate: builder.query({
       query: ({ date, status }) => `by-date?date=${date}&status=${status}`,
     }),
@@ -55,27 +56,61 @@ export const attendanceApi = createApi({
         method: "DELETE",
       }),
     }),
-    getDailyAttendanceMonthly: builder.query<any, void>({
-      query: () => "daily-percentage-monthly",
-    }),
-    getAttendanceHistory: builder.query({
-      query: ({ employeeId, startDate, endDate }: { employeeId: string; startDate?: string; endDate?: string }) => {
+    getUserAttendanceHistory: builder.query({
+      query: ({ employeeId, startDate, endDate }) => {
+        let url = `history/${employeeId}`;
         const params = new URLSearchParams();
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
-        
-        const queryString = params.toString();
-        return `history/${employeeId}${queryString ? `?${queryString}` : ''}`;
+        if (params.toString()) url += `?${params.toString()}`;
+        return url;
       },
     }),
     getAttendancesWithReasons: builder.query({
-      query: ({ employeeId, startDate, endDate }: { employeeId: string; startDate?: string; endDate?: string }) => {
+      query: ({ employeeId, startDate, endDate }) => {
+        let url = `with-reason/${employeeId}`;
         const params = new URLSearchParams();
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
-        
-        const queryString = params.toString();
-        return `with-reasons/${employeeId}${queryString ? `?${queryString}` : ''}`;
+        if (params.toString()) url += `?${params.toString()}`;
+        return url;
+      },
+    }),
+    getDailyAttendancePercentage: builder.query({
+      query: (companyId) => `daily-percentage/${companyId}`,
+    }),
+    getDailyAttendanceMonthly: builder.query({
+      query: (companyId) => `daily-monthly/${companyId}`,
+    }),
+    // New payroll calculation endpoints
+    calculateEmployeePayroll: builder.query({
+      query: ({ employeeId, startDate, endDate }) => {
+        let url = `payroll/${employeeId}`;
+        const params = new URLSearchParams();
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        if (params.toString()) url += `?${params.toString()}`;
+        return url;
+      },
+    }),
+    calculateCompanyPayroll: builder.query({
+      query: ({ companyId, startDate, endDate }) => {
+        let url = `payroll/company/${companyId}`;
+        const params = new URLSearchParams();
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        if (params.toString()) url += `?${params.toString()}`;
+        return url;
+      },
+    }),
+    calculateProjectPayroll: builder.query({
+      query: ({ projectId, companyId, startDate, endDate }) => {
+        let url = `payroll/project/${projectId}`;
+        const params = new URLSearchParams();
+        params.append('companyId', companyId);
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        return `${url}?${params.toString()}`;
       },
     }),
   }),
@@ -84,13 +119,17 @@ export const attendanceApi = createApi({
 export const {
   useAddAttendanceMutation,
   useEditAttendanceMutation,
+  useEditUserStatusMutation,
   useDeleteAttendanceMutation,
+  useDeleteManyAttendancesMutation,
   useAddReasonMutation,
   useGetAttendanceQuery,
-  useEditUserStatusMutation,
   useGetAttendanceByDateQuery,
-  useDeleteManyAttendancesMutation,
-  useGetDailyAttendanceMonthlyQuery,
-  useGetAttendanceHistoryQuery,
+  useGetUserAttendanceHistoryQuery,
   useGetAttendancesWithReasonsQuery,
+  useGetDailyAttendancePercentageQuery,
+  useGetDailyAttendanceMonthlyQuery,
+  useCalculateEmployeePayrollQuery,
+  useCalculateCompanyPayrollQuery,
+  useCalculateProjectPayrollQuery,
 } = attendanceApi;

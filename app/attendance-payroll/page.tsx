@@ -61,7 +61,6 @@ function ConvertedAmount({
       convert()
     }
   }, [amount, currency])
-  console.log("convertedAmount", convertedAmount)
   return (
     <>
       {showCurrency
@@ -105,7 +104,6 @@ export default function AttendancePayroll() {
     skip: false,
   })
   const [addReason, { isLoading: isAdding }] = useAddReasonMutation()
-  console.log("session data ", sessionData)
   useEffect(() => {
     if (sessionData?.user?.settings && sessionData.user.current_role) {
       const userPermission = sessionData.user.settings.find(
@@ -118,7 +116,6 @@ export default function AttendancePayroll() {
       }
     }
   }, [sessionData.user.settings, sessionData.user.current_role])
-  console.log("permissions", permissions)
 
   const splitCurrencyValue = (str: string | undefined | null) => {
     if (!str) return null
@@ -205,25 +202,84 @@ export default function AttendancePayroll() {
   }, [tradesData, projectsFetched])
 
 
-  // Add this useEffect to calculate totals
-  const totals = useMemo(() => {
+  // Calculate totals and enhanced employee data
+  const { totals, enhancedEmployees } = useMemo(() => {
     let baseline = 0
     let actualPayroll = 0
     let daysWorked = 0
     let dailyActualPayroll = 0
+    const enhanced = []
 
-    employees.forEach((employee: any) => {
+    for (const employee of employees) {
       baseline += Number(employee.budget_baseline || 0)
-      daysWorked += Number(employee.days_worked || 0)
-      actualPayroll += Number(employee.totalActualPayroll || 0)
-      dailyActualPayroll += Number(employee.daily_rate || 0)
-    })
+      
+      // Calculate working days from attendance: present + late + sick + vacation
+      const attendance = employee.attendance || []
+      const presentDays = attendance.filter((a: any) => a.status?.toLowerCase() === 'present').length
+      const lateDays = attendance.filter((a: any) => a.status?.toLowerCase() === 'late').length
+      const sickDays = attendance.filter((a: any) => a.reason?.toLowerCase() === 'sick').length
+      const vacationDays = attendance.filter((a: any) => a.reason?.toLowerCase() === 'vacation').length
+      const employeeWorkingDays = presentDays + lateDays + sickDays + vacationDays
+      
+      // Debug logging for first employee
+      if (employees.indexOf(employee) === 0) {
+        console.log('Employee:', employee.username);
+        console.log('Attendance records:', attendance);
+        console.log('Present days:', presentDays);
+        console.log('Late days:', lateDays);
+        console.log('Sick days:', sickDays);
+        console.log('Vacation days:', vacationDays);
+        console.log('Total working days:', employeeWorkingDays);
+        console.log('Employee daily rate:', employee.daily_rate);
+        console.log('Trade position:', employee.trade_position);
+      }
+      
+      daysWorked += employeeWorkingDays
+      
+      // Calculate actual payroll based on working days
+      // Get daily rate from employee or trade position
+      let dailyRate = Number(employee.daily_rate || 0)
+      if (dailyRate === 0 && employee.trade_position?.daily_planned_cost) {
+        dailyRate = Number(employee.trade_position.daily_planned_cost)
+      }
+      // If still 0 and monthly rate exists, convert monthly to daily
+      if (dailyRate === 0 && employee.trade_position?.monthly_planned_cost) {
+        dailyRate = Number(employee.trade_position.monthly_planned_cost) / 30
+      }
+      
+      const employeeActualPayroll = employeeWorkingDays * dailyRate
+      
+      // Debug logging for first employee (continued)
+      if (employees.indexOf(employee) === 0) {
+        console.log('Calculated daily rate:', dailyRate);
+        console.log('Employee actual payroll:', employeeActualPayroll);
+      }
+      
+      // Add deductions (late penalties and absent deductions)
+      const absentDays = attendance.filter((a: any) => a.status?.toLowerCase() === 'absent').length
+      const lateDeduction = lateDays * (dailyRate * 0.1) // 10% penalty per late day
+      const absentDeduction = absentDays * dailyRate // Full daily rate per absent day
+      const netPayroll = employeeActualPayroll - lateDeduction - absentDeduction
+      
+      actualPayroll += netPayroll
+      dailyActualPayroll += dailyRate
+      
+      // Create enhanced employee object with calculated values
+      enhanced.push({
+        ...employee,
+        days_worked: employeeWorkingDays,
+        totalActualPayroll: netPayroll
+      })
+    }
 
     return {
-      totalBaseline: baseline,
-      totalActualPayroll: actualPayroll,
-      totalDaysWorked: daysWorked,
-      totalDailyActuallPayroll: dailyActualPayroll,
+      totals: {
+        totalBaseline: baseline,
+        totalActualPayroll: actualPayroll,
+        totalDaysWorked: daysWorked,
+        totalDailyActuallPayroll: dailyActualPayroll,
+      },
+      enhancedEmployees: enhanced
     }
   }, [employees])
 
@@ -274,7 +330,7 @@ export default function AttendancePayroll() {
       return
     }
 
-    if (!employees || employees.length === 0) {
+    if (!enhancedEmployees || enhancedEmployees.length === 0) {
       toast({
         title: "No Employees",
         description: "There are no employees to generate payslips for.",
@@ -293,10 +349,11 @@ export default function AttendancePayroll() {
 
       await new Promise((resolve) => setTimeout(resolve, 500))
 
-      for (const employee of employees) {
+      for (const employee of enhancedEmployees) {
         try {
           const doc = generateSinglePayslip(employee)
-          doc.save(`payslip-${employee.username.replace(/\s+/g, "-")}-${Date.now()}.pdf`)
+          const fileName = `payslip_${employee.username.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
+          doc.save(fileName)
 
           await new Promise((resolve) => setTimeout(resolve, 200))
         } catch (error) {
@@ -313,7 +370,7 @@ export default function AttendancePayroll() {
 
       toast({
         title: "Payslips Generated",
-        description: `Successfully processed ${employees.length} employees.`,
+        description: `Successfully processed ${enhancedEmployees.length} employees.`,
       })
     } catch (error) {
       console.error("Error in payslip generation process:", error)
@@ -351,112 +408,167 @@ export default function AttendancePayroll() {
 
   const generateSinglePayslip = (employee: any) => {
     const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.width
+    const margin = 20
+    let yPosition = 30
 
+    // Helper functions
+    const addText = (text: string, x: number, y: number, options?: any) => {
+      doc.text(text, x, y, options)
+    }
+
+    const addLine = (x1: number, y1: number, x2: number, y2: number) => {
+      doc.line(x1, y1, x2, y2)
+    }
+
+    const formatCurrency = (value: number) => {
+      return `${currencyShort} ${(value * currencyValue).toLocaleString()}`
+    }
+
+    // Document properties
     doc.setProperties({
       title: `Payslip - ${employee.username}`,
       subject: "Employee Payslip",
-      author: "Construction Company",
-      creator: "Payroll System",
+      author: (sessionData?.user as any)?.companies?.[0]?.name || "Construction Company",
+      creator: "DSE Payroll System",
     })
 
+    // Company Header
     doc.setFontSize(20)
-    doc.setTextColor(33, 33, 33)
-    doc.text("CONSTRUCTION COMPANY", 105, 20, { align: "center" })
+    doc.setFont('helvetica', 'bold')
+    addText('PAYSLIP', pageWidth / 2, yPosition, { align: 'center' })
+    
+    yPosition += 15
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    
+    // Contract period calculation
+    const contractStartDate = employee.contract_start_date ? new Date(employee.contract_start_date) : new Date()
+    const contractEndDate = employee.contract_finish_date ? new Date(employee.contract_finish_date) : new Date()
+    const periodText = `${contractStartDate.toLocaleDateString()} - ${contractEndDate.toLocaleDateString()}`
+    
+    addText(`Period: ${periodText}`, pageWidth / 2, yPosition, { align: 'center' })
+    
+    yPosition += 30
 
+    // Employee Information
     doc.setFontSize(14)
-    doc.text("EMPLOYEE PAYSLIP", 105, 30, { align: "center" })
-
+    doc.setFont('helvetica', 'bold')
+    addText('Employee Information', margin, yPosition)
+    
+    yPosition += 15
     doc.setFontSize(10)
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 40, {
-      align: "center",
-    })
+    doc.setFont('helvetica', 'normal')
+    addText(`Name: ${employee.username}`, margin, yPosition)
+    yPosition += 10
+    addText(`Employee ID: ${employee.id}`, margin, yPosition)
+    yPosition += 10
+    
+    const salaryCalculation = (sessionData?.user as any)?.salary_calculation || "daily rate"
+    addText(`Salary Type: ${salaryCalculation}`, margin, yPosition)
+    
+    yPosition += 20
 
-    doc.setFontSize(12)
-    doc.text("Employee Information", 20, 55)
+    // Calculate attendance data
+    const presentDays = employee.attendance?.filter((a: any) => a.status?.toLowerCase() === 'present').length || 0
+    const lateDays = employee.attendance?.filter((a: any) => a.status?.toLowerCase() === 'late').length || 0
+    const absentDays = employee.attendance?.filter((a: any) => a.status?.toLowerCase() === 'absent').length || 0
+    const sickDays = employee.attendance?.filter((a: any) => a.reason?.toLowerCase() === 'sick').length || 0
+    const vacationDays = employee.attendance?.filter((a: any) => a.reason?.toLowerCase() === 'vacation').length || 0
+    const workingDays = presentDays + lateDays + sickDays + vacationDays
+
+    // Calculate earnings
+    const dailyRate = Number(employee.daily_rate) || 0
+    const monthlyRate = Number(employee.monthly_rate) || 0
+    
+    let baseSalary = 0
+    if (salaryCalculation === "monthly rate") {
+      baseSalary = monthlyRate
+    } else {
+      baseSalary = workingDays * dailyRate
+    }
+
+    // Calculate deductions
+    const lateDeduction = lateDays * (dailyRate * 0.1) // 10% penalty per late day
+    const absentDeduction = absentDays * dailyRate // Full daily rate per absent day
+    const totalDeductions = lateDeduction + absentDeduction
+    const netSalary = baseSalary - totalDeductions
+
+    // Earnings Section
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    addText('EARNINGS', margin, yPosition)
+    
+    yPosition += 15
+    addLine(margin, yPosition, pageWidth - margin, yPosition)
+    yPosition += 10
+    
     doc.setFontSize(10)
-    doc.text(`Name: ${employee.username}`, 20, 65)
-    doc.text(`Position: ${employee.trade_position?.trade_name || "N/A"}`, 20, 72)
-    doc.text(`Employee ID: ${employee.id}`, 20, 79)
+    doc.setFont('helvetica', 'normal')
+    addText(`Base Salary (${salaryCalculation})`, margin, yPosition)
+    addText(formatCurrency(baseSalary), pageWidth - margin - 50, yPosition)
+    yPosition += 10
+    addText(`Working Days: ${workingDays} (Present: ${presentDays}, Late: ${lateDays}, Sick: ${sickDays}, Vacation: ${vacationDays})`, margin, yPosition)
+    yPosition += 10
+    addText(`Absent Days: ${absentDays}`, margin, yPosition)
+    
+    yPosition += 20
 
-    const today = new Date()
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-
-    doc.setFontSize(12)
-    doc.text("Pay Period", 120, 55)
+    // Deductions Section
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    addText('DEDUCTIONS', margin, yPosition)
+    
+    yPosition += 15
+    addLine(margin, yPosition, pageWidth - margin, yPosition)
+    yPosition += 10
+    
     doc.setFontSize(10)
-    doc.text(`From: ${firstDay.toLocaleDateString()}`, 120, 65)
-    doc.text(`To: ${lastDay.toLocaleDateString()}`, 120, 72)
+    doc.setFont('helvetica', 'normal')
+    
+    if (lateDeduction > 0) {
+      addText(`Late Arrival Penalty (${lateDays} days)`, margin, yPosition)
+      addText(`-${formatCurrency(lateDeduction)}`, pageWidth - margin - 50, yPosition)
+      yPosition += 10
+    }
+    
+    if (absentDeduction > 0) {
+      addText(`Absent Days (${absentDays} days)`, margin, yPosition)
+      addText(`-${formatCurrency(absentDeduction)}`, pageWidth - margin - 50, yPosition)
+      yPosition += 10
+    }
 
-    const daysWorked = employee.attendance?.length || 0
-    const dailyRate = Number(employee.daily_rate) || 100
+    if (totalDeductions === 0) {
+      addText('No deductions for this period', margin, yPosition)
+      yPosition += 10
+    }
 
-    const regularPay = dailyRate * daysWorked
-    const overtimeHours = employee.overtime_hours || 0
-    const overtimeRate = Number(employee.overtime_rate) || dailyRate / 8
-    const overtimePay = overtimeHours * overtimeRate
+    yPosition += 20
 
-    const taxDeduction = regularPay * 0.1
-    const insuranceDeduction = 1000
-    const totalDeductions = taxDeduction + insuranceDeduction
-
-    const totalEarnings = regularPay + overtimePay
-    const netPay = totalEarnings - totalDeductions
-
-    const formatCurrency = (value: number) => `${currencyShort}${value.toLocaleString()}`
-
+    // Total Section
+    addLine(margin, yPosition, pageWidth - margin, yPosition)
+    yPosition += 15
+    
     doc.setFontSize(12)
-    doc.text("Earnings", 20, 95)
+    doc.setFont('helvetica', 'bold')
+    addText('Total Deductions:', margin, yPosition)
+    addText(`-${formatCurrency(totalDeductions)}`, pageWidth - margin - 50, yPosition)
+    
+    yPosition += 20
+    addLine(margin, yPosition, pageWidth - margin, yPosition)
+    yPosition += 15
+    
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    addText('NET SALARY:', margin, yPosition)
+    addText(formatCurrency(netSalary), pageWidth - margin - 70, yPosition)
 
-    autoTable(doc, {
-      startY: 100,
-      head: [["Description", "Rate", "Units", "Amount"]],
-      body: [
-        ["Regular Pay", formatCurrency(dailyRate), `${daysWorked} days`, formatCurrency(regularPay)],
-        ["Overtime", formatCurrency(overtimeRate), `${overtimeHours} hours`, formatCurrency(overtimePay)],
-        ["", "", "Total Earnings", formatCurrency(totalEarnings)],
-      ],
-      theme: "grid",
-      headStyles: { fillColor: [66, 66, 66] },
-    })
-
-    const deductionsStartY = (doc as any).lastAutoTable.finalY + 10
-    doc.setFontSize(12)
-    doc.text("Deductions", 20, deductionsStartY)
-
-    autoTable(doc, {
-      startY: deductionsStartY + 5,
-      head: [["Description", "Amount"]],
-      body: [
-        ["Tax", formatCurrency(taxDeduction)],
-        ["Insurance", formatCurrency(insuranceDeduction)],
-        ["", formatCurrency(totalDeductions)],
-      ],
-      theme: "grid",
-      headStyles: { fillColor: [66, 66, 66] },
-    })
-
-    const netPayStartY = (doc as any).lastAutoTable.finalY + 10
-    autoTable(doc, {
-      startY: netPayStartY,
-      startY: netPayStartY,
-      head: [["Net Pay", formatCurrency(netPay)]],
-      body: [],
-      theme: "grid",
-      headStyles: {
-        fillColor: [33, 33, 33],
-        fontSize: 14,
-        halign: "center",
-      },
-    })
-
+    // Footer
+    yPosition += 40
     doc.setFontSize(8)
-    doc.text(
-      "This is a computer-generated document and does not require a signature.",
-      105,
-      doc.internal.pageSize.height - 10,
-      { align: "center" },
-    )
+    doc.setFont('helvetica', 'normal')
+    addText(`Generated on: ${new Date().toLocaleDateString()}`, margin, yPosition)
+    addText(`Company: ${(sessionData?.user as any)?.companies?.[0]?.name || "Construction Company"}`, margin, yPosition + 8)
 
     return doc
   }
@@ -484,121 +596,299 @@ export default function AttendancePayroll() {
       setIsGeneratingReport(true)
 
       toast({
-        title: "Generating Report",
-        description: "Please wait while we generate your payroll report...",
+        title: "Generating Comprehensive Report",
+        description: "Please wait while we generate your detailed payroll report with real-time data...",
       })
 
       const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.width
+      const margin = 20
+      let yPosition = 30
 
+      // Helper functions
+      const addText = (text: string, x: number, y: number, options?: any) => {
+        doc.text(text, x, y, options)
+      }
+
+      const checkPageBreak = (requiredSpace: number) => {
+        if (yPosition + requiredSpace > doc.internal.pageSize.height - 20) {
+          doc.addPage()
+          yPosition = 30
+          return true
+        }
+        return false
+      }
+
+      // Document properties
       doc.setProperties({
-        title: "Payroll Report",
-        subject: "Monthly Payroll Summary",
-        author: "Construction Company",
-        creator: "Payroll System",
+        title: "Comprehensive Payroll Report",
+        subject: "Detailed Company Payroll Analysis",
+        author: (sessionData?.user as any)?.companies?.[0]?.name || "Construction Company",
+        creator: "DSE Payroll System",
       })
 
-      doc.setFontSize(20)
+      // Header
+      doc.setFontSize(24)
+      doc.setFont('helvetica', 'bold')
       doc.setTextColor(33, 33, 33)
-      doc.text("CONSTRUCTION COMPANY", 105, 20, { align: "center" })
-      doc.setFontSize(14)
-      doc.text("PAYROLL REPORT", 105, 30, { align: "center" })
+      addText((sessionData?.user as any)?.companies?.[0]?.name || "CONSTRUCTION COMPANY", pageWidth / 2, yPosition, { align: "center" })
+      
+      yPosition += 15
+      doc.setFontSize(18)
+      addText("COMPREHENSIVE PAYROLL REPORT", pageWidth / 2, yPosition, { align: "center" })
+      
+      yPosition += 10
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'normal')
+      addText(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, pageWidth / 2, yPosition, { align: "center" })
+      
+      yPosition += 5
+      addText(`Report Period: ${new Date().toLocaleDateString()}`, pageWidth / 2, yPosition, { align: "center" })
+      
+      yPosition += 20
 
-      doc.setFontSize(10)
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 40, {
-        align: "center",
-      })
-
+      // Calculate comprehensive statistics
+      let totalEmployees = employees.length
       let totalBudget = 0
       let totalActual = 0
       let totalDays = 0
+      let totalPresentDays = 0
+      let totalLateDays = 0
+      let totalAbsentDays = 0
       let totalEarnings = 0
+      let totalDeductions = 0
 
-      employees.forEach(
-        (employee: {
-          attendance: string | any[]
-          daily_rate: any
-          budget_baseline: any
-        }) => {
-          const daysWorked = employee.attendance?.length || 0
-          const dailyRate = Number(employee.daily_rate) || 0
-          totalBudget += Number(employee.budget_baseline) || 0
-          totalActual += daysWorked * dailyRate
-          totalDays += daysWorked
-          totalEarnings += daysWorked * dailyRate
-        },
-      )
+      // Group by trades and projects
+      const tradeStats = new Map()
+      const projectStats = new Map()
 
-      doc.setFontSize(12)
-      doc.text("Payroll Summary", 20, 55)
+      employees.forEach((employee: any) => {
+        const daysWorked = employee.attendance?.filter((a: any) => a.status === 'present' || a.status === 'late').length || 0
+        const presentDays = employee.attendance?.filter((a: any) => a.status === 'present').length || 0
+        const lateDays = employee.attendance?.filter((a: any) => a.status === 'late').length || 0
+        const absentDays = employee.attendance?.filter((a: any) => a.status === 'absent').length || 0
+        
+        const dailyRate = Number(employee.daily_rate) || 0
+        const monthlyRate = Number(employee.monthly_rate) || 0
+        const budgetBaseline = Number(employee.budget_baseline) || 0
+        
+        // Calculate earnings based on salary calculation preference
+        const salaryCalculation = (sessionData?.user as any)?.salary_calculation || "daily rate"
+        let earnings = 0
+        if (salaryCalculation === "monthly rate") {
+          earnings = monthlyRate
+        } else {
+          earnings = daysWorked * dailyRate
+        }
 
-      autoTable(doc, {
-        startY: 60,
-        head: [["Metric", "Value"]],
-        body: [
-          ["Total Employees", employees.length],
-          ["Total Days Worked", totalDays],
-          ["Total Budget", `${currencyShort}${(totalBudget * currencyValue).toLocaleString()}`],
-          ["Total Actual Payroll", `${currencyShort}${totalActual.toLocaleString()}`],
-          ["Variance", `${currencyShort}${((totalBudget - totalActual) * currencyValue).toLocaleString()}`],
-        ],
-        theme: "grid",
-        headStyles: { fillColor: [66, 66, 66] },
+        // Calculate automatic deductions
+        const lateDeduction = lateDays * (dailyRate * 0.1) // 10% penalty per late day
+        const absentDeduction = absentDays * dailyRate // Full daily rate per absent day
+        const employeeDeductions = lateDeduction + absentDeduction
+
+        totalBudget += budgetBaseline
+        totalActual += earnings
+        totalDays += (employee.attendance?.length || 0)
+        totalPresentDays += presentDays
+        totalLateDays += lateDays
+        totalAbsentDays += absentDays
+        totalEarnings += earnings
+        totalDeductions += employeeDeductions
+
+        // Trade statistics
+        const tradeName = employee.trade_position?.trade_name || "Unassigned"
+        if (!tradeStats.has(tradeName)) {
+          tradeStats.set(tradeName, {
+            employees: 0,
+            totalEarnings: 0,
+            totalDays: 0,
+            avgDailyRate: 0,
+            totalRates: 0
+          })
+        }
+        const tradeData = tradeStats.get(tradeName)
+        tradeData.employees += 1
+        tradeData.totalEarnings += earnings
+        tradeData.totalDays += daysWorked
+        tradeData.totalRates += dailyRate
+        tradeData.avgDailyRate = tradeData.totalRates / tradeData.employees
       })
 
-      const finalY = (doc as any).lastAutoTable.finalY + 15
-      doc.setFontSize(12)
-      doc.text("Employee Details", 20, finalY)
+      // Executive Summary
+      doc.setFontSize(16)
+      doc.setFont('helvetica', 'bold')
+      addText("EXECUTIVE SUMMARY", margin, yPosition)
+      yPosition += 15
 
-      const employeeData = employees.map(
-        (employee: {
-          attendance: string | any[]
-          daily_rate: any
-          username: any
-          trade_position: { trade_name: any }
-        }) => {
-          const daysWorked = employee.attendance?.length || 0
-          const dailyRate = Number(employee.daily_rate) || 0
-          const earnings = daysWorked * dailyRate
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
 
-          return [
-            employee.username,
-            employee.trade_position?.trade_name || "N/A",
-            `${currencyShort}${(dailyRate * currencyValue).toLocaleString()}`,
-            daysWorked,
-            `${currencyShort}${(earnings * currencyValue).toLocaleString()}`,
-          ]
-        },
-      )
+      const summaryData = [
+        ["Total Employees", totalEmployees.toString()],
+        ["Total Working Days", totalPresentDays.toString()],
+        ["Total Late Days", totalLateDays.toString()],
+        ["Total Absent Days", totalAbsentDays.toString()],
+        ["Attendance Rate", `${totalDays > 0 ? ((totalPresentDays / totalDays) * 100).toFixed(1) : 0}%`],
+        ["Total Budget Allocated", `${currencyShort} ${(totalBudget * currencyValue).toLocaleString()}`],
+        ["Total Actual Payroll", `${currencyShort} ${(totalActual * currencyValue).toLocaleString()}`],
+        ["Total Deductions", `${currencyShort} ${(totalDeductions * currencyValue).toLocaleString()}`],
+        ["Net Payroll", `${currencyShort} ${((totalActual - totalDeductions) * currencyValue).toLocaleString()}`],
+        ["Budget Variance", `${currencyShort} ${((totalBudget - totalActual) * currencyValue).toLocaleString()}`],
+        ["Cost per Working Day", `${currencyShort} ${totalPresentDays > 0 ? ((totalActual / totalPresentDays) * currencyValue).toLocaleString() : 0}`],
+      ]
 
       autoTable(doc, {
-        startY: finalY + 5,
-        head: [["Name", "Position", "Daily Rate", "Days Worked", "Earnings"]],
+        startY: yPosition,
+        head: [["Metric", "Value"]],
+        body: summaryData,
+        theme: "grid",
+        headStyles: { fillColor: [52, 152, 219], textColor: 255 },
+        styles: { fontSize: 9 },
+        margin: { left: margin, right: margin },
+      })
+
+      yPosition = (doc as any).lastAutoTable.finalY + 20
+      checkPageBreak(60)
+
+      // Trade Analysis
+      doc.setFontSize(16)
+      doc.setFont('helvetica', 'bold')
+      addText("TRADE ANALYSIS", margin, yPosition)
+      yPosition += 15
+
+      const tradeData = Array.from(tradeStats.entries()).map(([trade, stats]: [string, any]) => [
+        trade,
+        stats.employees.toString(),
+        `${currencyShort} ${(stats.avgDailyRate * currencyValue).toLocaleString()}`,
+        stats.totalDays.toString(),
+        `${currencyShort} ${(stats.totalEarnings * currencyValue).toLocaleString()}`,
+        `${currencyShort} ${stats.totalDays > 0 ? ((stats.totalEarnings / stats.totalDays) * currencyValue).toLocaleString() : 0}`
+      ])
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [["Trade", "Employees", "Avg Daily Rate", "Total Days", "Total Earnings", "Cost/Day"]],
+        body: tradeData,
+        theme: "grid",
+        headStyles: { fillColor: [46, 125, 50], textColor: 255 },
+        styles: { fontSize: 8 },
+        margin: { left: margin, right: margin },
+      })
+
+      yPosition = (doc as any).lastAutoTable.finalY + 20
+      checkPageBreak(60)
+
+      // Detailed Employee Report
+      doc.setFontSize(16)
+      doc.setFont('helvetica', 'bold')
+      addText("DETAILED EMPLOYEE REPORT", margin, yPosition)
+      yPosition += 15
+
+      const employeeData = employees.map((employee: any) => {
+        const presentDays = employee.attendance?.filter((a: any) => a.status === 'present').length || 0
+        const lateDays = employee.attendance?.filter((a: any) => a.status === 'late').length || 0
+        const absentDays = employee.attendance?.filter((a: any) => a.status === 'absent').length || 0
+        const daysWorked = presentDays + lateDays
+        
+        const dailyRate = Number(employee.daily_rate) || 0
+        const salaryCalculation = (sessionData?.user as any)?.salary_calculation || "daily rate"
+        
+        let grossEarnings = 0
+        if (salaryCalculation === "monthly rate") {
+          grossEarnings = Number(employee.monthly_rate) || 0
+        } else {
+          grossEarnings = daysWorked * dailyRate
+        }
+
+        const lateDeduction = lateDays * (dailyRate * 0.1)
+        const absentDeduction = absentDays * dailyRate
+        const totalDeductions = lateDeduction + absentDeduction
+        const netEarnings = grossEarnings - totalDeductions
+
+        const attendanceRate = (employee.attendance?.length || 0) > 0 ? 
+          ((presentDays / (employee.attendance?.length || 1)) * 100).toFixed(1) : "0"
+
+        return [
+          employee.username || "N/A",
+          employee.trade_position?.trade_name || "N/A",
+          `${presentDays}/${lateDays}/${absentDays}`,
+          `${attendanceRate}%`,
+          `${currencyShort} ${(dailyRate * currencyValue).toLocaleString()}`,
+          `${currencyShort} ${(grossEarnings * currencyValue).toLocaleString()}`,
+          `${currencyShort} ${(totalDeductions * currencyValue).toLocaleString()}`,
+          `${currencyShort} ${(netEarnings * currencyValue).toLocaleString()}`,
+        ]
+      })
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [["Employee", "Trade", "P/L/A Days", "Attendance %", "Daily Rate", "Gross Pay", "Deductions", "Net Pay"]],
         body: employeeData,
         theme: "grid",
-        headStyles: { fillColor: [66, 66, 66] },
-        styles: { fontSize: 8 },
+        headStyles: { fillColor: [156, 39, 176], textColor: 255 },
+        styles: { fontSize: 7 },
+        margin: { left: margin, right: margin },
         columnStyles: {
-          0: { cellWidth: 40 },
-          1: { cellWidth: 40 },
-          2: { cellWidth: 25 },
-          3: { cellWidth: 25 },
-          4: { cellWidth: 25 },
+          0: { cellWidth: 25 },
+          1: { cellWidth: 20 },
+          2: { cellWidth: 18 },
+          3: { cellWidth: 15 },
+          4: { cellWidth: 20 },
+          5: { cellWidth: 22 },
+          6: { cellWidth: 20 },
+          7: { cellWidth: 22 },
         },
       })
 
+      yPosition = (doc as any).lastAutoTable.finalY + 20
+      checkPageBreak(40)
+
+      // Performance Metrics
+      doc.setFontSize(16)
+      doc.setFont('helvetica', 'bold')
+      addText("PERFORMANCE METRICS", margin, yPosition)
+      yPosition += 15
+
+      const performanceData = [
+        ["Average Daily Cost per Employee", `${currencyShort} ${totalEmployees > 0 ? ((totalActual / totalEmployees) * currencyValue).toLocaleString() : 0}`],
+        ["Cost Efficiency (Actual vs Budget)", `${totalBudget > 0 ? (((totalBudget - totalActual) / totalBudget) * 100).toFixed(1) : 0}%`],
+        ["Productivity Rate", `${totalDays > 0 ? ((totalPresentDays / totalDays) * 100).toFixed(1) : 0}%`],
+        ["Late Arrival Rate", `${totalDays > 0 ? ((totalLateDays / totalDays) * 100).toFixed(1) : 0}%`],
+        ["Absenteeism Rate", `${totalDays > 0 ? ((totalAbsentDays / totalDays) * 100).toFixed(1) : 0}%`],
+        ["Average Deduction per Employee", `${currencyShort} ${totalEmployees > 0 ? ((totalDeductions / totalEmployees) * currencyValue).toLocaleString() : 0}`],
+      ]
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [["Performance Indicator", "Value"]],
+        body: performanceData,
+        theme: "grid",
+        headStyles: { fillColor: [255, 152, 0], textColor: 255 },
+        styles: { fontSize: 9 },
+        margin: { left: margin, right: margin },
+      })
+
+      // Footer
+      yPosition = doc.internal.pageSize.height - 30
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(128, 128, 128)
+      addText(`Report generated by DSE Payroll System | ${new Date().toLocaleString()}`, pageWidth / 2, yPosition, { align: "center" })
+      addText(`Company: ${(sessionData?.user as any)?.companies?.[0]?.name || "Construction Company"}`, pageWidth / 2, yPosition + 8, { align: "center" })
+
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
-      doc.save(`payroll-report_${timestamp}.pdf`)
+      doc.save(`comprehensive-payroll-report_${timestamp}.pdf`)
 
       setIsGeneratingReport(false)
       toast({
-        title: "Report Generated",
-        description: "Payroll report has been generated and downloaded successfully.",
+        title: "Comprehensive Report Generated",
+        description: "Detailed payroll report with real-time data has been generated and downloaded successfully.",
       })
     } catch (error) {
       console.error("Error generating report:", error)
       toast({
         title: "Error",
-        description: "Failed to generate payroll report. Please try again.",
+        description: "Failed to generate comprehensive payroll report. Please try again.",
         variant: "destructive",
       })
       setIsGeneratingReport(false)
@@ -618,7 +908,7 @@ export default function AttendancePayroll() {
   }
 
   const filteredEmployees = useMemo(() => {
-    return employees.filter((employee: any) => {
+    return enhancedEmployees.filter((employee: any) => {
       if (!employee) return false
       if (searchTerm && employee.username && !employee.username.toLowerCase().includes(searchTerm.toLowerCase()))
         return false
@@ -627,7 +917,7 @@ export default function AttendancePayroll() {
       if (
         filters.project &&
         filters.project !== "all" &&
-        employee.trade_position?.project?.project_name !== filters.project
+        employee.project?.project_name !== filters.project
       )
         return false
       if (filters.dailyRate && filters.dailyRate !== "all") {
@@ -642,7 +932,7 @@ export default function AttendancePayroll() {
       }
       return true
     })
-  }, [employees, searchTerm, filters, currencyShort])
+  }, [enhancedEmployees, searchTerm, filters, currencyShort])
 
   const prevFiltersRef = React.useRef(filters)
   const prevFilteredCountRef = React.useRef(filteredEmployees.length)
@@ -980,9 +1270,7 @@ export default function AttendancePayroll() {
                               </td>
                               <td className="px-4 py-3 border-r">{employee.trade_position.trade_name}</td>
                               <td className="px-4 py-3 border-r">
-                                {employee.trade_position.project?.project_name
-                                  ? employee.trade_position.project.project_name
-                                  : "no project"}
+                                {employee.project?.project_name || "No Project Assigned"}
                               </td>
                               <td className="px-4 py-3 border-r">{formatDate(employee.created_date)}</td>
                               <td className="px-4 py-3 border-r">{formatDate(employee.contract_finish_date)}</td>
@@ -1315,7 +1603,7 @@ export default function AttendancePayroll() {
                     <div className="grid grid-cols-5 gap-4 mb-4">
                       <div className="bg-white border rounded-lg p-4">
                         <div className="text-sm text-gray-500 mb-1">Total Employees</div>
-                        <div className="text-xl font-bold">{employees.length}</div>
+                        <div className="text-xl font-bold">{enhancedEmployees.length}</div>
                       </div>
                       <div className="bg-white border rounded-lg p-4">
                         <div className="text-sm text-gray-500 mb-1">Total Days Worked</div>

@@ -13,6 +13,8 @@ import {
   notificationsSlice,
 } from "./redux/notificationSlice";
 import { userSettingsApi } from "./redux/userSettingsSlice";
+import { expenseApi } from "./redux/expenseSlice";
+import { boqApi } from "./redux/boqSlice";
 
 export const makeStore = () => {
   return configureStore({
@@ -28,6 +30,8 @@ export const makeStore = () => {
       [companyApi.reducerPath]: companyApi.reducer,
       [userApi.reducerPath]: userApi.reducer, // ✅ userApi reducer
       [userSettingsApi.reducerPath]: userSettingsApi.reducer,
+      [expenseApi.reducerPath]: expenseApi.reducer,
+      [boqApi.reducerPath]: boqApi.reducer,
       [notificationsApi.reducerPath]: notificationsApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
@@ -41,6 +45,8 @@ export const makeStore = () => {
         .concat(attendanceApi.middleware)
         .concat(companyApi.middleware)
         .concat(userApi.middleware) // ✅ userApi middleware
+        .concat(expenseApi.middleware)
+        .concat(boqApi.middleware)
         .concat(notificationsApi.middleware)
   });
 };

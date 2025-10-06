@@ -50,6 +50,10 @@ export const employeeApi = createApi({
     getEmployee: builder.query<any, string>({
       query: (id) => `get/employees/${id}`,
     }),
+    getEmployeesByTrade: builder.query<any[], string>({
+      query: (tradeId) => `get/employees/by-trade/${tradeId}`,
+      providesTags: ["Employees"],
+    }),
     getTotalPayroll: builder.query<any, { year: number; month: number }>({
       query: ({ year, month }) => `payroll/${year}/${month}`,
     }),
@@ -61,6 +65,22 @@ export const employeeApi = createApi({
     }),
     getMonthlyStats: builder.query<any, void>({
       query: () => "monthly-stats",
+    }),
+    updateEmployeeProject: builder.mutation<any, { employeeId: string; projectId: string | null }>({
+      query: ({ employeeId, projectId }) => ({
+        url: `${employeeId}/project`,
+        method: "PATCH",
+        body: { projectId },
+      }),
+      invalidatesTags: ["Employees"],
+    }),
+    updateEmployeesProject: builder.mutation<any, { employeeIds: string[]; projectId: string | null }>({
+      query: ({ employeeIds, projectId }) => ({
+        url: "update-project",
+        method: "PUT",
+        body: { employeeIds, projectId },
+      }),
+      invalidatesTags: ["Employees"],
     }),
   }),
 });
@@ -74,7 +94,10 @@ export const {
   useGetMonthlyStatsQuery,
   useGetEmployeeNumberQuery,
   useGetEmployeeQuery,
+  useGetEmployeesByTradeQuery,
   useGetTotalPayrollQuery,
   useGetDaysWorkedQuery,
   useGetPlannedVsActualQuery,
+  useUpdateEmployeeProjectMutation,
+  useUpdateEmployeesProjectMutation,
 } = employeeApi;

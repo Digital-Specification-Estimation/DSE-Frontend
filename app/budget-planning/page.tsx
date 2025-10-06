@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {
   Search,
   FileText,
@@ -48,6 +48,8 @@ import {
   useUnassignTradeProjectIdMutation,
 } from "@/lib/redux/tradePositionSlice";
 import { useSessionQuery } from "@/lib/redux/authSlice";
+import { useCalculateCompanyPayrollQuery } from "@/lib/redux/attendanceSlice";
+import { useGetExpensesQuery } from "@/lib/redux/expenseSlice";
 import {
   Card,
   CardContent,
@@ -64,7 +66,6 @@ import {
   Legend,
   ResponsiveContainer,
   ComposedChart,
-  BarChart,
   Sector,
 } from "recharts";
 import { ChartContainer } from "@/components/ui/chart";
@@ -101,39 +102,51 @@ interface Project {
 }
 
 export default function BudgetPlanning() {
-
-  function ConvertedAmount({ 
-    amount, 
-    currency, 
-    showCurrency = true 
-  }: { 
-    amount: number; 
-    currency: string; 
+  function ConvertedAmount({
+    amount,
+    currency,
+    showCurrency = true,
+  }: {
+    amount: number;
+    currency: string;
     showCurrency?: boolean;
   }) {
-    const [convertedAmount, setConvertedAmount] = useState<number | string>('...');
-  
+    const [convertedAmount, setConvertedAmount] = useState<number | string>(
+      "..."
+    );
+
     useEffect(() => {
       const convert = async () => {
         try {
-          const result = await convertCurrency(amount, currency, sessionData.user.companies[0].base_currency);
+          const result = await convertCurrency(
+            amount,
+            currency,
+            sessionData.user.companies[0].base_currency
+          );
           setConvertedAmount(result);
         } catch (error) {
-          console.error('Error converting currency:', error);
-          setConvertedAmount('Error');
+          console.error("Error converting currency:", error);
+          setConvertedAmount("Error");
         }
       };
-  
+
       if (amount !== undefined) {
         convert();
       }
     }, [amount, currency]);
 
-    const formattedAmount = typeof convertedAmount === 'number' 
-      ? convertedAmount.toLocaleString() 
-      : convertedAmount;
+    const formattedAmount =
+      typeof convertedAmount === "number"
+        ? convertedAmount.toLocaleString()
+        : convertedAmount;
 
-    return <>{showCurrency ? `${currency} ${formattedAmount.toLocaleString()}` : formattedAmount.toLocaleString()}</>;
+    return (
+      <>
+        {showCurrency
+          ? `${currency} ${formattedAmount.toLocaleString()}`
+          : formattedAmount.toLocaleString()}
+      </>
+    );
   }
   const [permissions, setPermissions] = useState({
     approve_attendance: false,
@@ -162,13 +175,14 @@ export default function BudgetPlanning() {
     pollingInterval: 60000, // Poll every minute to keep session data fresh
     skip: false,
   });
-  
+
   useEffect(() => {
     if (sessionData?.user?.settings && sessionData.user.current_role) {
       const userPermission = sessionData.user.settings.find(
         (setting: any) =>
           setting.role.toLowerCase() ===
-          sessionData.user.current_role.toLowerCase() && setting.company_id === sessionData.user.company_id
+            sessionData.user.current_role.toLowerCase() &&
+          setting.company_id === sessionData.user.company_id
       );
 
       if (userPermission) {
@@ -176,7 +190,6 @@ export default function BudgetPlanning() {
       }
     }
   }, [sessionData.user.settings, sessionData.user.current_role]);
-  // console.log("permissions", permissions);
 
   const splitCurrencyValue = (str: string | undefined | null) => {
     if (!str) return null; // return early if str is undefined or null
@@ -209,24 +222,17 @@ export default function BudgetPlanning() {
     data: fetchedData = [],
     refetch: refetchProjects,
     isFetching: isProjectsFetching,
-  } = useGetProjectsQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-    refetchOnFocus: true,
-    refetchOnReconnect: true,
-    pollingInterval: 30000, // Poll every 30 seconds
-  });
-console.log("tradesFetched", tradesFetched);
-console.log("fetchedData", fetchedData);
+  } = useGetProjectsQuery();
   const [unassignProject] = useUnassignTradeProjectIdMutation();
   const [updateTrade, { isLoading: isUpdating }] = useEditTradeMutation();
   const { toast } = useToast();
 
   // State management
-  const [user] = useState({
-    name: "Kristin Watson",
-    role: "Personal Account",
-    avatar: "/placeholder.svg?height=40&width=40",
-  });
+  const user = {
+    name: (sessionData as any)?.user?.username || "Current User",
+    role: (sessionData as any)?.user?.current_role || "user",
+    avatar: "",
+  };
 
   const [activeTab, setActiveTab] = useState("plan");
   const [projects, setProjects] = useState<any[]>([]);
@@ -241,7 +247,6 @@ console.log("fetchedData", fetchedData);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedProjectIds, setExpandedProjectIds] = useState<number[]>([]);
   const [activePieIndex, setActivePieIndex] = useState(0);
-
   const chartRef = useRef<HTMLDivElement>(null);
 
   // Form state for adding and editing trades
@@ -320,14 +325,6 @@ console.log("fetchedData", fetchedData);
 
     // No need to set state here as the component will re-render with the new calculations
     // when tradesFetched changes
-
-    // Log updates for debugging
-    console.log("Data dependencies updated:", {
-      tradesCount: tradesFetched?.length || 0,
-      projectsCount: fetchedData?.length || 0,
-      totalPlannedCost: newTotalPlannedCost,
-      totalActualCost: newTotalActualCost,
-    });
   }, [tradesFetched, fetchedData]);
 
   // Add visibility change event listener to refetch when tab becomes visible
@@ -370,7 +367,10 @@ console.log("fetchedData", fetchedData);
       }
 
       setIsSaving(true);
-      let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
+      let exchangeRate = await getExchangeRate(
+        sessionData.user.currency,
+        sessionData.user.companies?.[0]?.base_currency
+      );
 
       // Prepare the trade data
       const tradeData = {
@@ -406,7 +406,6 @@ console.log("fetchedData", fetchedData);
           await Promise.all([refetchTrades(), refetchProjects()]);
         } catch (error) {
           if (retries > 0) {
-            console.log(`Retrying refetch, ${retries} attempts left`);
             setTimeout(() => refetchWithRetry(retries - 1), 1000);
           } else {
             throw error;
@@ -457,7 +456,10 @@ console.log("fetchedData", fetchedData);
       }
 
       setIsSaving(true);
-      let exchangeRate = await getExchangeRate(sessionData.user.currency,sessionData.user.companies?.[0]?.base_currency);
+      let exchangeRate = await getExchangeRate(
+        sessionData.user.currency,
+        sessionData.user.companies?.[0]?.base_currency
+      );
 
       await updateTrade({
         id: editTrade.id,
@@ -475,7 +477,6 @@ console.log("fetchedData", fetchedData);
           await Promise.all([refetchTrades(), refetchProjects()]);
         } catch (error) {
           if (retries > 0) {
-            console.log(`Retrying refetch, ${retries} attempts left`);
             setTimeout(() => refetchWithRetry(retries - 1), 1000);
           } else {
             throw error;
@@ -523,10 +524,10 @@ console.log("fetchedData", fetchedData);
         plannedSalary:
           sessionData.user.salary_calculation === "monthly rate"
             ? trade.monthly_planned_cost
-              ? trade.monthly_planned_cost 
+              ? trade.monthly_planned_cost
               : 0
             : trade.daily_planned_cost
-            ? trade.daily_planned_cost 
+            ? trade.daily_planned_cost
             : 0,
       });
       setSelectedTrade(trade);
@@ -545,7 +546,6 @@ console.log("fetchedData", fetchedData);
             await Promise.all([refetchTrades(), refetchProjects()]);
           } catch (error) {
             if (retries > 0) {
-              console.log(`Retrying refetch, ${retries} attempts left`);
               setTimeout(() => refetchWithRetry(retries - 1), 1000);
             } else {
               throw error;
@@ -621,10 +621,7 @@ console.log("fetchedData", fetchedData);
       const budgetValue = Number(project.budget || 0);
       doc.text(
         `Budget: ${sessionData.user.currency}${
-          (project.budget  
-            ? project.budget  
-            : 0
-          ).toLocaleString() || "0"
+          (project.budget ? project.budget : 0).toLocaleString() || "0"
         }`,
         14,
         30
@@ -646,11 +643,10 @@ console.log("fetchedData", fetchedData);
             trade.employees?.length || 0,
             trade.work_days || "N/A",
             `${sessionData.user.currency}${(
-              trade.daily_planned_cost   || 0
+              trade.daily_planned_cost || 0
             ).toLocaleString()}`,
             `${sessionData.user.currency}${(
-              (trade.daily_planned_cost   || 0) *
-              (trade.work_days || 0)
+              (trade.daily_planned_cost || 0) * (trade.work_days || 0)
             ).toLocaleString()}`,
           ]
         );
@@ -714,9 +710,9 @@ console.log("fetchedData", fetchedData);
           doc.lastAutoTable.finalY + 35
         );
         doc.text(
-          `Total Planned Cost: ${sessionData.user.currency}${(
-            totalPlanned  
-          ).toLocaleString()}`,
+          `Total Planned Cost: ${
+            sessionData.user.currency
+          }${totalPlanned.toLocaleString()}`,
           14,
           doc.lastAutoTable.finalY + 45
         );
@@ -810,10 +806,7 @@ console.log("fetchedData", fetchedData);
         doc.setTextColor(73, 80, 87);
         doc.text(
           `Budget: ${sessionData.user.currency}${
-            (project.budget  
-              ? project.budget  
-              : 0
-            ).toLocaleString() || "0"
+            (project.budget ? project.budget : 0).toLocaleString() || "0"
           }`,
           14,
           yPosition
@@ -830,11 +823,10 @@ console.log("fetchedData", fetchedData);
             trade.employees?.length || 0,
             trade.work_days || "N/A",
             `${sessionData.user.currency}${(
-              trade.daily_planned_cost   || 0
+              trade.daily_planned_cost || 0
             ).toLocaleString()}`,
             `${sessionData.user.currency}${(
-              (trade.daily_planned_cost   || 0) *
-              (trade.work_days || 0)
+              (trade.daily_planned_cost || 0) * (trade.work_days || 0)
             ).toLocaleString()}`,
           ]);
 
@@ -879,9 +871,9 @@ console.log("fetchedData", fetchedData);
           doc.setFontSize(11);
           doc.setTextColor(33, 37, 41);
           doc.text(
-            `Total Planned Cost: ${sessionData.user.currency}${(
-              totalPlanned  
-            ).toLocaleString()}`,
+            `Total Planned Cost: ${
+              sessionData.user.currency
+            }${totalPlanned.toLocaleString()}`,
             14,
             yPosition
           );
@@ -937,17 +929,17 @@ console.log("fetchedData", fetchedData);
 
       doc.setFontSize(12);
       doc.text(
-        `Total Budget Across Projects: ${sessionData.user.currency}${(
-          totalBudget  
-        ).toLocaleString()}`,
+        `Total Budget Across Projects: ${
+          sessionData.user.currency
+        }${totalBudget.toLocaleString()}`,
         14,
         yPosition
       );
       yPosition += 10;
       doc.text(
-        `Total Planned Costs: ${sessionData.user.currency}${(
-          totalPlannedCost  
-        ).toLocaleString()}`,
+        `Total Planned Costs: ${
+          sessionData.user.currency
+        }${totalPlannedCost.toLocaleString()}`,
         14,
         yPosition
       );
@@ -1052,39 +1044,83 @@ console.log("fetchedData", fetchedData);
   // Handle search change
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-    console.log("Search term updated:", value);
   };
 
-  // Calculate totals
-  let total_planned_cost = 0;
-  let total_actual_cost = 0;
-  if (tradesFetched && tradesFetched.length > 0) {
-    tradesFetched.forEach((trade: any) => {
-      total_actual_cost += trade.actual_cost || 0;
-      total_planned_cost += trade.planned_costs || 0;
-    });
-  }
+  // Calculate totals from fetched data - CORRECTED LOGIC
+  const total_planned_cost = useMemo(() => {
+    if (!fetchedData || fetchedData.length === 0) return 0;
+    // Planned costs = sum of all project budgets
+    return fetchedData.reduce((sum: number, project: any) => {
+      return sum + Number(project.budget || 0);
+    }, 0);
+  }, [fetchedData]);
 
-  // Format trend data for line chart
+  // Fetch payroll and expense data for actual cost calculations
+  const companyId = (sessionData as any)?.user?.company_id;
+  const {
+    data: payrollData,
+    error: payrollError,
+    isLoading: payrollLoading,
+    refetch: refetchPayroll,
+  } = useCalculateCompanyPayrollQuery(
+    {
+      companyId,
+      startDate: undefined, // Get all-time data for now
+      endDate: undefined,
+    },
+    {
+      skip: !companyId,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
+      pollingInterval: 30000, // Refetch every 30 seconds to get updated payroll
+    }
+  );
+  const { data: expensesData = [] } = useGetExpensesQuery(companyId, {
+    skip: !companyId,
+  });
+
+  const total_actual_cost = useMemo(() => {
+    // Actual costs = payroll + manual expenses (project-specific when filtered)
+    const payrollCost = payrollData?.summary?.totalNetPay || 0;
+    const expensesCost = expensesData.reduce((sum: number, expense: any) => {
+      return sum + Number(expense.amount || 0);
+    }, 0);
+
+    // Debug logging to see what's happening (remove in production)
+    if (payrollData) {
+      console.log("Budget Planning - Payroll Data:", payrollData);
+      console.log("Budget Planning - Payroll Cost:", payrollCost);
+      console.log("Budget Planning - Expenses Cost:", expensesCost);
+      console.log(
+        "Budget Planning - Total Actual Cost:",
+        payrollCost + expensesCost
+      );
+    }
+    if (payrollError) {
+      console.error("Budget Planning - Payroll Error:", payrollError);
+    }
+
+    return payrollCost + expensesCost;
+  }, [payrollData, expensesData, companyId, payrollError, payrollLoading]);
+
+  const budget_balance = useMemo(
+    () => total_planned_cost - total_actual_cost,
+    [total_planned_cost, total_actual_cost]
+  );
+
+  // Generate trend data for charts
   const generateTrendData = () => {
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+    if (!tradesFetched || tradesFetched.length === 0) {
+      return [];
+    }
 
-    return months.map((month, index) => {
-      // Create realistic looking trend data based on the actual data
-      const baseValue = total_planned_cost / 6;
-      const randomFactor = 0.8 + Math.random() * 0.4; // Between 0.8 and 1.2
-      const plannedValue = baseValue * randomFactor;
-
-      // Actual costs should follow trends but with more variation
-      const actualFactor = 0.7 + Math.random() * 0.6; // Between 0.7 and 1.3
-      const actualValue = baseValue * actualFactor;
-
-      return {
-        name: month,
-        planned: Math.round(plannedValue  ),
-        actual: Math.round(actualValue  ),
-      };
-    });
+    return tradesFetched.map((trade: any) => ({
+      name: trade.trade_name,
+      planned: trade.planned_costs || 0,
+      actual: trade.actual_cost || 0,
+      employees: trade.employees?.length || 0,
+    }));
   };
 
   // Prepare data for Pie chart
@@ -1095,8 +1131,8 @@ console.log("fetchedData", fetchedData);
 
     return tradesFetched.map((trade: any) => ({
       name: trade.trade_name,
-      value: (trade.planned_costs || 0)  ,
-      actualValue: (trade.actual_cost || 0)  ,
+      value: trade.planned_costs || 0,
+      actualValue: trade.actual_cost || 0,
     }));
   };
 
@@ -1196,8 +1232,7 @@ console.log("fetchedData", fetchedData);
   // Budget status calculation
   const budgetStatus =
     total_actual_cost <= total_planned_cost ? "under" : "over";
-  const budgetDifference =
-    Math.abs(total_actual_cost - total_planned_cost);
+  const budgetDifference = Math.abs(total_actual_cost - total_planned_cost);
   const budgetPercentage =
     total_planned_cost > 0
       ? Math.round(
@@ -1378,7 +1413,9 @@ console.log("fetchedData", fetchedData);
 
                     // Search in project name
                     if (
-                      project.project_name.toLowerCase().includes(searchTerm.toLowerCase())
+                      project.project_name
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase())
                     )
                       return true;
 
@@ -1388,7 +1425,9 @@ console.log("fetchedData", fetchedData);
                       project.trade_positions.length > 0
                     ) {
                       return project.trade_positions.some((trade: any) =>
-                        trade.trade_name.toLowerCase().includes(searchTerm.toLowerCase())
+                        trade.trade_name
+                          .toLowerCase()
+                          .includes(searchTerm.toLowerCase())
                       );
                     }
 
@@ -1432,15 +1471,20 @@ console.log("fetchedData", fetchedData);
                             </span>
                             <span className="text-sm bg-gray-100 px-2 py-0.5 rounded-full">
                               {sessionData.user.currency}
-                              {project.budget  
-                                ? (
-                                  <ConvertedAmount amount={project.budget} currency={sessionData.user.currency} showCurrency={false} />
-                                  )
-                                : "0"}
+                              {project.budget ? (
+                                <ConvertedAmount
+                                  amount={project.budget}
+                                  currency={sessionData.user.currency}
+                                  showCurrency={false}
+                                />
+                              ) : (
+                                "0"
+                              )}
                             </span>
                           </div>
                           <div className="ml-auto flex items-center gap-2">
-                            {(permissions.generate_reports || permissions.full_access) && (
+                            {(permissions.generate_reports ||
+                              permissions.full_access) && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1534,12 +1578,15 @@ console.log("fetchedData", fetchedData);
                                         <td className="px-4 py-3">
                                           {sessionData.user
                                             .salary_calculation ===
-                                          "monthly rate"
-                                            ? (
+                                          "monthly rate" ? (
                                             <>
                                               <ConvertedAmount
-                                                amount={Number(trade.monthly_planned_cost)}
-                                                currency={sessionData.user.currency}
+                                                amount={Number(
+                                                  trade.monthly_planned_cost
+                                                )}
+                                                currency={
+                                                  sessionData.user.currency
+                                                }
                                                 showCurrency={true}
                                               />
                                               /month
@@ -1547,8 +1594,12 @@ console.log("fetchedData", fetchedData);
                                           ) : (
                                             <>
                                               <ConvertedAmount
-                                                amount={Number(trade.daily_planned_cost)}
-                                                currency={sessionData.user.currency}
+                                                amount={Number(
+                                                  trade.daily_planned_cost
+                                                )}
+                                                currency={
+                                                  sessionData.user.currency
+                                                }
                                                 showCurrency={true}
                                               />
                                               /day
@@ -1556,7 +1607,8 @@ console.log("fetchedData", fetchedData);
                                           )}
                                         </td>
                                         <td className="px-4 py-3">
-                                          {(permissions.manage_employees || permissions.full_access) && (
+                                          {(permissions.manage_employees ||
+                                            permissions.full_access) && (
                                             <DropdownMenu>
                                               <DropdownMenuTrigger asChild>
                                                 <Button
@@ -1640,11 +1692,13 @@ console.log("fetchedData", fetchedData);
                   <CardContent>
                     <div className="text-2xl font-bold">
                       {sessionData.user.currency}
-                      {<ConvertedAmount
-                        amount={total_planned_cost}
-                        currency={sessionData.user.currency}
-                        showCurrency={false}
-                      />}
+                      {
+                        <ConvertedAmount
+                          amount={total_planned_cost}
+                          currency={sessionData.user.currency}
+                          showCurrency={false}
+                        />
+                      }
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       For {timeFilter}
@@ -1662,11 +1716,13 @@ console.log("fetchedData", fetchedData);
                   <CardContent>
                     <div className="text-2xl font-bold">
                       {sessionData.user.currency}
-                      {<ConvertedAmount
-                        amount={total_actual_cost}
-                        currency={sessionData.user.currency}
-                        showCurrency={false}
-                      />}
+                      {
+                        <ConvertedAmount
+                          amount={total_actual_cost}
+                          currency={sessionData.user.currency}
+                          showCurrency={false}
+                        />
+                      }
                     </div>
                     <div className="flex items-center gap-1 mt-1">
                       {budgetStatus === "under" ? (
@@ -1694,17 +1750,19 @@ console.log("fetchedData", fetchedData);
                   <CardContent>
                     <div className="text-2xl font-bold">
                       {sessionData.user.currency}
-                      {budgetStatus === "under"
-                        ? <ConvertedAmount
+                      {budgetStatus === "under" ? (
+                        <ConvertedAmount
                           amount={budgetDifference}
                           currency={sessionData.user.currency}
                           showCurrency={false}
                         />
-                        : <ConvertedAmount
+                      ) : (
+                        <ConvertedAmount
                           amount={0}
                           currency={sessionData.user.currency}
                           showCurrency={false}
-                        />}
+                        />
+                      )}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       {budgetStatus === "under"
@@ -1776,12 +1834,8 @@ console.log("fetchedData", fetchedData);
                           tradesFetched && tradesFetched.length > 0
                             ? tradesFetched.map((trade: any) => ({
                                 name: trade.trade_name,
-                                planned: Math.abs(
-                                  (trade.planned_costs || 0)  
-                                ),
-                                actual: Math.abs(
-                                  (trade.actual_cost || 0)  
-                                ),
+                                planned: Math.abs(trade.planned_costs || 0),
+                                actual: Math.abs(trade.actual_cost || 0),
                               }))
                             : []
                         }
@@ -1798,7 +1852,9 @@ console.log("fetchedData", fetchedData);
                         />
                         <YAxis
                           tickFormatter={(value) =>
-                            `${sessionData.user.currency}${value.toLocaleString()}`
+                            `${
+                              sessionData.user.currency
+                            }${value.toLocaleString()}`
                           }
                           domain={[0, "auto"]}
                         />
@@ -1849,13 +1905,13 @@ console.log("fetchedData", fetchedData);
                             <div className="flex items-center gap-2">
                               <div className="h-3 w-3 rounded-full bg-orange-500"></div>
                               Planned Budget ({sessionData.user.currency}
-                              {(
+                              {
                                 <ConvertedAmount
                                   amount={total_planned_cost}
                                   currency={sessionData.user.currency}
                                   showCurrency={false}
                                 />
-                              )}
+                              }
                               )
                             </div>
                           </th>
@@ -1863,13 +1919,13 @@ console.log("fetchedData", fetchedData);
                             <div className="flex items-center gap-2">
                               <div className="h-3 w-3 rounded-full bg-blue-700"></div>
                               Actual Cost ({sessionData.user.currency}
-                              {(
+                              {
                                 <ConvertedAmount
                                   amount={total_actual_cost}
                                   currency={sessionData.user.currency}
                                   showCurrency={false}
                                 />
-                              )}
+                              }
                               )
                             </div>
                           </th>
@@ -1906,23 +1962,23 @@ console.log("fetchedData", fetchedData);
                                 </td>
                                 <td className="px-4 py-3">
                                   {currencyShort}
-                                  {(
+                                  {
                                     <ConvertedAmount
                                       amount={data.planned_costs || 0}
                                       currency={sessionData.user.currency}
                                       showCurrency={false}
                                     />
-                                  )}
+                                  }
                                 </td>
                                 <td className="px-4 py-3">
                                   {currencyShort}
-                                  {(
+                                  {
                                     <ConvertedAmount
                                       amount={data.actual_cost || 0}
                                       currency={sessionData.user.currency}
                                       showCurrency={false}
                                     />
-                                  )}
+                                  }
                                 </td>
                                 <td className="px-4 py-3">
                                   {difference > 0 ? (
