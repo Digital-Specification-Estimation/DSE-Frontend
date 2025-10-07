@@ -652,7 +652,7 @@ const CostControlPage = () => {
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
                     Manual: {formatCurrency(costSummary?.total_expenses || 0)}{" "}
-                    + Budget: {formatCurrency(costSummary?.budget_from_planning || 0)}
+                    + Budget: {formatCurrency(costSummary?.project_budget || 0)}
                   </p>
                 </div>
 
@@ -757,82 +757,41 @@ const CostControlPage = () => {
                               </p>
                               <p className="text-xl font-bold text-slate-800">
                                 {formatCurrency(
-                                  boqItems.reduce(
-                                    (sum, item) => sum + item.amount,
-                                    0
-                                  )
+                                costSummary.total_boq_value
                                 )}
                               </p>
                             </div>
                             <div className="bg-green-50 rounded-lg p-4">
                               <p className="text-sm text-slate-600 mb-1">
-                                Earned Revenue
+                                Total Revenue
                               </p>
                               <p className="text-xl font-bold text-green-600">
                                 {formatCurrency(
-                                  revenues.reduce(
-                                    (sum, r) => sum + r.amount,
-                                    0
-                                  )
+                                costSummary.total_revenues + costSummary.total_boq_value
                                 )}
                               </p>
                             </div>
-                            <div className="bg-amber-50 rounded-lg p-4">
-                              <p className="text-sm text-slate-600 mb-1">
-                                Completion %
-                              </p>
-                              <p className="text-xl font-bold text-amber-600">
-                                {boqItems.length > 0
-                                  ? (
-                                      (revenues.reduce(
-                                        (sum, r) => sum + r.amount,
-                                        0
-                                      ) /
-                                        boqItems.reduce(
-                                          (sum, item) => sum + item.amount,
-                                          0
-                                        )) *
-                                      100
-                                    ).toFixed(1)
-                                  : "0"}
-                                %
-                              </p>
-                            </div>
+                     
                           </div>
                         </div>
                       )}
 
                       {/* Total Expenses Breakdown */}
                       {(expenses.length > 0 ||
-                        (costSummary?.budget_from_planning || 0) > 0) && (
+                        (costSummary?.project_budget || 0) > 0) && (
                         <div>
                           <h3 className="text-lg font-semibold text-slate-800 mb-4">
                             Total Project Expenses
                           </h3>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                            <div className="bg-red-50 rounded-lg p-4">
-                              <p className="text-sm text-slate-600 mb-1">
-                                Manual Expenses
-                              </p>
-                              <p className="text-xl font-bold text-red-600">
-                                {formatCurrency(
-                                  expenses.reduce(
-                                    (sum, exp) => sum + exp.amount,
-                                    0
-                                  )
-                                )}
-                              </p>
-                              <p className="text-xs text-slate-500">
-                                From Cost Control
-                              </p>
-                            </div>
+                          
                             <div className="bg-orange-50 rounded-lg p-4">
                               <p className="text-sm text-slate-600 mb-1">
                                 Budget Planning
                               </p>
                               <p className="text-xl font-bold text-orange-600">
                                 {formatCurrency(
-                                  costSummary?.budget_from_planning || 0
+                                  costSummary?.project_budget
                                 )}
                               </p>
                               <p className="text-xs text-slate-500">
@@ -845,10 +804,7 @@ const CostControlPage = () => {
                               </p>
                               <p className="text-xl font-bold text-slate-800">
                                 {formatCurrency(
-                                  (expenses.reduce(
-                                    (sum, exp) => sum + exp.amount,
-                                    0
-                                  ) + (costSummary?.budget_from_planning || 0))
+                                 costSummary.total_expenses
                                 )}
                               </p>
                               <p className="text-xs text-slate-500">

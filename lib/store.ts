@@ -15,6 +15,7 @@ import {
 import { userSettingsApi } from "./redux/userSettingsSlice";
 import { expenseApi } from "./redux/expenseSlice";
 import { boqApi } from "./redux/boqSlice";
+import { deductionApi } from "./redux/deductionSlice";
 
 export const makeStore = () => {
   return configureStore({
@@ -33,6 +34,7 @@ export const makeStore = () => {
       [expenseApi.reducerPath]: expenseApi.reducer,
       [boqApi.reducerPath]: boqApi.reducer,
       [notificationsApi.reducerPath]: notificationsApi.reducer,
+      [deductionApi.reducerPath]: deductionApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware()
@@ -48,6 +50,7 @@ export const makeStore = () => {
         .concat(expenseApi.middleware)
         .concat(boqApi.middleware)
         .concat(notificationsApi.middleware)
+    .concat(deductionApi.middleware)
   });
 };
 
