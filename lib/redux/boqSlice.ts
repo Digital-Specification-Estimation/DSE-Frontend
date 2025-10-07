@@ -14,7 +14,6 @@ export const boqApi = createApi({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["BOQ"],
     }),
     getBOQByProject: builder.query({
       query: ({ projectId, companyId }) => `project/${projectId}?companyId=${companyId}`,

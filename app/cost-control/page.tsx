@@ -29,25 +29,37 @@ import {
 import { useGetProjectsQuery, useGetProjectFinancialMetricsQuery } from "@/lib/redux/projectSlice";
 import { useCreateExpenseMutation, useGetExpensesByProjectQuery } from "@/lib/redux/expenseSlice";
 import { useSessionQuery } from "@/lib/redux/authSlice";
+import { useCreateBOQMutation, useGetBOQByProjectQuery } from "@/lib/redux/boqSlice";
+
+interface BOQItem {
+  item_code: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  unit_rate: number;
+  total: number;
+  project_id: string;
+  company_id: string;
+}
 
 const CostControlPage = () => {
   const [activeTab, setActiveTab] = useState<
     "overview" | "boq" | "revenues" | "expenses"
   >("overview");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
-    const {
-      data: sessionData = { user: {} },
-      isLoading: isSessionLoading,
-      isError,
-      error,
-      refetch,
-      isFetching,
-    } = useSessionQuery(undefined, {
-      refetchOnMountOrArgChange: true,
-      refetchOnFocus: true,
-      refetchOnReconnect: true,
-      skip: false,
-    });
+  const {
+    data: sessionData = { user: {} },
+    isLoading: isSessionLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useSessionQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    skip: false,
+  });
   console.log("session data", sessionData);
   // Fetch projects from the backend
   const {
@@ -78,8 +90,23 @@ const CostControlPage = () => {
   } = useGetExpensesByProjectQuery(selectedProjectId, {
     skip: !selectedProjectId,
   });
+  console.log("expenses", expenses);
 
-  // Form state for new expense
+  // BOQ state and mutations
+  const [boqForm, setBoqForm] = useState<Omit<BOQItem, 'total' | 'project_id' | 'company_id'>>({ 
+    item_code: '',
+    description: '',
+    unit: '',
+    quantity: 0,
+    unit_rate: 0
+  });
+  const [createBOQ, { isLoading: isCreatingBOQ }] = useCreateBOQMutation();
+  const { data: boqItems = [], refetch: refetchBOQ } = useGetBOQByProjectQuery(
+    { projectId: selectedProjectId, companyId: sessionData.user?.company_id },
+    { skip: !selectedProjectId || !sessionData.user?.company_id }
+  );
+
+  // Form state for new expense 
   const [expenseForm, setExpenseForm] = useState({
     description: "",
     amount: "",
@@ -95,6 +122,17 @@ const CostControlPage = () => {
     }));
   };
 
+  // Handle BOQ form input changes
+  const handleBOQInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setBoqForm(prev => ({
+      ...prev,
+      [name]: name === 'quantity' || name === 'unit_rate' 
+        ? parseFloat(value) || 0 
+        : value
+    }));
+  };
+
   // Handle expense form submission
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,8 +145,8 @@ const CostControlPage = () => {
     try {
       await createExpense({
         projectId: selectedProjectId,
-        companyId,
-        amount:expenseForm.amount.toString(),
+        companyId: sessionData.user.company_id,
+        amount: expenseForm.amount.toString(),
         category: expenseForm.category,
         description: expenseForm.description,
       }).unwrap();
@@ -128,6 +166,41 @@ const CostControlPage = () => {
     } catch (error) {
       console.error("Error adding expense:", error);
       toast.error("Failed to add expense. Please try again.");
+    }
+  };
+
+  // Handle BOQ form submission
+  const handleAddBOQItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProjectId || !sessionData.user?.company_id) {
+      toast.error("Please select a project and ensure you're logged in with a company");
+      return;
+    }
+
+    try {
+      await createBOQ({
+        item_no:boqForm.item_code,
+        description:boqForm.description,
+        unit:boqForm.unit,
+        quantity:boqForm.quantity.toString(),
+        rate:boqForm.unit_rate.toString(),
+        amount: (boqForm.quantity * boqForm.unit_rate).toString(),
+        project_id: selectedProjectId,
+        company_id: sessionData.user.company_id,
+      }).unwrap();
+      
+      toast.success("BOQ item added successfully");
+      setBoqForm({
+        item_code: '',
+        description: '',
+        unit: '',
+        quantity: 0,
+        unit_rate: 0
+      });
+      refetchBOQ();
+    } catch (error:any) {
+      console.error("Failed to add BOQ item:", error);
+      toast.error(error.data.message);
     }
   };
 
@@ -340,7 +413,7 @@ const CostControlPage = () => {
                     <span className="text-green-500">📈</span>
                   </div>
                   <p className="text-2xl font-bold text-green-600">
-                    {formatCurrency(costSummary?.total_revenues || 0)}
+                    {formatCurrency(costSummary?.total_revenues  || 0)}
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
                     From BOQ progress
@@ -476,7 +549,7 @@ const CostControlPage = () => {
                             </p>
                             <p className="text-xl font-bold text-green-600">
                               {formatCurrency(
-                                costSummary.total_revenues + costSummary.total_boq_value
+                                costSummary.total_revenues
                               )}
                             </p>
                           </div>
@@ -539,20 +612,10 @@ const CostControlPage = () => {
                                 {category}
                               </p>
                               <p className="text-xl font-bold text-slate-800">
-                                {formatCurrency(amount)}
+                                {formatCurrency(Number(amount))}
                               </p>
                             </div>
                           ))}
-                        </div>
-                      </div>
-
-                      {/* Recent Revenues */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                          Recent Revenue Entries
-                        </h3>
-                        <div className="space-y-2">
-                          {/* Add revenues here */}
                         </div>
                       </div>
 
@@ -579,7 +642,7 @@ const CostControlPage = () => {
                                   </p>
                                 </div>
                                 <p className="text-lg font-bold text-red-600">
-                                  -{formatCurrency(expense.amount)}
+                                  {formatCurrency(Number(expense.amount))}
                                 </p>
                               </div>
                             ))}
@@ -589,12 +652,12 @@ const CostControlPage = () => {
                             </p>
                           )}
                         </div>
-                        {(costSummary?.budget_from_planning || 0) > 0 && (
+                        {(costSummary?.project_budget || 0) > 0 && (
                           <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                             <p className="text-sm text-blue-800">
-                              <strong>Note:</strong> This project also has $
+                              <strong>Note:</strong> This project also has 
                               {formatCurrency(
-                                costSummary?.budget_from_planning || 0
+                                costSummary?.project_budget || 0
                               )}
                               in planned expenses from the Budget Planning
                               system, which are included in the total expenses
@@ -609,66 +672,150 @@ const CostControlPage = () => {
                   {/* BOQ Tab */}
                   {activeTab === "boq" && (
                     <div className="space-y-6">
-                      {/* BOQ Items List */}
-                      <div className="border-t pt-6">
-                        <h3 className="font-semibold text-slate-800 mb-4 text-lg">
-                          BOQ Items
-                        </h3>
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead className="bg-slate-100">
-                              <tr>
-                                <th className="px-3 py-3 text-left font-semibold">
-                                  Item
-                                </th>
-                                <th className="px-3 py-3 text-left font-semibold">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Add New BOQ Item</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <form onSubmit={handleAddBOQItem} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium" htmlFor="item_code">
+                                  Item Code
+                                </label>
+                                <Input
+                                  id="item_code"
+                                  name="item_code"
+                                  value={boqForm.item_code}
+                                  onChange={handleBOQInputChange}
+                                  placeholder="e.g., CONC-001"
+                                  required
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium" htmlFor="description">
                                   Description
-                                </th>
-                                <th className="px-3 py-3 text-center font-semibold">
+                                </label>
+                                <Input
+                                  id="description"
+                                  name="description"
+                                  value={boqForm.description}
+                                  onChange={handleBOQInputChange}
+                                  placeholder="Item description"
+                                  required
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium" htmlFor="unit">
                                   Unit
-                                </th>
-                                <th className="px-3 py-3 text-right font-semibold">
-                                  Total Qty
-                                </th>
-                                <th className="px-3 py-3 text-right font-semibold">
-                                  Rate
-                                </th>
-                                <th className="px-3 py-3 text-right font-semibold">
-                                  Amount
-                                </th>
-                                <th className="px-3 py-3 text-right font-semibold">
-                                  Completed
-                                </th>
-                                <th className="px-3 py-3 text-right font-semibold">
-                                  %
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {/* Add BOQ items here */}
-                            </tbody>
-                            <tfoot className="bg-slate-50 font-bold">
-                              <tr>
-                                <td
-                                  colSpan={5}
-                                  className="px-3 py-3 text-right text-lg"
-                                >
-                                  Total:
-                                </td>
-                                <td className="px-3 py-3 text-right text-lg">
-                                  {/* Add total amount here */}
-                                </td>
-                                <td
-                                  colSpan={2}
-                                  className="px-3 py-3 text-right text-green-600 text-lg"
-                                >
-                                  Earned: {/* Add earned amount here */}
-                                </td>
-                              </tr>
-                            </tfoot>
-                          </table>
-                        </div>
-                      </div>
+                                </label>
+                                <Input
+                                  id="unit"
+                                  name="unit"
+                                  value={boqForm.unit}
+                                  onChange={handleBOQInputChange}
+                                  placeholder="e.g., m³, kg, pcs"
+                                  required
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium" htmlFor="quantity">
+                                  Quantity
+                                </label>
+                                <Input
+                                  id="quantity"
+                                  name="quantity"
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={boqForm.quantity || ''}
+                                  onChange={handleBOQInputChange}
+                                  placeholder="0.00"
+                                  required
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium" htmlFor="unit_rate">
+                                  Unit Rate (R)
+                                </label>
+                                <Input
+                                  id="unit_rate"
+                                  name="unit_rate"
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={boqForm.unit_rate || ''}
+                                  onChange={handleBOQInputChange}
+                                  placeholder="0.00"
+                                  required
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium">
+                                  Total (R)
+                                </label>
+                                <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                  {(boqForm.quantity * boqForm.unit_rate).toFixed(2)}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-end">
+                              <Button type="submit" disabled={isCreatingBOQ || !selectedProjectId}>
+                                {isCreatingBOQ ? "Adding..." : "Add BOQ Item"}
+                              </Button>
+                            </div>
+                          </form>
+                        </CardContent>
+                      </Card>
+                      
+                      {/* Add BOQ items table here */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>BOQ Items</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {boqItems.length > 0 ? (
+                            <div className="rounded-md border">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="border-b">
+                                    <th className="text-left p-4">Item Code</th>
+                                    <th className="text-left p-4">Description</th>
+                                    <th className="text-right p-4">Qty</th>
+                                    <th className="text-right p-4">Unit</th>
+                                    <th className="text-right p-4">Unit Rate (R)</th>
+                                    <th className="text-right p-4">Total (R)</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {boqItems.map((item: BOQItem, index) => (
+                                    <tr key={`${item.item_no}-${index}`} className="border-b hover:bg-gray-50">
+                                      <td className="p-4">{item.item_no}</td>
+                                      <td className="p-4">{item.description}</td>
+                                      <td className="text-right p-4">{item.quantity}</td>
+                                      <td className="text-right p-4">{item.unit}</td>
+                                      <td className="text-right p-4">{item.rate}</td>
+                                      <td className="text-right p-4 font-medium">
+                                        {(item.quantity * item.rate).toFixed(2)}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <p className="text-center text-gray-500 py-8">
+                              No BOQ items found. Add your first item above.
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
                     </div>
                   )}
 
@@ -735,6 +882,13 @@ const CostControlPage = () => {
                                     <SelectItem value="LABOR">Labor</SelectItem>
                                     <SelectItem value="EQUIPMENT">Equipment</SelectItem>
                                     <SelectItem value="SUBCONTRACTOR">Subcontractor</SelectItem>
+                                    <SelectItem value="PERMITS">Permits</SelectItem>
+                                    <SelectItem value="TRANSPORTATION">Transportation</SelectItem>
+                                    <SelectItem value="UTILITIES">Utilities</SelectItem>
+                                    <SelectItem value="RENT">Rent</SelectItem>
+                                    <SelectItem value="OFFICE_SUPPLIES">Office Supplies</SelectItem>
+                                    <SelectItem value="TRAINING">Training</SelectItem>
+                                    <SelectItem value="MARKETING">Marketing</SelectItem>
                                     <SelectItem value="OTHER">Other</SelectItem>
                                   </SelectContent>
                                 </Select>
@@ -773,10 +927,7 @@ const CostControlPage = () => {
                                   </div>
                                   <div className="text-right">
                                     <p className="font-medium">
-                                      {new Intl.NumberFormat('en-US', {
-                                        style: 'currency',
-                                        currency: userCurrency,
-                                      }).format(Number(expense.amount))}
+                                      {formatCurrency(Number(expense.amount))}
                                     </p>
                                     <p className="text-sm text-gray-500">
                                       {new Date(expense.createdAt).toLocaleDateString()}
