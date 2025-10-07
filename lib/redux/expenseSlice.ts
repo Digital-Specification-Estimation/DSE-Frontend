@@ -78,6 +78,7 @@ interface CreateExpenseDto {
   projectId: string;
   companyId: string;
   amount: number | string;
+  category: string;
   description: string;
 }
 
@@ -92,6 +93,7 @@ interface ExpenseEntity {
   description: string;
   projectId: string;
   companyId: string;
+  category: string;
   project?: any; // You might want to replace 'any' with a proper Project type
   company?: any;  // You might want to replace 'any' with a proper Company type
   createdAt: string;
