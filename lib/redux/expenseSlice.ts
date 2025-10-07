@@ -6,7 +6,6 @@ export const expenseApi = createApi({
     baseUrl: "http://localhost:4000/expenses",
     credentials: "include",
     prepareHeaders: (headers) => {
-      // Get token from localStorage
       const token = localStorage.getItem('authToken');
       if (token) {
         headers.set('Authorization', `Bearer ${token}`);
@@ -16,58 +15,94 @@ export const expenseApi = createApi({
   }),
   tagTypes: ["Expense"],
   endpoints: (builder) => ({
-    createExpense: builder.mutation({
-      query: (data) => ({
-        url: "",
+    // Create a new expense
+    createExpense: builder.mutation<ExpenseEntity, CreateExpenseDto>({
+      query: (expenseData) => ({
+        url: "/",
         method: "POST",
-        body: data,
+        body: expenseData,
       }),
       invalidatesTags: ["Expense"],
     }),
-    getExpenses: builder.query({
-      query: (companyId) => `company/${companyId}`,
-      providesTags: ["Expense"],
+
+    // Get all expenses with optional filters
+    getExpenses: builder.query<ExpenseEntity[], { projectId?: string; companyId?: string } | void>({
+      query: (filters = {}) => ({
+        url: "/",
+        params: filters,
+      }),
+      providesTags: (result) =>
+        result
+          ? [...result.map(({ id }) => ({ type: 'Expense' as const, id })), 'Expense']
+          : ['Expense'],
     }),
-    getExpensesByProject: builder.query({
-      query: ({ projectId, companyId }) => `project/${projectId}?companyId=${companyId}`,
-      providesTags: ["Expense"],
+
+    // Get expenses by project ID
+    getExpensesByProject: builder.query<ExpenseEntity[], string>({
+      query: (projectId) => `/project/${projectId}`,
+      providesTags: (result) =>
+        result
+          ? [...result.map(({ id }) => ({ type: 'Expense' as const, id })), 'Expense']
+          : ['Expense'],
     }),
-    updateExpense: builder.mutation({
-      query: ({ id, ...data }) => ({
-        url: `${id}`,
+
+    // Get single expense by ID
+    getExpense: builder.query<ExpenseEntity, string>({
+      query: (id) => `/${id}`,
+      providesTags: (result, error, id) => [{ type: 'Expense', id }],
+    }),
+
+    // Update an expense
+    updateExpense: builder.mutation<ExpenseEntity, { id: string; data: Partial<UpdateExpenseDto> }>({
+      query: ({ id, data }) => ({
+        url: `/${id}`,
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: ["Expense"],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Expense', id }],
     }),
-    deleteExpense: builder.mutation({
-      query: ({ id, companyId }) => ({
-        url: `${id}?companyId=${companyId}`,
+
+    // Delete an expense
+    deleteExpense: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Expense"],
-    }),
-    bulkUploadExpenses: builder.mutation({
-      query: ({ projectId, file }) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('projectId', projectId);
-        return {
-          url: 'bulk-upload',
-          method: 'POST',
-          body: formData,
-        };
-      },
-      invalidatesTags: ["Expense"],
+      invalidatesTags: (result, error, id) => [{ type: 'Expense', id }],
     }),
   }),
 });
+
+// Types based on the provided DTOs
+interface CreateExpenseDto {
+  projectId: string;
+  companyId: string;
+  amount: number | string;
+  description: string;
+}
+
+interface UpdateExpenseDto {
+  amount?: number | string;
+  description?: string;
+}
+
+interface ExpenseEntity {
+  id: string;
+  amount: number | string;
+  description: string;
+  projectId: string;
+  companyId: string;
+  project?: any; // You might want to replace 'any' with a proper Project type
+  company?: any;  // You might want to replace 'any' with a proper Company type
+  createdAt: string;
+  updatedAt: string;
+}
 
 export const {
   useCreateExpenseMutation,
   useGetExpensesQuery,
   useGetExpensesByProjectQuery,
+  useGetExpenseQuery,
   useUpdateExpenseMutation,
   useDeleteExpenseMutation,
-  useBulkUploadExpensesMutation,
 } = expenseApi;
