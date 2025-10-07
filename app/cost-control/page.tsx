@@ -3,12 +3,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Sidebar } from "@/components/sidebar";
 import DashboardHeader from "@/components/DashboardHeader";
-// TODO: Import backend API hooks when implementing backend integration
-// import { useGetProjectsQuery } from "@/lib/redux/projectSlice";
-// import { useSessionQuery } from "@/lib/redux/authSlice";
-// import { useCreateExpenseMutation, useGetExpensesByProjectQuery } from "@/lib/redux/expenseSlice";
-// import { useCreateBOQMutation, useGetBOQByProjectQuery } from "@/lib/redux/boqSlice";
-// import { useCalculateCompanyPayrollQuery } from "@/lib/redux/attendanceSlice";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +10,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,12 +26,40 @@ import {
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
+import { useGetProjectsQuery, useGetProjectFinancialMetricsQuery } from "@/lib/redux/projectSlice";
 
 const CostControlPage = () => {
   const [activeTab, setActiveTab] = useState<
     "overview" | "boq" | "revenues" | "expenses"
   >("overview");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  
+  // Fetch projects from the backend
+  const {
+    data: projects = [],
+    isLoading: isLoadingProjects,
+    isError: isErrorProjects,
+    error: projectsError,
+    refetch: refetchProjects,
+  } = useGetProjectsQuery();
+
+  // Fetch financial metrics for the selected project
+  const { 
+    data: financialMetrics, 
+    isLoading: isLoadingMetrics, 
+    isError: isErrorMetrics 
+  } = useGetProjectFinancialMetricsQuery(selectedProjectId, {
+    skip: !selectedProjectId, // Skip the query if no project is selected
+  });
+  console.log("financial metrics", financialMetrics)
+
+  console.log("selected project", selectedProjectId);
+  // Handle project selection change
+  const handleProjectChange = (value: string) => {
+    setSelectedProjectId(value);
+    // You can add additional logic here when project changes
+  };
+
   // TODO: Replace with backend currency data when implementing backend integration
   const [userCurrency, setUserCurrency] = useState<string>("USD");
   const [currencyValue, setCurrencyValue] = useState<number>(1);
@@ -44,12 +67,8 @@ const CostControlPage = () => {
 
   // Form states
   const [expenseForm, setExpenseForm] = useState({
-    date: new Date().toISOString().split("T")[0],
-    category: " Materials",
     description: "",
-    quantity: "",
-    unit: "M",
-    unit_price: "",
+    amount: 0,
   });
 
   const [boqForm, setBOQForm] = useState({
@@ -66,7 +85,8 @@ const CostControlPage = () => {
     to_date: new Date().toISOString().split("T")[0],
     quantity_done: "",
   });
-  //mock session dat
+
+  // Mock session data
   const sessionData = {
     user: {
       id: "mock-user-id",
@@ -78,34 +98,7 @@ const CostControlPage = () => {
   };
   const companyId = sessionData?.user?.company_id;
 
-  // Mock data for development
-  const projects = [
-    {
-      id: "1",
-      project_name: "Office Building A",
-      location_name: "Downtown",
-      budget: 500000,
-      start_date: "2024-01-01",
-      end_date: "2024-12-31",
-    },
-    {
-      id: "2",
-      project_name: "Residential Complex B",
-      location_name: "Suburbs",
-      budget: 750000,
-      start_date: "2024-02-01",
-      end_date: "2025-01-31",
-    },
-    {
-      id: "3",
-      project_name: "Shopping Mall C",
-      location_name: "City Center",
-      budget: 1200000,
-      start_date: "2024-03-01",
-      end_date: "2025-06-30",
-    },
-  ];
-  //expenses mock data
+  // expenses mock data
   const [expenses, setExpenses] = useState([
     {
       id: "1",
@@ -147,7 +140,8 @@ const CostControlPage = () => {
     completed_value: 125000,
     total_value: 500000,
   };
-  //boq mock data
+
+  // boq mock data
   const [boqItems, setBOQItems] = useState([
     {
       id: "1",
@@ -186,16 +180,31 @@ const CostControlPage = () => {
   const boqLoading = false;
   const boqItemsLoading = false;
 
-  // TODO: Replace with actual project-specific payroll calculation when implementing backend integration
-  const selectedProject = projects.find((p: any) => p.id === selectedProjectId);
+  // Selected project
+  const selectedProject = projects?.find((p: any) => p.id === selectedProjectId);
+  
+  // Project payroll calculation
   const projectPayroll = useMemo(() => {
     if (!selectedProjectId) return 0;
-    // Mock project-specific payroll calculation
     return payrollData.summary.totalNetPay * 0.3; // Assume 30% of total payroll for selected project
   }, [selectedProjectId, payrollData]);
 
   // Calculate comprehensive cost summary
   const costSummary = useMemo(() => {
+    if (financialMetrics) {
+      return {
+        total_expenses: financialMetrics.totalExpenses || 0,
+        total_revenues: financialMetrics.totalBOQ + financialMetrics.budget || 0,
+        total_boq_value: financialMetrics.totalBOQ || 0,
+        boq_completed_value: financialMetrics.totalBOQ || 0, // Assuming all BOQ is considered completed
+        project_budget: financialMetrics.budget || 0,
+        net_profit: financialMetrics.netProfit || 0,
+        profit_margin: financialMetrics.profitMargin || 0,
+        currency: financialMetrics.currency || 'RWF',
+      };
+    }
+
+    // Fallback to existing calculation if no financial metrics are available
     const manualExpenses = expenses.reduce(
       (sum: number, expense: any) => sum + Number(expense.amount || 0),
       0
@@ -206,15 +215,10 @@ const CostControlPage = () => {
     const boqCompletedValue = boqSummary?.completed_value || 0;
     const totalBOQValue = boqSummary?.total_value || 0;
 
-    // Total Revenue = Project Budget + BOQ Completed Value
     const totalRevenues = projectBudget + boqCompletedValue;
-
-    // Total Expenses = Project Payroll + Manual Expenses
     const totalExpenses = projectPayroll + manualExpenses;
-
     const netProfit = totalRevenues - totalExpenses;
-    const profitMargin =
-      totalRevenues > 0 ? (netProfit / totalRevenues) * 100 : 0;
+    const profitMargin = totalRevenues > 0 ? (netProfit / totalRevenues) * 100 : 0;
 
     return {
       total_expenses: totalExpenses,
@@ -226,9 +230,9 @@ const CostControlPage = () => {
       manual_expenses: manualExpenses,
       net_profit: netProfit,
       profit_margin: profitMargin,
-      budget_from_planning: 0, // TODO: Add budget planning integration when implementing backend
+      currency: 'RWF', // Default currency
     };
-  }, [expenses, selectedProject, boqSummary, projectPayroll]);
+  }, [expenses, selectedProject, boqSummary, projectPayroll, financialMetrics]);
 
   const revenues: any[] = [];
   const revenuesLoading = false;
@@ -237,7 +241,8 @@ const CostControlPage = () => {
   // TODO: Replace with actual currency conversion when implementing backend integration
   // Simple currency formatting for frontend-only version
   const formatCurrency = (amount: number) => {
-    return `${currencyShort} ${amount.toLocaleString(undefined, {
+    const currencySymbol = costSummary.currency || 'RWF';
+    return `${currencySymbol} ${amount.toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
@@ -347,15 +352,12 @@ const CostControlPage = () => {
       return;
     }
 
-    const quantity = parseFloat(expenseForm.quantity);
-    const unitPrice = parseFloat(expenseForm.unit_price);
+    const amount = parseFloat(expenseForm.amount.toString());
     if (
-      isNaN(quantity) ||
-      isNaN(unitPrice) ||
-      quantity <= 0 ||
-      unitPrice <= 0
+      isNaN(amount) ||
+      amount <= 0
     ) {
-      toast.error("Please enter valid quantity and unit price");
+      toast.error("Please enter valid amount");
       return;
     }
 
@@ -365,21 +367,15 @@ const CostControlPage = () => {
         id: Date.now().toString(),
         ...expenseForm,
         project_id: selectedProjectId,
-        quantity,
-        unit_price: unitPrice,
-        amount: quantity * unitPrice,
+        amount: amount
       };
 
       setExpenses((prev) => [...prev, newExpense]);
       toast.success("Expense added successfully");
 
       setExpenseForm({
-        date: new Date().toISOString().split("T")[0],
-        category: "Materials",
         description: "",
-        quantity: "",
-        unit: "M",
-        unit_price: "",
+        amount: 0
       });
     } catch (error) {
       console.error("Error adding expense:", error);
@@ -544,15 +540,15 @@ const CostControlPage = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-white">
       <Sidebar user={user} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardHeader />
-        <main className="flex-1 overflow-auto bg-gradient-to-br from-slate-50 to-slate-100">
+        <main className="flex-1 overflow-auto bg-white">
           <div className="max-w-7xl mx-auto p-6">
             {/* Header */}
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div className="bg-white rounded-lg shadow-md border p-6 mb-6">
               <h1 className="text-3xl font-bold text-slate-800 mb-2">
                 Cost Control Dashboard
               </h1>
@@ -566,18 +562,18 @@ const CostControlPage = () => {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Select Project
                 </label>
-                <select
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="w-full max-w-md px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">-- Select a Project --</option>
-                  {projects?.map((project: any) => (
-                    <option key={project.id} value={project.id}>
-                      {project.project_name} - {project.location_name}
-                    </option>
-                  ))}
-                </select>
+                <Select onValueChange={handleProjectChange} value={selectedProjectId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects?.map((project: any) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.project_name} - {project.location_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {!selectedProjectId && (
                   <p className="text-sm text-slate-500 mt-2">
                     Please select a project to view cost control data
@@ -592,8 +588,39 @@ const CostControlPage = () => {
               </div>
             </div>
 
+            {/* Loading State */}
+            {isLoadingProjects && (
+              <div className="flex h-screen">
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {isErrorProjects && (
+              <div className="flex h-screen">
+                <div className="flex-1 p-8">
+                  <DashboardHeader
+                    title="Cost Control"
+                    description="Manage project costs, BOQ, and financials"
+                  />
+                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                    <strong className="font-bold">Error!</strong>
+                    <span className="block sm:inline"> Failed to load projects. Please try again later.</span>
+                    <button 
+                      onClick={() => refetchProjects()}
+                      className="absolute bg-transparent text-2xl font-semibold leading-none right-0 top-0 mt-0 mr-4 outline-none focus:outline-none"
+                    >
+                      <span>×</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Summary Cards */}
-            {selectedProjectId && (
+            {selectedProjectId && !isLoadingProjects && !isErrorProjects && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white rounded-lg shadow p-6">
                   <div className="flex items-center justify-between mb-2">
@@ -603,7 +630,7 @@ const CostControlPage = () => {
                     <span className="text-green-500">📈</span>
                   </div>
                   <p className="text-2xl font-bold text-green-600">
-                    ${costSummary?.total_revenues?.toFixed(2) || "0.00"}
+                    {formatCurrency(costSummary?.total_revenues || 0)}
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
                     From BOQ progress
@@ -618,16 +645,14 @@ const CostControlPage = () => {
                     <span className="text-red-500">📉</span>
                   </div>
                   <p className="text-2xl font-bold text-red-600">
-                    $
-                    {(
+                    {formatCurrency(
                       (costSummary?.total_expenses || 0) +
                       (costSummary?.budget_from_planning || 0)
-                    ).toFixed(2)}
+                    )}
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
-                    Manual: ${costSummary?.total_expenses?.toFixed(2) || "0.00"}{" "}
-                    + Budget: $
-                    {costSummary?.budget_from_planning?.toFixed(2) || "0.00"}
+                    Manual: {formatCurrency(costSummary?.total_expenses || 0)}{" "}
+                    + Budget: {formatCurrency(costSummary?.budget_from_planning || 0)}
                   </p>
                 </div>
 
@@ -645,7 +670,7 @@ const CostControlPage = () => {
                         : "text-red-600"
                     }`}
                   >
-                    ${costSummary?.net_profit?.toFixed(2) || "0.00"}
+                    {formatCurrency(costSummary?.net_profit || 0)}
                   </p>
                 </div>
 
@@ -670,7 +695,7 @@ const CostControlPage = () => {
             )}
 
             {/* Tabs */}
-            {selectedProjectId && (
+            {selectedProjectId && !isLoadingProjects && !isErrorProjects && (
               <div className="bg-white rounded-lg shadow-lg mb-6">
                 <div className="flex border-b overflow-x-auto">
                   <button
@@ -731,10 +756,12 @@ const CostControlPage = () => {
                                 Total BOQ Value
                               </p>
                               <p className="text-xl font-bold text-slate-800">
-                                $
-                                {boqItems
-                                  .reduce((sum, item) => sum + item.amount, 0)
-                                  .toFixed(2)}
+                                {formatCurrency(
+                                  boqItems.reduce(
+                                    (sum, item) => sum + item.amount,
+                                    0
+                                  )
+                                )}
                               </p>
                             </div>
                             <div className="bg-green-50 rounded-lg p-4">
@@ -742,10 +769,12 @@ const CostControlPage = () => {
                                 Earned Revenue
                               </p>
                               <p className="text-xl font-bold text-green-600">
-                                $
-                                {revenues
-                                  .reduce((sum, r) => sum + r.amount, 0)
-                                  .toFixed(2)}
+                                {formatCurrency(
+                                  revenues.reduce(
+                                    (sum, r) => sum + r.amount,
+                                    0
+                                  )
+                                )}
                               </p>
                             </div>
                             <div className="bg-amber-50 rounded-lg p-4">
@@ -786,10 +815,12 @@ const CostControlPage = () => {
                                 Manual Expenses
                               </p>
                               <p className="text-xl font-bold text-red-600">
-                                $
-                                {expenses
-                                  .reduce((sum, exp) => sum + exp.amount, 0)
-                                  .toFixed(2)}
+                                {formatCurrency(
+                                  expenses.reduce(
+                                    (sum, exp) => sum + exp.amount,
+                                    0
+                                  )
+                                )}
                               </p>
                               <p className="text-xs text-slate-500">
                                 From Cost Control
@@ -800,10 +831,9 @@ const CostControlPage = () => {
                                 Budget Planning
                               </p>
                               <p className="text-xl font-bold text-orange-600">
-                                $
-                                {costSummary?.budget_from_planning?.toFixed(
-                                  2
-                                ) || "0.00"}
+                                {formatCurrency(
+                                  costSummary?.budget_from_planning || 0
+                                )}
                               </p>
                               <p className="text-xs text-slate-500">
                                 From Budget System
@@ -814,13 +844,12 @@ const CostControlPage = () => {
                                 Total Expenses
                               </p>
                               <p className="text-xl font-bold text-slate-800">
-                                $
-                                {(
-                                  expenses.reduce(
+                                {formatCurrency(
+                                  (expenses.reduce(
                                     (sum, exp) => sum + exp.amount,
                                     0
-                                  ) + (costSummary?.budget_from_planning || 0)
-                                ).toFixed(2)}
+                                  ) + (costSummary?.budget_from_planning || 0))
+                                )}
                               </p>
                               <p className="text-xs text-slate-500">
                                 Combined Total
@@ -852,7 +881,7 @@ const CostControlPage = () => {
                                   {category}
                                 </p>
                                 <p className="text-xl font-bold text-slate-800">
-                                  ${amount.toFixed(2)}
+                                  {formatCurrency(amount)}
                                 </p>
                               </div>
                             ))}
@@ -885,7 +914,7 @@ const CostControlPage = () => {
                                     </p>
                                   </div>
                                   <p className="text-lg font-bold text-green-600">
-                                    +${revenue.amount.toFixed(2)}
+                                    +{formatCurrency(revenue.amount)}
                                   </p>
                                 </div>
                               ))}
@@ -919,7 +948,7 @@ const CostControlPage = () => {
                                   </p>
                                 </div>
                                 <p className="text-lg font-bold text-red-600">
-                                  -${expense.amount.toFixed(2)}
+                                  -{formatCurrency(expense.amount)}
                                 </p>
                               </div>
                             ))}
@@ -933,7 +962,9 @@ const CostControlPage = () => {
                           <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                             <p className="text-sm text-blue-800">
                               <strong>Note:</strong> This project also has $
-                              {costSummary?.budget_from_planning?.toFixed(2)}
+                              {formatCurrency(
+                                costSummary?.budget_from_planning || 0
+                              )}
                               in planned expenses from the Budget Planning
                               system, which are included in the total expenses
                               above.
@@ -1083,9 +1114,9 @@ const CostControlPage = () => {
                           </div>
                           <button
                             type="submit"
-                            className="w-full mt-4 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                           >
-                            ➕ Add BOQ Item
+                            Add BOQ Item
                           </button>
                         </form>
                       </div>
@@ -1157,10 +1188,10 @@ const CostControlPage = () => {
                                         {item.quantity}
                                       </td>
                                       <td className="px-3 py-3 text-right">
-                                        ${item.rate.toFixed(2)}
+                                        {formatCurrency(item.rate)}
                                       </td>
                                       <td className="px-3 py-3 text-right font-semibold">
-                                        ${item.amount.toFixed(2)}
+                                        {formatCurrency(item.amount)}
                                       </td>
                                       <td className="px-3 py-3 text-right font-bold text-green-600">
                                         {item.completed_qty.toFixed(2)}
@@ -1183,22 +1214,23 @@ const CostControlPage = () => {
                                     Total:
                                   </td>
                                   <td className="px-3 py-3 text-right text-lg">
-                                    $
-                                    {boqItems
-                                      .reduce(
+                                    {formatCurrency(
+                                      boqItems.reduce(
                                         (sum, item) => sum + item.amount,
                                         0
                                       )
-                                      .toFixed(2)}
+                                    )}
                                   </td>
                                   <td
                                     colSpan={2}
                                     className="px-3 py-3 text-right text-green-600 text-lg"
                                   >
-                                    Earned: $
-                                    {revenues
-                                      .reduce((sum, r) => sum + r.amount, 0)
-                                      .toFixed(2)}
+                                    Earned: {formatCurrency(
+                                      revenues.reduce(
+                                        (sum, r) => sum + r.amount,
+                                        0
+                                      )
+                                    )}
                                   </td>
                                 </tr>
                               </tfoot>
@@ -1260,7 +1292,7 @@ const CostControlPage = () => {
                                 {boqItems.map((item) => (
                                   <option key={item.id} value={item.id}>
                                     {item.item_no} - {item.description} (Rate: $
-                                    {item.rate}/{item.unit})
+                                    {formatCurrency(item.rate)}/{item.unit})
                                   </option>
                                 ))}
                               </select>
@@ -1330,15 +1362,16 @@ const CostControlPage = () => {
                                       </p>
                                       <p className="text-xs text-green-600 mt-1">
                                         {revenueForm.quantity_done} units × $
-                                        {boqItems.find(
-                                          (item) =>
-                                            item.id === revenueForm.boq_item_id
-                                        )?.rate || 0}
+                                        {formatCurrency(
+                                          boqItems.find(
+                                            (item) =>
+                                              item.id === revenueForm.boq_item_id
+                                          )?.rate || 0
+                                        )}
                                       </p>
                                     </div>
                                     <p className="text-3xl font-bold text-green-600">
-                                      $
-                                      {(
+                                      {formatCurrency(
                                         (parseFloat(
                                           revenueForm.quantity_done
                                         ) || 0) *
@@ -1346,7 +1379,7 @@ const CostControlPage = () => {
                                           (item) =>
                                             item.id === revenueForm.boq_item_id
                                         )?.rate || 0)
-                                      ).toFixed(2)}
+                                      )}
                                     </p>
                                   </div>
                                 </div>
@@ -1355,7 +1388,7 @@ const CostControlPage = () => {
                               type="submit"
                               className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
                             >
-                              ➕ Record Revenue
+                              Record Revenue
                             </button>
                           </form>
                         </>
@@ -1410,44 +1443,6 @@ const CostControlPage = () => {
                         <form onSubmit={handleAddExpense} className="space-y-4">
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">
-                              Date
-                            </label>
-                            <input
-                              type="date"
-                              value={expenseForm.date}
-                              onChange={(e) =>
-                                setExpenseForm({
-                                  ...expenseForm,
-                                  date: e.target.value,
-                                })
-                              }
-                              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                              Category
-                            </label>
-                            <select
-                              value={expenseForm.category}
-                              onChange={(e) =>
-                                setExpenseForm({
-                                  ...expenseForm,
-                                  category: e.target.value,
-                                })
-                              }
-                              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            >
-                              {categories.map((category) => (
-                                <option key={category} value={category}>
-                                  {category}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
                               Description
                             </label>
                             <input
@@ -1464,60 +1459,18 @@ const CostControlPage = () => {
                               required
                             />
                           </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-2">
-                                Quantity
-                              </label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={expenseForm.quantity}
-                                onChange={(e) =>
-                                  setExpenseForm({
-                                    ...expenseForm,
-                                    quantity: e.target.value,
-                                  })
-                                }
-                                placeholder="0.00"
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-2">
-                                Unit
-                              </label>
-                              <select
-                                value={expenseForm.unit}
-                                onChange={(e) =>
-                                  setExpenseForm({
-                                    ...expenseForm,
-                                    unit: e.target.value,
-                                  })
-                                }
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              >
-                                {units.map((unit) => (
-                                  <option key={unit.value} value={unit.value}>
-                                    {unit.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">
-                              Unit Price ($)
+                              Amount
                             </label>
                             <input
                               type="number"
                               step="0.01"
-                              value={expenseForm.unit_price}
+                              value={expenseForm.amount}
                               onChange={(e) =>
                                 setExpenseForm({
                                   ...expenseForm,
-                                  unit_price: e.target.value,
+                                  amount: e.target.value,
                                 })
                               }
                               placeholder="0.00"
@@ -1525,29 +1478,11 @@ const CostControlPage = () => {
                               required
                             />
                           </div>
-                          {expenseForm.quantity && expenseForm.unit_price && (
-                            <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-sm text-red-700 font-medium">
-                                    Calculated Amount
-                                  </p>
-                                  <p className="text-xs text-red-600 mt-1">
-                                    {expenseForm.quantity} {expenseForm.unit} ×
-                                    ${expenseForm.unit_price}/{expenseForm.unit}
-                                  </p>
-                                </div>
-                                <p className="text-3xl font-bold text-red-600">
-                                  ${calculateExpenseAmount().toFixed(2)}
-                                </p>
-                              </div>
-                            </div>
-                          )}
                           <button
                             type="submit"
                             className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                           >
-                            ➕ Add Expense
+                            Add Expense
                           </button>
                         </form>
                       </div>

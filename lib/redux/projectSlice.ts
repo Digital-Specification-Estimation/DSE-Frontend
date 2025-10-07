@@ -82,6 +82,10 @@ export const projectApi = createApi({
       query: (projectId) => `${projectId}/employees`,
       providesTags: (result, error, projectId) => [{ type: "Projects", id: projectId }],
     }),
+    getProjectFinancialMetrics: builder.query<any, string>({
+      query: (projectId) => `${projectId}/financial-metrics`,
+      providesTags: (result, error, projectId) => [{ type: "Projects", id: `${projectId}-metrics` }],
+    }),
   }),
 });
 
@@ -95,4 +99,5 @@ export const {
   useAssignTradesToProjectMutation,
   useUnassignTradeFromProjectMutation,
   useGetProjectEmployeesQuery,
+  useGetProjectFinancialMetricsQuery,
 } = projectApi;
