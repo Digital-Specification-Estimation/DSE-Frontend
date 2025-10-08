@@ -30,6 +30,51 @@ import { useGetProjectsQuery, useGetProjectFinancialMetricsQuery } from "@/lib/r
 import { useCreateExpenseMutation, useGetExpensesByProjectQuery } from "@/lib/redux/expenseSlice";
 import { useSessionQuery } from "@/lib/redux/authSlice";
 import { useCreateBOQMutation, useGetBOQByProjectQuery } from "@/lib/redux/boqSlice";
+import { convertCurrency, getExchangeRate } from "@/lib/utils";
+
+interface ConvertedAmountProps {
+  amount: number;
+  currency: string;
+  showCurrency?: boolean;
+  sessionData: any;
+}
+
+const ConvertedAmount = ({
+  amount,
+  currency,
+  showCurrency = true,
+  sessionData,
+}: ConvertedAmountProps) => {
+  const [convertedAmount, setConvertedAmount] = useState<string>("...");
+
+  useEffect(() => {
+    const convert = async () => {
+      try {
+        const result = await convertCurrency(
+          amount,
+          currency,
+          sessionData.user.companies[0].base_currency
+        );
+        setConvertedAmount(result);
+      } catch (error) {
+        console.error("Error converting currency:", error);
+        setConvertedAmount("Error");
+      }
+    };
+
+    if (amount !== undefined) {
+      convert();
+    }
+  }, [amount, currency, sessionData.user.companies]);
+
+  return (
+    <>
+      {showCurrency
+        ? `${currency} ${Number(convertedAmount).toLocaleString()}`
+        : Number(convertedAmount).toLocaleString()}
+    </>
+  );
+};
 
 interface BOQItem {
   item_code: string;
@@ -105,6 +150,7 @@ const CostControlPage = () => {
     { projectId: selectedProjectId, companyId: sessionData.user?.company_id },
     { skip: !selectedProjectId || !sessionData.user?.company_id }
   );
+  console.log("boq items", boqItems );
 
   // Form state for new expense 
   const [expenseForm, setExpenseForm] = useState({
@@ -141,12 +187,16 @@ const CostControlPage = () => {
       toast.error("Please fill in all required fields");
       return;
     }
+    let exchangeRate = await getExchangeRate(
+        sessionData.user.currency,
+        sessionData.user.companies?.[0]?.base_currency
+      );
 
     try {
       await createExpense({
         projectId: selectedProjectId,
         companyId: sessionData.user.company_id,
-        amount: expenseForm.amount.toString(),
+        amount: (Number(expenseForm.amount) * exchangeRate).toString(),
         category: expenseForm.category,
         description: expenseForm.description,
       }).unwrap();
@@ -176,6 +226,10 @@ const CostControlPage = () => {
       toast.error("Please select a project and ensure you're logged in with a company");
       return;
     }
+    let exchangeRate = await getExchangeRate(
+        sessionData.user.currency,
+        sessionData.user.companies?.[0]?.base_currency
+      );
 
     try {
       await createBOQ({
@@ -183,8 +237,8 @@ const CostControlPage = () => {
         description:boqForm.description,
         unit:boqForm.unit,
         quantity:boqForm.quantity.toString(),
-        rate:boqForm.unit_rate.toString(),
-        amount: (boqForm.quantity * boqForm.unit_rate).toString(),
+        rate:(Number(boqForm.unit_rate) * exchangeRate).toString(),
+        amount: (Number(boqForm.quantity) * Number(boqForm.unit_rate) * exchangeRate).toString(),
         project_id: selectedProjectId,
         company_id: sessionData.user.company_id,
       }).unwrap();
@@ -332,9 +386,37 @@ const CostControlPage = () => {
           <div className="max-w-7xl mx-auto p-6">
             {/* Header */}
             <div className="bg-white rounded-lg shadow-md border p-6 mb-6">
-              <h1 className="text-3xl font-bold text-slate-800 mb-2">
-                Cost Control Dashboard
-              </h1>
+              <div className="flex justify-between items-center mb-2">
+                <h1 className="text-3xl font-bold text-slate-800">
+                  Cost Control Dashboard
+                </h1>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => {
+                    window.location.reload();
+                  }}
+                  title="Refresh page"
+                  className="ml-4"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4"
+                  >
+                    <path d="M21.5 2v6h-6" />
+                    <path d="M21.34 15.57a10 10 0 1 1-.57-8.38" />
+                  </svg>
+                  <span className="sr-only">Refresh page</span>
+                </Button>
+              </div>
               <p className="text-slate-600">
                 Track expenses, revenues, and BOQ progress for accurate project
                 cost management
@@ -413,7 +495,12 @@ const CostControlPage = () => {
                     <span className="text-green-500">📈</span>
                   </div>
                   <p className="text-2xl font-bold text-green-600">
-                    {formatCurrency(costSummary?.total_revenues  || 0)}
+                    <ConvertedAmount
+                      amount={costSummary?.total_revenues || 0}
+                      currency={sessionData.user.currency}
+                      showCurrency={true}
+                      sessionData={sessionData}
+                    />
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
                     From BOQ progress
@@ -428,14 +515,28 @@ const CostControlPage = () => {
                     <span className="text-red-500">📉</span>
                   </div>
                   <p className="text-2xl font-bold text-red-600">
-                    {formatCurrency(
-                      (costSummary?.total_expenses || 0) +
-                      (costSummary?.budget_from_planning || 0)
-                    )}
+                    <ConvertedAmount
+                      amount={costSummary?.total_expenses || 0}
+                      currency={sessionData.user.currency}
+                      showCurrency={true}
+                      sessionData={sessionData}
+                    />
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
-                    Manual: {formatCurrency(costSummary?.total_expenses || 0)}{" "}
-                    + Budget: {formatCurrency(costSummary?.project_budget || 0)}
+                    Manual:
+                    <ConvertedAmount
+                      amount={costSummary?.total_expenses || 0}
+                      currency={sessionData.user.currency}
+                      showCurrency={true}
+                      sessionData={sessionData}
+                    />
+                    + Budget:
+                    <ConvertedAmount
+                      amount={costSummary?.project_budget || 0}
+                      currency={sessionData.user.currency}
+                      showCurrency={true}
+                      sessionData={sessionData}
+                    />
                   </p>
                 </div>
 
@@ -453,7 +554,12 @@ const CostControlPage = () => {
                         : "text-red-600"
                     }`}
                   >
-                    {formatCurrency(costSummary?.net_profit || 0)}
+                    <ConvertedAmount
+                      amount={costSummary?.net_profit || 0}
+                      currency={sessionData.user.currency}
+                      showCurrency={true}
+                      sessionData={sessionData}
+                    />
                   </p>
                 </div>
 
@@ -538,9 +644,12 @@ const CostControlPage = () => {
                               Total BOQ Value
                             </p>
                             <p className="text-xl font-bold text-slate-800">
-                              {formatCurrency(
-                                costSummary.total_boq_value
-                              )}
+                              <ConvertedAmount
+                                amount={costSummary?.total_boq_value || 0}
+                                currency={sessionData.user.currency}
+                                showCurrency={true}
+                                sessionData={sessionData}
+                              />
                             </p>
                           </div>
                           <div className="bg-green-50 rounded-lg p-4">
@@ -548,9 +657,12 @@ const CostControlPage = () => {
                               Total Revenue
                             </p>
                             <p className="text-xl font-bold text-green-600">
-                              {formatCurrency(
-                                costSummary.total_revenues
-                              )}
+                              <ConvertedAmount
+                                amount={costSummary?.total_revenues || 0}
+                                currency={sessionData.user.currency}
+                                showCurrency={true}
+                                sessionData={sessionData}
+                              />
                             </p>
                           </div>
                         </div>
@@ -567,9 +679,12 @@ const CostControlPage = () => {
                               Budget Planning
                             </p>
                             <p className="text-xl font-bold text-orange-600">
-                              {formatCurrency(
-                                costSummary?.project_budget
-                              )}
+                              <ConvertedAmount
+                                amount={costSummary?.project_budget || 0}
+                                currency={sessionData.user.currency}
+                                showCurrency={true}
+                                sessionData={sessionData}
+                              />
                             </p>
                             <p className="text-xs text-slate-500">
                               From Budget System
@@ -580,9 +695,12 @@ const CostControlPage = () => {
                               Total Expenses
                             </p>
                             <p className="text-xl font-bold text-slate-800">
-                              {formatCurrency(
-                                costSummary.total_expenses
-                              )}
+                              <ConvertedAmount
+                                amount={costSummary?.total_expenses || 0}
+                                currency={sessionData.user.currency}
+                                showCurrency={true}
+                                sessionData={sessionData}
+                              />
                             </p>
                             <p className="text-xs text-slate-500">
                               Combined Total
@@ -612,7 +730,12 @@ const CostControlPage = () => {
                                 {category}
                               </p>
                               <p className="text-xl font-bold text-slate-800">
-                                {formatCurrency(Number(amount))}
+                                <ConvertedAmount
+                                  amount={Number(amount)}
+                                  currency={sessionData.user.currency}
+                                  showCurrency={true}
+                                  sessionData={sessionData}
+                                />
                               </p>
                             </div>
                           ))}
@@ -642,7 +765,12 @@ const CostControlPage = () => {
                                   </p>
                                 </div>
                                 <p className="text-lg font-bold text-red-600">
-                                  {formatCurrency(Number(expense.amount))}
+                                  <ConvertedAmount
+                                    amount={Number(expense.amount)}
+                                    currency={sessionData.user.currency}
+                                    showCurrency={true}
+                                    sessionData={sessionData}
+                                  />
                                 </p>
                               </div>
                             ))}
@@ -800,9 +928,21 @@ const CostControlPage = () => {
                                       <td className="p-4">{item.description}</td>
                                       <td className="text-right p-4">{item.quantity}</td>
                                       <td className="text-right p-4">{item.unit}</td>
-                                      <td className="text-right p-4">{item.rate}</td>
+                                      <td className="text-right p-4">
+                                        <ConvertedAmount
+                                          amount={Number(item.rate)}
+                                          currency={sessionData.user.currency}
+                                          showCurrency={true}
+                                          sessionData={sessionData}
+                                        />
+                                      </td>
                                       <td className="text-right p-4 font-medium">
-                                        {(item.quantity * item.rate).toFixed(2)}
+                                      <ConvertedAmount
+                                        amount={item.quantity * item.rate}
+                                        currency={sessionData.user.currency}
+                                        showCurrency={true}
+                                        sessionData={sessionData}
+                                      />
                                       </td>
                                     </tr>
                                   ))}
@@ -927,7 +1067,12 @@ const CostControlPage = () => {
                                   </div>
                                   <div className="text-right">
                                     <p className="font-medium">
-                                      {formatCurrency(Number(expense.amount))}
+                                    <ConvertedAmount
+                                      amount={Number(expense.amount)}
+                                      currency={sessionData.user.currency}
+                                      showCurrency={true}
+                                      sessionData={sessionData}
+                                    />
                                     </p>
                                     <p className="text-sm text-gray-500">
                                       {new Date(expense.createdAt).toLocaleDateString()}
