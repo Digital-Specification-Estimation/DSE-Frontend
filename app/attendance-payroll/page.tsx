@@ -198,7 +198,6 @@ export default function AttendancePayroll() {
   });
 
   // Updated filters state to include remainingDays
-  // Updated filters state to include remainingDays
   const [filters, setFilters] = useState({
     trade: "",
     project: "",
@@ -240,17 +239,11 @@ export default function AttendancePayroll() {
     }
   }, [tradesData, projectsFetched]);
 
-  // Calculate totals and enhanced employee data
-  const { totals, enhancedEmployees } = useMemo(() => {
-    let baseline = 0;
-    let actualPayroll = 0;
-    let daysWorked = 0;
-    let dailyActualPayroll = 0;
+  // Calculate attendance data only (no payroll calculations)
+  const { enhancedEmployees } = useMemo(() => {
     const enhanced = [];
 
     for (const employee of employees) {
-      baseline += Number(employee.budget_baseline || 0);
-
       // Calculate attendance data
       const attendance = employee.attendance || [];
       const presentDays = attendance.filter(
@@ -260,7 +253,7 @@ export default function AttendancePayroll() {
         (a: any) => a.status?.toLowerCase() === "late"
       ).length;
 
-      // Separate absent days by whether they have a reason (paid leave) or not (unpaid leave)
+      // Separate absent days by whether they have a reason
       const absentWithoutReason = attendance.filter(
         (a: any) =>
           a.status?.toLowerCase() === "absent" &&
@@ -277,125 +270,17 @@ export default function AttendancePayroll() {
         (a: any) =>
           a.status?.toLowerCase() === "absent" &&
           a.reason?.toLowerCase() === "vacation"
-      ).length;
+      );
 
-      // Calculate paid days: working days + paid leave (sick/vacation)
       const workingDays = presentDays + lateDays;
       const paidLeaveDays = absentWithSickReason + absentWithVacationReason;
       const employeeWorkingDays = workingDays + paidLeaveDays;
-
-      // Total absent days for display purposes
       const totalAbsentDays =
         absentWithoutReason + absentWithSickReason + absentWithVacationReason;
 
-      // Debug logging for first employee
-      if (employees.indexOf(employee) === 0) {
-        console.log("Employee:", employee.username);
-        console.log("Attendance records:", attendance);
-        console.log("Present days:", presentDays);
-        console.log("Late days:", lateDays);
-        console.log("Absent without reason (unpaid):", absentWithoutReason);
-        console.log("Absent with sick reason (paid):", absentWithSickReason);
-        console.log(
-          "Absent with vacation reason (paid):",
-          absentWithVacationReason
-        );
-        console.log("Paid leave days:", paidLeaveDays);
-        console.log("Total working days:", employeeWorkingDays);
-        console.log("Employee daily rate:", employee.daily_rate);
-        console.log("Trade position:", employee.trade_position);
-      }
-
-      daysWorked += employeeWorkingDays;
-
-      // Calculate actual payroll based on working days
-      // Get daily rate from employee or trade position
-      let dailyRate = Number(employee.daily_rate || 0);
-      if (dailyRate === 0 && employee.trade_position?.daily_planned_cost) {
-        dailyRate = Number(employee.trade_position.daily_planned_cost);
-      }
-      // If still 0 and monthly rate exists, convert monthly to daily
-      if (dailyRate === 0 && employee.trade_position?.monthly_planned_cost) {
-        dailyRate = Number(employee.trade_position.monthly_planned_cost) / 30;
-      }
-
-      const employeeActualPayroll = employeeWorkingDays * dailyRate;
-
-      // Debug logging for first employee (continued)
-      if (employees.indexOf(employee) === 0) {
-        console.log("Calculated daily rate:", dailyRate);
-        console.log("Employee actual payroll:", employeeActualPayroll);
-      }
-
-      // Calculate automatic deductions (only late penalties, no absent deductions)
-      const lateDeduction = lateDays * (dailyRate * 0.1); // 10% penalty per late day
-
-      // Get manual deductions for this employee
-      const employeeManualDeductions = deductions
-        .filter((deduction: any) => deduction.employee_id === employee.id)
-        .reduce(
-          (total: number, deduction: any) =>
-            total + Number(deduction.amount || 0),
-          0
-        );
-
-      // Total deductions = automatic + manual
-      const totalDeductions = lateDeduction + employeeManualDeductions;
-
-      // Note: Absent days are unpaid leave (0 pay), not deductions
-      const netPayroll = employeeActualPayroll - totalDeductions;
-
-      actualPayroll += netPayroll;
-
-      // Calculate daily actual payroll: only for employees present or on paid leave today
-      const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
-      const todayAttendance = attendance.find((a: any) => {
-        const attendanceDate = new Date(a.date).toISOString().split("T")[0];
-        return attendanceDate === today;
-      });
-
-      if (todayAttendance) {
-        const status = todayAttendance.status?.toLowerCase();
-        const reason = todayAttendance.reason?.toLowerCase();
-
-        // Include in daily payroll if present, late, or absent with paid reason (sick/vacation)
-        const isPaidToday =
-          status === "present" ||
-          status === "late" ||
-          (status === "absent" && (reason === "sick" || reason === "vacation"));
-
-        if (isPaidToday) {
-          // Calculate today's specific deductions
-          const todayManualDeductions = deductions
-            .filter((deduction: any) => {
-              if (deduction.employee_id !== employee.id) return false;
-              // Include deductions dated today, or deductions without specific dates (general deductions)
-              if (!deduction.date) return true; // General deductions apply daily
-              const deductionDate = new Date(deduction.date)
-                .toISOString()
-                .split("T")[0];
-              return deductionDate === today;
-            })
-            .reduce(
-              (total: number, deduction: any) =>
-                total + Number(deduction.amount || 0),
-              0
-            );
-
-          // Daily calculation: today's rate minus today's specific deductions and late penalty
-          const todayLateDeduction = status === "late" ? dailyRate * 0.1 : 0;
-          const dailyNetPayroll =
-            dailyRate - todayLateDeduction - todayManualDeductions;
-          dailyActualPayroll += Math.max(0, dailyNetPayroll);
-        }
-      }
-
-      // Create enhanced employee object with calculated values
       enhanced.push({
         ...employee,
         days_worked: employeeWorkingDays,
-        totalActualPayroll: netPayroll,
-        // Add attendance breakdown for table display
         sickDays: absentWithSickReason,
         vacationDays: absentWithVacationReason,
         unpaidDays: absentWithoutReason,
@@ -406,15 +291,9 @@ export default function AttendancePayroll() {
     }
 
     return {
-      totals: {
-        totalBaseline: baseline,
-        totalActualPayroll: actualPayroll,
-        totalDaysWorked: daysWorked,
-        totalDailyActuallPayroll: dailyActualPayroll,
-      },
       enhancedEmployees: enhanced,
     };
-  }, [employees]);
+  }, [employees, deductions]);
 
   // Update employee attendance using fetch
   const updateEmployeeAttendance = async (
@@ -427,7 +306,6 @@ export default function AttendancePayroll() {
         permissions.approve_attendance ||
         permissions.mark_attendance
       ) {
-        // Use RTK Query mutation instead of fetch
         await updateAttendance({
           employeeId,
           status,
@@ -435,7 +313,6 @@ export default function AttendancePayroll() {
           time: "today",
         }).unwrap();
         setOpenAttendanceDropdown(null);
-
         await refetch();
 
         toast({
@@ -459,77 +336,6 @@ export default function AttendancePayroll() {
     }
   };
 
-  // Generate payslips using fetch
-  const handleGeneratePayslips = async () => {
-    if (!permissions.full_access && !permissions.manage_payroll) {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to generate payslips.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!enhancedEmployees || enhancedEmployees.length === 0) {
-      toast({
-        title: "No Employees",
-        description: "There are no employees to generate payslips for.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setIsGeneratingPayslips(true);
-
-      toast({
-        title: "Generating Payslips",
-        description:
-          "Please wait while we generate payslips for all employees...",
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      for (const employee of enhancedEmployees) {
-        try {
-          const doc = generateSinglePayslip(employee);
-          const fileName = `payslip_${employee.username.replace(/\s+/g, "_")}_${
-            new Date().toISOString().split("T")[0]
-          }.pdf`;
-          doc.save(fileName);
-
-          await new Promise((resolve) => setTimeout(resolve, 200));
-        } catch (error) {
-          console.error(
-            `Error generating payslip for ${employee.username}:`,
-            error
-          );
-          toast({
-            title: `Error with ${employee.username}`,
-            description: "Skipping to next employee...",
-            variant: "destructive",
-          });
-        }
-      }
-
-      setIsGeneratingPayslips(false);
-
-      toast({
-        title: "Payslips Generated",
-        description: `Successfully processed ${enhancedEmployees.length} employees.`,
-      });
-    } catch (error) {
-      console.error("Error in payslip generation process:", error);
-
-      toast({
-        title: "Process Failed",
-        description: "The payslip generation process encountered an error.",
-        variant: "destructive",
-      });
-
-      setIsGeneratingPayslips(false);
-    }
-  };
   const handleAddReasonSubmit = async () => {
     try {
       await addReason(newReason).unwrap();
@@ -550,285 +356,6 @@ export default function AttendancePayroll() {
         variant: "destructive",
       });
     }
-  };
-
-  const generateSinglePayslip = (employee: any) => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
-    const margin = 20;
-    let yPosition = 30;
-
-    // Helper functions
-    const addText = (text: string, x: number, y: number, options?: any) => {
-      doc.text(text, x, y, options);
-    };
-
-    const addLine = (x1: number, y1: number, x2: number, y2: number) => {
-      doc.line(x1, y1, x2, y2);
-    };
-
-    const formatCurrency = (value: number) => {
-      return `${currencyShort} ${(value * currencyValue).toLocaleString()}`;
-    };
-
-    // Document properties
-    doc.setProperties({
-      title: `Payslip - ${employee.username}`,
-      subject: "Employee Payslip",
-      author:
-        (sessionData?.user as any)?.companies?.[0]?.name ||
-        "Construction Company",
-      creator: "DSE Payroll System",
-    });
-
-    // Company Header
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    addText("PAYSLIP", pageWidth / 2, yPosition, { align: "center" });
-
-    yPosition += 15;
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-
-    // Contract period calculation
-    const contractStartDate = employee.contract_start_date
-      ? new Date(employee.contract_start_date)
-      : new Date();
-    const contractEndDate = employee.contract_finish_date
-      ? new Date(employee.contract_finish_date)
-      : new Date();
-    const periodText = `${contractStartDate.toLocaleDateString()} - ${contractEndDate.toLocaleDateString()}`;
-
-    addText(`Period: ${periodText}`, pageWidth / 2, yPosition, {
-      align: "center",
-    });
-
-    yPosition += 30;
-
-    // Employee Information
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    addText("Employee Information", margin, yPosition);
-
-    yPosition += 15;
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    addText(`Name: ${employee.username}`, margin, yPosition);
-    yPosition += 10;
-    addText(`Employee ID: ${employee.id}`, margin, yPosition);
-    yPosition += 10;
-
-    const salaryCalculation =
-      (sessionData?.user as any)?.salary_calculation || "daily rate";
-    addText(`Salary Type: ${salaryCalculation}`, margin, yPosition);
-
-    yPosition += 20;
-
-    // Calculate attendance data
-    const presentDays =
-      employee.attendance?.filter(
-        (a: any) => a.status?.toLowerCase() === "present"
-      ).length || 0;
-    const lateDays =
-      employee.attendance?.filter(
-        (a: any) => a.status?.toLowerCase() === "late"
-      ).length || 0;
-
-    // Separate absent days by whether they have a reason (paid leave) or not (unpaid leave)
-    const absentWithoutReason =
-      employee.attendance?.filter(
-        (a: any) =>
-          a.status?.toLowerCase() === "absent" &&
-          (!a.reason || a.reason.trim() === "")
-      ).length || 0;
-
-    const absentWithSickReason =
-      employee.attendance?.filter(
-        (a: any) =>
-          a.status?.toLowerCase() === "absent" &&
-          a.reason?.toLowerCase() === "sick"
-      ).length || 0;
-
-    const absentWithVacationReason =
-      employee.attendance?.filter(
-        (a: any) =>
-          a.status?.toLowerCase() === "absent" &&
-          a.reason?.toLowerCase() === "vacation"
-      ).length || 0;
-
-    // Calculate paid days: working days + paid leave (sick/vacation)
-    const workingDays = presentDays + lateDays;
-    const paidLeaveDays = absentWithSickReason + absentWithVacationReason;
-    const totalPaidDays = workingDays + paidLeaveDays;
-
-    // Total absent days for display
-    const totalAbsentDays =
-      absentWithoutReason + absentWithSickReason + absentWithVacationReason;
-
-    // Calculate earnings
-    const dailyRate = Number(employee.daily_rate) || 0;
-    const monthlyRate = Number(employee.monthly_rate) || 0;
-
-    let baseSalary = 0;
-    if (salaryCalculation === "monthly rate") {
-      baseSalary = monthlyRate;
-    } else {
-      // Pay for working days + paid leave days only
-      baseSalary = totalPaidDays * dailyRate;
-    }
-
-    // Calculate automatic deductions (only late penalties, no absent deductions)
-    const lateDeduction = lateDays * (dailyRate * 0.1); // 10% penalty per late day
-
-    // Get manual deductions for this employee
-    const employeeManualDeductions = deductions
-      .filter((deduction: any) => deduction.employee_id === employee.id)
-      .reduce(
-        (total: number, deduction: any) =>
-          total + Number(deduction.amount || 0),
-        0
-      );
-
-    // Total deductions = automatic + manual
-    // Note: Absent days are unpaid leave (0 pay), not deductions
-    const totalDeductions = lateDeduction + employeeManualDeductions;
-    const netSalary = baseSalary - totalDeductions;
-
-    // Earnings Section
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    addText("EARNINGS", margin, yPosition);
-
-    yPosition += 15;
-    addLine(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 10;
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    addText(`Base Salary (${salaryCalculation})`, margin, yPosition);
-    addText(formatCurrency(baseSalary), pageWidth - margin - 50, yPosition);
-    yPosition += 10;
-    addText(
-      `Paid Days: ${totalPaidDays} (Present: ${presentDays}, Late: ${lateDays})`,
-      margin,
-      yPosition
-    );
-    yPosition += 10;
-    if (paidLeaveDays > 0) {
-      addText(
-        `Paid Leave: ${paidLeaveDays} (Sick: ${absentWithSickReason}, Vacation: ${absentWithVacationReason})`,
-        margin,
-        yPosition
-      );
-      yPosition += 10;
-    }
-    if (absentWithoutReason > 0) {
-      addText(
-        `Unpaid Leave: ${absentWithoutReason} days (No Pay)`,
-        margin,
-        yPosition
-      );
-      yPosition += 10;
-    }
-
-    yPosition += 20;
-
-    // Deductions Section
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    addText("DEDUCTIONS", margin, yPosition);
-
-    yPosition += 15;
-    addLine(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 10;
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-
-    // Automatic deductions
-    if (lateDeduction > 0) {
-      addText(`Late Arrival Penalty (${lateDays} days)`, margin, yPosition);
-      addText(
-        `-${formatCurrency(lateDeduction)}`,
-        pageWidth - margin - 50,
-        yPosition
-      );
-      yPosition += 10;
-    }
-
-    // Manual deductions
-    const employeeDeductions = deductions.filter(
-      (deduction: any) => deduction.employee_id === employee.id
-    );
-    if (employeeDeductions.length > 0) {
-      employeeDeductions.forEach((deduction: any) => {
-        const deductionName = deduction.name || "Manual Deduction";
-        const deductionAmount = Number(deduction.amount || 0);
-        addText(`${deductionName}`, margin, yPosition);
-        addText(
-          `-${formatCurrency(deductionAmount)}`,
-          pageWidth - margin - 50,
-          yPosition
-        );
-        yPosition += 10;
-      });
-    }
-
-    // Note: Absent days without reason are unpaid leave (no deduction shown, just no pay)
-    if (absentWithoutReason > 0) {
-      addText(`Unpaid Leave (${absentWithoutReason} days)`, margin, yPosition);
-      addText(`No Pay`, pageWidth - margin - 50, yPosition);
-      yPosition += 10;
-    }
-
-    if (totalDeductions === 0) {
-      addText("No deductions for this period", margin, yPosition);
-      yPosition += 10;
-    }
-
-    yPosition += 20;
-
-    // Total Section
-    addLine(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 15;
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    addText("Total Deductions:", margin, yPosition);
-    addText(
-      `-${formatCurrency(totalDeductions)}`,
-      pageWidth - margin - 50,
-      yPosition
-    );
-
-    yPosition += 20;
-    addLine(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 15;
-
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    addText("NET SALARY:", margin, yPosition);
-    addText(formatCurrency(netSalary), pageWidth - margin - 70, yPosition);
-
-    // Footer
-    yPosition += 40;
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    addText(
-      `Generated on: ${new Date().toLocaleDateString()}`,
-      margin,
-      yPosition
-    );
-    addText(
-      `Company: ${
-        (sessionData?.user as any)?.companies?.[0]?.name ||
-        "Construction Company"
-      }`,
-      margin,
-      yPosition + 8
-    );
-
-    return doc;
   };
 
   const handleGenerateReport = async () => {
@@ -967,37 +494,12 @@ export default function AttendancePayroll() {
         // Calculate earnings based on salary calculation preference
         const salaryCalculation =
           (sessionData?.user as any)?.salary_calculation || "daily rate";
-        let earnings = 0;
-        if (salaryCalculation === "monthly rate") {
-          earnings = monthlyRate;
-        } else {
-          earnings = daysWorked * dailyRate;
-        }
-
-        // Calculate automatic deductions
-        const lateDeduction = lateDays * (dailyRate * 0.1); // 10% penalty per late day
-        const absentDeduction = absentDays * dailyRate; // Full daily rate per absent day
-
-        // Get manual deductions for this employee
-        const employeeManualDeductions = deductions
-          .filter((deduction: any) => deduction.employee_id === employee.id)
-          .reduce(
-            (total: number, deduction: any) =>
-              total + Number(deduction.amount || 0),
-            0
-          );
-
-        const employeeDeductions =
-          lateDeduction + absentDeduction + employeeManualDeductions;
 
         totalBudget += budgetBaseline;
-        totalActual += earnings;
         totalDays += employee.attendance?.length || 0;
         totalPresentDays += presentDays;
         totalLateDays += lateDays;
         totalAbsentDays += absentDays;
-        totalEarnings += earnings;
-        totalDeductions += employeeDeductions;
 
         // Trade statistics
         const tradeName = employee.trade_position?.trade_name || "Unassigned";
@@ -1012,7 +514,6 @@ export default function AttendancePayroll() {
         }
         const tradeData = tradeStats.get(tradeName);
         tradeData.employees += 1;
-        tradeData.totalEarnings += earnings;
         tradeData.totalDays += daysWorked;
         tradeData.totalRates += dailyRate;
         tradeData.avgDailyRate = tradeData.totalRates / tradeData.employees;
@@ -1173,8 +674,8 @@ export default function AttendancePayroll() {
           grossEarnings = daysWorked * dailyRate;
         }
 
-        const lateDeduction = lateDays * (dailyRate * 0.1);
-        const absentDeduction = absentDays * dailyRate;
+        const lateDeduction = lateDays * (dailyRate * 0.1); // 10% penalty per late day
+        const absentDeduction = absentDays * dailyRate; // Full daily rate per absent day
 
         // Get manual deductions for this employee
         const employeeManualDeductions = deductions
@@ -1185,9 +686,8 @@ export default function AttendancePayroll() {
             0
           );
 
-        const totalDeductions =
+        const employeeDeductions =
           lateDeduction + absentDeduction + employeeManualDeductions;
-        const netEarnings = grossEarnings - totalDeductions;
 
         const attendanceRate =
           (employee.attendance?.length || 0) > 0
@@ -1207,9 +707,11 @@ export default function AttendancePayroll() {
             grossEarnings * currencyValue
           ).toLocaleString()}`,
           `${currencyShort} ${(
-            totalDeductions * currencyValue
+            employeeDeductions * currencyValue
           ).toLocaleString()}`,
-          `${currencyShort} ${(netEarnings * currencyValue).toLocaleString()}`,
+          `${currencyShort} ${
+            (grossEarnings - employeeDeductions) * currencyValue
+          }.toLocaleString()}`,
         ];
       });
 
@@ -1510,20 +1012,6 @@ export default function AttendancePayroll() {
                   {isGeneratingReport ? "Generating..." : "View Payroll Report"}
                 </Button>
               )}
-              {(permissions.full_access || permissions.manage_payroll) && (
-                <Button
-                  className="bg-orange-500 hover:bg-orange-600 gap-2 flex items-center h-14 rounded-full"
-                  onClick={handleGeneratePayslips}
-                  disabled={isGeneratingPayslips}
-                >
-                  {isGeneratingPayslips ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileCheck className="h-5 w-5" />
-                  )}
-                  {isGeneratingPayslips ? "Generating..." : "Generate Payslips"}
-                </Button>
-              )}
             </div>
           </div>
 
@@ -1531,7 +1019,6 @@ export default function AttendancePayroll() {
             <div className="flex h-10 items-center rounded-lg ">
               {[
                 { id: "attendance", label: "Attendance" },
-                { id: "payroll", label: "Payroll Calculation" },
                 { id: "leave", label: "Leave Tracking" },
               ].map((tab, index) => (
                 <button
@@ -1723,7 +1210,7 @@ export default function AttendancePayroll() {
                         <div className="text-xl font-bold">
                           {
                             <ConvertedAmount
-                              amount={totals.totalBaseline}
+                              amount={0}
                               currency={sessionData.user.currency}
                               sessionData={sessionData}
                             />
@@ -1737,7 +1224,7 @@ export default function AttendancePayroll() {
                         <div className="text-xl font-bold">
                           {
                             <ConvertedAmount
-                              amount={totals.totalActualPayroll}
+                              amount={0}
                               currency={sessionData.user.currency}
                               sessionData={sessionData}
                             />
@@ -2190,165 +1677,6 @@ export default function AttendancePayroll() {
                               </tr>
                             )}
                           </React.Fragment>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
-
-              {activeTab === "payroll" && (
-                <>
-                  <div className="px-4 pb-4">
-                    <div className="grid grid-cols-5 gap-4 mb-4">
-                      <div className="bg-white border rounded-lg p-4">
-                        <div className="text-sm text-gray-500 mb-1">
-                          Total Employees
-                        </div>
-                        <div className="text-xl font-bold">
-                          {enhancedEmployees.length}
-                        </div>
-                      </div>
-                      <div className="bg-white border rounded-lg p-4">
-                        <div className="text-sm text-gray-500 mb-1">
-                          Total Days Worked
-                        </div>
-                        <div className="text-xl font-bold">
-                          {totals.totalDaysWorked}
-                        </div>
-                      </div>
-                      <div className="bg-white border rounded-lg p-4">
-                        <div className="text-sm text-gray-500 mb-1">
-                          Total Budget Baseline
-                        </div>
-                        <div className="text-xl font-bold">
-                          {
-                            <ConvertedAmount
-                              amount={totals.totalBaseline}
-                              currency={sessionData.user.currency}
-                              sessionData={sessionData}
-                            />
-                          }
-                        </div>
-                      </div>
-                      <div className="bg-white border rounded-lg p-4">
-                        <div className="text-sm text-gray-500 mb-1">
-                          Total Actual Payroll
-                        </div>
-                        <div className="text-xl font-bold">
-                          {
-                            <ConvertedAmount
-                              amount={totals.totalActualPayroll}
-                              currency={sessionData.user.currency}
-                              sessionData={sessionData}
-                            />
-                          }
-                        </div>
-                      </div>
-                      <div className="bg-white border rounded-lg p-4">
-                        <div className="text-sm text-gray-500 mb-1">
-                          Daily Actual Payroll
-                        </div>
-                        <div className="text-xl font-bold">
-                          {
-                            <ConvertedAmount
-                              amount={totals.totalDailyActuallPayroll}
-                              currency={sessionData.user.currency}
-                              sessionData={sessionData}
-                            />
-                          }
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full border rounded-md">
-                      <thead>
-                        <tr className="border-t border-b text-[14px] text-gray-500">
-                          <th className="px-4 py-3 text-left border-r">
-                            Employee Name
-                          </th>
-                          <th className="px-4 py-3 text-left border-r">
-                            Daily Rate
-                          </th>
-                          <th className="px-4 py-3 text-left border-r">
-                            Days Worked
-                          </th>
-                          <th className="px-4 py-3 text-left border-r">
-                            Budget Baseline
-                          </th>
-                          <th className="px-4 py-3 text-left border-r">
-                            Total Actual
-                          </th>
-                          <th className="px-4 py-3 text-left border-r">
-                            Planned vs Actual
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-[14px]">
-                        {filteredEmployees.map((employee: any) => (
-                          <tr
-                            key={employee.id}
-                            className="border-b hover:bg-gray-50"
-                          >
-                            <td className="px-4 py-3 border-r">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">
-                                  {employee.username}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 border-r">
-                              {
-                                <ConvertedAmount
-                                  amount={employee.daily_rate}
-                                  currency={sessionData.user.currency}
-                                  sessionData={sessionData}
-                                />
-                              }
-                            </td>
-                            <td className="px-4 py-3 border-r">
-                              {employee.days_worked}
-                            </td>
-                            <td className="px-4 py-3 border-r">
-                              {
-                                <ConvertedAmount
-                                  amount={employee.budget_baseline}
-                                  currency={sessionData.user.currency}
-                                  sessionData={sessionData}
-                                />
-                              }
-                            </td>
-                            <td className="px-4 py-3 border-r">
-                              {
-                                <ConvertedAmount
-                                  amount={employee.totalActualPayroll}
-                                  currency={sessionData.user.currency}
-                                  sessionData={sessionData}
-                                />
-                              }
-                            </td>
-                            <td className="px-4 py-3 border-r">
-                              {employee.plannedVsActual?.includes(
-                                "Over Budget"
-                              ) ? (
-                                <Badge className="bg-red-50 text-red-700 border-0">
-                                  {employee.plannedVsActual}
-                                </Badge>
-                              ) : employee.plannedVsActual?.includes(
-                                  "Planned"
-                                ) ? (
-                                <span className="text-gray-700">
-                                  {employee.plannedVsActual}
-                                </span>
-                              ) : (
-                                <Badge className="bg-green-50 text-green-700 border-0">
-                                  {employee.plannedVsActual}
-                                </Badge>
-                              )}
-                            </td>
-                          </tr>
                         ))}
                       </tbody>
                     </table>
