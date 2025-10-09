@@ -1,11 +1,66 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+
+// Professional construction industry units
+const STANDARD_UNITS = [
+  // Length/Distance
+  { value: "m", label: "Meters (m)" },
+  { value: "cm", label: "Centimeters (cm)" },
+  { value: "mm", label: "Millimeters (mm)" },
+  { value: "ft", label: "Feet (ft)" },
+  { value: "in", label: "Inches (in)" },
+
+  // Area
+  { value: "m²", label: "Square Meters (m²)" },
+  { value: "ft²", label: "Square Feet (ft²)" },
+  { value: "ha", label: "Hectares (ha)" },
+
+  // Volume
+  { value: "m³", label: "Cubic Meters (m³)" },
+  { value: "ft³", label: "Cubic Feet (ft³)" },
+  { value: "l", label: "Liters (l)" },
+
+  // Weight/Mass
+  { value: "kg", label: "Kilograms (kg)" },
+  { value: "g", label: "Grams (g)" },
+  { value: "t", label: "Tonnes (t)" },
+  { value: "mt", label: "Metric Tons (mt)" },
+
+  // Count/Quantity
+  { value: "pcs", label: "Pieces (pcs)" },
+  { value: "nos", label: "Numbers (nos)" },
+  { value: "units", label: "Units" },
+  { value: "sets", label: "Sets" },
+  { value: "pairs", label: "Pairs" },
+
+  // Construction Materials
+  { value: "bags", label: "Bags" },
+  { value: "rolls", label: "Rolls" },
+  { value: "sheets", label: "Sheets" },
+  { value: "panels", label: "Panels" },
+  { value: "blocks", label: "Blocks" },
+  { value: "bricks", label: "Bricks" },
+  { value: "tiles", label: "Tiles" },
+  { value: "pipes", label: "Pipes" },
+  { value: "rods", label: "Rods" },
+  { value: "beams", label: "Beams" },
+  { value: "planks", label: "Planks" },
+
+  // Labor/Service Units
+  { value: "hours", label: "Labor Hours" },
+  { value: "man-hours", label: "Man Hours" },
+
+  // Project Units
+  { value: "batch", label: "Batch" },
+  { value: "job", label: "Job" },
+  { value: "lump-sum", label: "Lump Sum" },
+];
 import { Sidebar } from "@/components/sidebar";
-import DashboardHeader from "@/components/DashboardHeader";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -16,25 +71,28 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import DashboardHeader from "@/components/DashboardHeader";
 import {
-  Trash2,
-  Edit,
-  Plus,
-  Upload,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  CalendarIcon,
   Download,
   DollarSign,
   TrendingUp,
   TrendingDown,
   FileText,
+  Upload,
 } from "lucide-react";
 import {
   useGetProjectsQuery,
   useGetProjectFinancialMetricsQuery,
 } from "@/lib/redux/projectSlice";
-import {
-  useCreateExpenseMutation,
-  useGetExpensesByProjectQuery,
-} from "@/lib/redux/expenseSlice";
+import { toast, useToast } from "@/components/ui/use-toast";
 import { useSessionQuery } from "@/lib/redux/authSlice";
 import {
   useCreateBOQMutation,
@@ -43,17 +101,31 @@ import {
 import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
 import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
 import { useGetDeductionsQuery } from "@/lib/redux/deductionSlice";
-import { useCalculateEmployeePayrollQuery } from "@/lib/redux/attendanceSlice";
+import {
+  useCalculateEmployeePayrollQuery,
+  useCalculateProjectPayrollQuery,
+} from "@/lib/redux/attendanceSlice";
+import {
+  useCreateRevenueMutation,
+  useGetRevenuesByProjectQuery,
+  useDeleteRevenueMutation,
+} from "@/lib/redux/revenueSlice";
+import { useUpdateBOQProgressMutation } from "@/lib/redux/boqSlice";
+import {
+  useCreateExpenseMutation,
+  useGetExpensesByProjectQuery,
+  useDeleteExpenseMutation,
+} from "@/lib/redux/expenseSlice";
 
 // Profit & Loss Statement Component
-const ProfitLossStatement = ({ 
-  selectedProjectId, 
-  sessionData, 
-  costSummary, 
+const ProfitLossStatement = ({
+  selectedProjectId,
+  sessionData,
+  costSummary,
   projects,
   boqItems,
   formatCurrency,
-  getUserCurrency 
+  getUserCurrency,
 }: {
   selectedProjectId: string;
   sessionData: any;
@@ -63,36 +135,111 @@ const ProfitLossStatement = ({
   formatCurrency: (amount: number, fromCurrency?: string) => string;
   getUserCurrency: () => string;
 }) => {
-
   // Fetch trades, employees, expenses, and attendance data
   const { data: trades = [] } = useGetTradesQuery();
   const { data: employees = [] } = useGetEmployeesQuery();
   const { data: deductions = [] } = useGetDeductionsQuery();
-  const { data: projectExpenses = [] } = useGetExpensesByProjectQuery(selectedProjectId);
-  
-  // Create a memoized object to store payroll data for each employee and month
-  const [employeePayrollCache, setEmployeePayrollCache] = useState<{[key: string]: number}>({});
+  const { data: projectExpenses = [] } =
+    useGetExpensesByProjectQuery(selectedProjectId);
+  const { data: revenueEntries = [] } =
+    useGetRevenuesByProjectQuery(selectedProjectId);
 
-  // State for selected months (default to current and next 2 months)
-  const [selectedMonths, setSelectedMonths] = useState(() => {
+  // State for date ranges (periods) - user selectable
+  const [periods, setPeriods] = useState(() => {
     const now = new Date();
-    const month1 = new Date(now.getFullYear(), now.getMonth(), 1);
-    const month2 = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const month3 = new Date(now.getFullYear(), now.getMonth() + 2, 1);
-    
+    const period1Start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const period1End = new Date(now.getFullYear(), now.getMonth(), 0);
+    const period2Start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const period2End = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const period3Start = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const period3End = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+
     return {
-      month1: month1.toISOString().slice(0, 7), // YYYY-MM format
-      month2: month2.toISOString().slice(0, 7),
-      month3: month3.toISOString().slice(0, 7)
+      period1: {
+        startDate: period1Start.toISOString().split("T")[0],
+        endDate: period1End.toISOString().split("T")[0],
+        label: `Period 1 (${period1Start.toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "short",
+        })} - ${period1End.toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "short",
+        })})`,
+      },
+      period2: {
+        startDate: period2Start.toISOString().split("T")[0],
+        endDate: period2End.toISOString().split("T")[0],
+        label: `Period 2`,
+      },
+      period3: {
+        startDate: period3Start.toISOString().split("T")[0],
+        endDate: period3End.toISOString().split("T")[0],
+        label: `Period 3`,
+      },
     };
   });
 
+  // State for editable "Other" fields
+  const [otherLabour, setOtherLabour] = useState({
+    period1: 0,
+    period2: 0,
+    period3: 0,
+  });
+
+  const [otherExpenses, setOtherExpenses] = useState({
+    period1: 0,
+    period2: 0,
+    period3: 0,
+  });
+
+  // State to track when data is being recalculated
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
+  // Effect to trigger recalculation when periods change
+  useEffect(() => {
+    if (selectedProjectId) {
+      setIsRecalculating(true);
+      console.log("Period dates changed, triggering data recalculation...", {
+        period1: `${periods.period1.startDate} to ${periods.period1.endDate}`,
+        period2: `${periods.period2.startDate} to ${periods.period2.endDate}`,
+        period3: `${periods.period3.startDate} to ${periods.period3.endDate}`,
+      });
+
+      // Show toast notification
+      toast({
+        title: "Updating table with new period data...",
+        duration: 2000,
+      });
+
+      // Add a small delay to show loading state, then mark as complete
+      const timer = setTimeout(() => {
+        setIsRecalculating(false);
+        console.log("Data recalculation completed for new periods");
+        toast({
+          title: "Table updated with new period data!",
+          duration: 3000,
+        });
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }
+  }, [
+    periods.period1.startDate,
+    periods.period1.endDate,
+    periods.period2.startDate,
+    periods.period2.endDate,
+    periods.period3.startDate,
+    periods.period3.endDate,
+    selectedProjectId,
+  ]);
+
   // Get project employees - try multiple possible field names
   const projectEmployees = useMemo(() => {
-    return employees.filter((emp: any) => 
-      emp.project_id === selectedProjectId || 
-      emp.projectId === selectedProjectId ||
-      emp.current_project_id === selectedProjectId
+    return employees.filter(
+      (emp: any) =>
+        emp.project_id === selectedProjectId ||
+        emp.projectId === selectedProjectId ||
+        emp.current_project_id === selectedProjectId
     );
   }, [employees, selectedProjectId]);
 
@@ -100,319 +247,402 @@ const ProfitLossStatement = ({
   const projectTrades = useMemo(() => {
     // If no project employees, show all trades for now (for debugging)
     if (projectEmployees.length === 0) {
-      console.log('No project employees found. Available employees:', employees);
-      console.log('Selected project ID:', selectedProjectId);
+      console.log(
+        "No project employees found. Available employees:",
+        employees
+      );
+      console.log("Selected project ID:", selectedProjectId);
       // Return all trades so we can see the structure
       return trades.slice(0, 5); // Limit to first 5 trades for testing
     }
-    
-    const tradeIds = [...new Set(projectEmployees.map((emp: any) => emp.trade_position_id).filter(Boolean))];
-    console.log('Trade IDs from project employees:', tradeIds);
+
+    const tradeIds = [
+      ...new Set(
+        projectEmployees
+          .map((emp: any) => emp.trade_position_id)
+          .filter(Boolean)
+      ),
+    ];
+    console.log("Trade IDs from project employees:", tradeIds);
     return trades.filter((trade: any) => tradeIds.includes(trade.id));
   }, [trades, projectEmployees, employees, selectedProjectId]);
 
-  // Calculate actual payroll for each trade in each month using REAL attendance data
-  const calculateTradePayroll = (tradeId: string, month: string) => {
-    // First try to get employees for this specific trade from project employees
-    let tradeEmployees = projectEmployees.filter((emp: any) => emp.trade_position_id === tradeId);
-    
-    // If no project employees found, try to get all employees for this trade (for debugging)
-    if (tradeEmployees.length === 0) {
-      tradeEmployees = employees.filter((emp: any) => emp.trade_position_id === tradeId);
-      console.log(`No project employees for trade ${tradeId}, using all employees:`, tradeEmployees.length);
-    }
-    
-    return tradeEmployees.reduce((total: number, employee: any) => {
-      // Get attendance data for this employee
-      const attendance = employee.attendance || [];
-      
-      // Filter attendance records for the specific month
-      const monthAttendance = attendance.filter((a: any) => {
-        if (!a.date) return false;
-        const attendanceMonth = new Date(a.date).toISOString().slice(0, 7);
-        return attendanceMonth === month;
-      });
-      
-      // Calculate attendance statistics using the same logic as attendance-payroll
-      const presentDays = monthAttendance.filter(
-        (a: any) => a.status?.toLowerCase() === "present"
-      ).length;
-      
-      const lateDays = monthAttendance.filter(
-        (a: any) => a.status?.toLowerCase() === "late"
-      ).length;
-      
-      // Separate absent days by whether they have a reason (paid leave) or not (unpaid leave)
-      const absentWithSickReason = monthAttendance.filter(
-        (a: any) =>
-          a.status?.toLowerCase() === "absent" &&
-          a.reason?.toLowerCase() === "sick"
-      ).length;
-      
-      const absentWithVacationReason = monthAttendance.filter(
-        (a: any) =>
-          a.status?.toLowerCase() === "absent" &&
-          a.reason?.toLowerCase() === "vacation"
-      ).length;
-      
-      // Calculate paid days: working days + paid leave (sick/vacation)
-      const workingDays = presentDays + lateDays;
-      const paidLeaveDays = absentWithSickReason + absentWithVacationReason;
-      const totalPaidDays = workingDays + paidLeaveDays;
-      
-      // Get daily rate from employee or trade position (same logic as attendance-payroll)
-      let dailyRate = Number(employee.daily_rate || 0);
-      if (dailyRate === 0 && employee.trade_position?.daily_planned_cost) {
-        dailyRate = Number(employee.trade_position.daily_planned_cost);
-      }
-      // If still 0 and monthly rate exists, convert monthly to daily
-      if (dailyRate === 0 && employee.trade_position?.monthly_planned_cost) {
-        dailyRate = Number(employee.trade_position.monthly_planned_cost) / 30;
-      }
-      
-      // Calculate gross payroll based on actual paid days
-      const grossPayroll = totalPaidDays * dailyRate;
-      
-      // Calculate automatic deductions (late penalties)
-      const lateDeduction = lateDays * (dailyRate * 0.1); // 10% penalty per late day
-      
-      // Get manual deductions for this employee for this month
-      const employeeManualDeductions = deductions
-        .filter((deduction: any) => {
-          if (deduction.employee_id !== employee.id) return false;
-          if (!deduction.date) return true; // General deductions apply
-          const deductionMonth = new Date(deduction.date).toISOString().slice(0, 7);
-          return deductionMonth === month;
-        })
-        .reduce(
-          (total: number, deduction: any) =>
-            total + Number(deduction.amount || 0),
-          0
-        );
-      
-      // Total deductions = automatic + manual
-      const totalDeductions = lateDeduction + employeeManualDeductions;
-      
-      // Net payroll = gross - deductions
-      const netPayroll = Math.max(0, grossPayroll - totalDeductions);
-      
-      console.log(`Employee ${employee.name || employee.username || employee.id} (${month}):`, {
-        presentDays,
-        lateDays,
-        paidLeaveDays,
-        totalPaidDays,
-        dailyRate,
-        grossPayroll,
-        lateDeduction,
-        manualDeductions: employeeManualDeductions,
-        totalDeductions,
-        netPayroll
-      });
-      
-      return total + netPayroll;
-    }, 0);
-  };
+  // Calculate actual payroll for each trade in a specific period using REAL attendance data with real-time updates
+  const calculateTradePayroll = useMemo(() => {
+    return (tradeId: string, periodKey: "period1" | "period2" | "period3") => {
+      const period = periods[periodKey];
 
-  // State for only editable expenses - Other Expenses
-  const [otherExpenses, setOtherExpenses] = useState({
-    month1: 0,
-    month2: 0,
-    month3: 0
-  });
+      // Validate dates before creating Date objects
+      if (!period.startDate || !period.endDate) {
+        console.log(`Invalid dates for ${periodKey}:`, period);
+        return 0;
+      }
 
-  // Calculate expense totals by category from database
-  const calculateExpenseByCategory = (category: string, month: string) => {
-    const filteredExpenses = projectExpenses
-      .filter((expense: any) => {
+      const startDate = new Date(period.startDate);
+      const endDate = new Date(period.endDate);
+
+      // Check if dates are valid
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        console.log(`Invalid date objects for ${periodKey}:`, {
+          startDate: period.startDate,
+          endDate: period.endDate,
+          startDateValid: !isNaN(startDate.getTime()),
+          endDateValid: !isNaN(endDate.getTime()),
+        });
+        return 0;
+      }
+
+      console.log(`Calculating payroll for trade ${tradeId} in ${periodKey}:`, {
+        startDate: startDate.toISOString().split("T")[0],
+        endDate: endDate.toISOString().split("T")[0],
+      });
+
+      // Get employees for this specific trade from project employees
+      let tradeEmployees = projectEmployees.filter(
+        (emp: any) => emp.trade_position_id === tradeId
+      );
+
+      console.log(`Trade ${tradeId} employees:`, tradeEmployees.length);
+
+      return tradeEmployees.reduce((total: number, employee: any) => {
+        // Get attendance data for this employee
+        const attendance = employee.attendance || [];
+
+        // Filter attendance records for the specific period
+        const periodAttendance = attendance.filter((a: any) => {
+          if (!a.date) return false;
+          const attendanceDate = new Date(a.date);
+          return attendanceDate >= startDate && attendanceDate <= endDate;
+        });
+
+        // Calculate attendance statistics using the same logic as attendance-payroll
+        const presentDays = periodAttendance.filter(
+          (a: any) => a.status?.toLowerCase() === "present"
+        ).length;
+
+        const lateDays = periodAttendance.filter(
+          (a: any) => a.status?.toLowerCase() === "late"
+        ).length;
+
+        // Separate absent days by whether they have a reason (paid leave) or not (unpaid leave)
+        const absentWithSickReason = periodAttendance.filter(
+          (a: any) =>
+            a.status?.toLowerCase() === "absent" &&
+            a.reason?.toLowerCase() === "sick"
+        ).length;
+
+        const absentWithVacationReason = periodAttendance.filter(
+          (a: any) =>
+            a.status?.toLowerCase() === "absent" &&
+            a.reason?.toLowerCase() === "vacation"
+        ).length;
+
+        // Calculate paid days: working days + paid leave (sick/vacation)
+        const workingDays = presentDays + lateDays;
+        const paidLeaveDays = absentWithSickReason + absentWithVacationReason;
+        const totalPaidDays = workingDays + paidLeaveDays;
+
+        // Get daily rate from employee or trade position (same logic as attendance-payroll)
+        let dailyRate = Number(employee.daily_rate || 0);
+        if (dailyRate === 0 && employee.trade_position?.daily_planned_cost) {
+          dailyRate = Number(employee.trade_position.daily_planned_cost);
+        }
+        // If still 0 and monthly rate exists, convert monthly to daily
+        if (dailyRate === 0 && employee.trade_position?.monthly_planned_cost) {
+          dailyRate = Number(employee.trade_position.monthly_planned_cost) / 30;
+        }
+
+        // Calculate gross payroll based on actual paid days
+        const grossPayroll = totalPaidDays * dailyRate;
+
+        // Calculate automatic deductions (late penalties)
+        const lateDeduction = lateDays * (dailyRate * 0.1); // 10% penalty per late day
+
+        // Get manual deductions for this employee for this period
+        const employeeManualDeductions = deductions
+          .filter((deduction: any) => {
+            if (deduction.employee_id !== employee.id) return false;
+            if (!deduction.date) return true; // General deductions apply
+            const deductionDate = new Date(deduction.date);
+            return deductionDate >= startDate && deductionDate <= endDate;
+          })
+          .reduce(
+            (total: number, deduction: any) =>
+              total + Number(deduction.amount || 0),
+            0
+          );
+
+        // Total deductions = automatic + manual
+        const totalDeductions = lateDeduction + employeeManualDeductions;
+
+        // Net payroll = gross - deductions
+        const netPayroll = Math.max(0, grossPayroll - totalDeductions);
+
+        if (netPayroll > 0) {
+          console.log(
+            `Employee ${
+              employee.name || employee.username
+            } payroll in ${periodKey}:`,
+            {
+              totalPaidDays,
+              dailyRate,
+              grossPayroll,
+              totalDeductions,
+              netPayroll,
+            }
+          );
+        }
+
+        return total + netPayroll;
+      }, 0);
+    };
+  }, [periods, projectEmployees, deductions]);
+
+  // Calculate expense totals by category from database for a specific period with real-time updates
+  const calculateExpenseByCategory = useMemo(() => {
+    return (category: string, periodKey: "period1" | "period2" | "period3") => {
+      const period = periods[periodKey];
+
+      // Validate dates before creating Date objects
+      if (!period.startDate || !period.endDate) {
+        console.log(`Invalid dates for ${periodKey}:`, period);
+        return 0;
+      }
+
+      const startDate = new Date(period.startDate);
+      const endDate = new Date(period.endDate);
+
+      // Check if dates are valid
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        console.log(`Invalid date objects for ${periodKey}:`, {
+          startDate: period.startDate,
+          endDate: period.endDate,
+          startDateValid: !isNaN(startDate.getTime()),
+          endDateValid: !isNaN(endDate.getTime()),
+        });
+        return 0;
+      }
+
+      console.log(
+        `Calculating expenses for category "${category}" in ${periodKey}:`,
+        {
+          startDate: startDate.toISOString().split("T")[0],
+          endDate: endDate.toISOString().split("T")[0],
+          totalExpenses: projectExpenses.length,
+        }
+      );
+
+      const filteredExpenses = projectExpenses.filter((expense: any) => {
         if (expense.category !== category) return false;
         if (!expense.date) return false;
-        const expenseMonth = new Date(expense.date).toISOString().slice(0, 7);
-        return expenseMonth === month;
+        const expenseDate = new Date(expense.date);
+        const isInPeriod = expenseDate >= startDate && expenseDate <= endDate;
+
+        if (isInPeriod) {
+          console.log(`Expense included in ${periodKey}:`, {
+            category: expense.category,
+            date: expense.date,
+            amount: expense.amount,
+            description: expense.description,
+          });
+        }
+
+        return isInPeriod;
       });
-    
-    const total = filteredExpenses.reduce((total: number, expense: any) => total + Number(expense.amount || 0), 0);
-    console.log(`Expense calculation for ${category} in ${month}:`, {
-      filteredExpenses: filteredExpenses.length,
-      total,
-      allExpenses: projectExpenses.length
-    });
-    return total;
-  };
+
+      const total = filteredExpenses.reduce(
+        (total: number, expense: any) => total + Number(expense.amount || 0),
+        0
+      );
+
+      console.log(`${category} expenses in ${periodKey}:`, {
+        filteredExpenses: filteredExpenses.length,
+        total,
+      });
+
+      return total;
+    };
+  }, [periods, projectExpenses]);
 
   // Get unique expense categories from the database
   const expenseCategories = useMemo(() => {
-    const categories = [...new Set(projectExpenses.map((exp: any) => exp.category).filter(Boolean))];
-    return categories.filter(cat => cat.toLowerCase() !== 'other'); // Exclude 'other' as it's editable
+    const categories = [
+      ...new Set(
+        projectExpenses.map((exp: any) => exp.category).filter(Boolean)
+      ),
+    ];
+    return categories.filter((cat) => cat.toLowerCase() !== "other"); // Exclude 'other' as it's editable
   }, [projectExpenses]);
 
   // Get selected project details
   const selectedProject = projects.find((p: any) => p.id === selectedProjectId);
-  
+
   // Debug project data
-  console.log('Selected Project ID:', selectedProjectId);
-  console.log('Available Projects:', projects);
-  console.log('Selected Project:', selectedProject);
+  console.log("Selected Project ID:", selectedProjectId);
+  console.log("Available Projects:", projects);
+  console.log("Selected Project:", selectedProject);
   if (selectedProject) {
-    console.log('Project fields:', Object.keys(selectedProject));
-    console.log('Project values:', selectedProject);
+    console.log("Project fields:", Object.keys(selectedProject));
+    console.log("Project values:", selectedProject);
   }
-  
-  // Calculate month-specific BOQ progress (actual work completed in that month)
-  const calculateMonthlyBOQRevenue = (monthKey: 'month1' | 'month2' | 'month3') => {
-    const month = selectedMonths[monthKey];
-    
-    console.log(`Debugging BOQ items for ${month}:`, {
-      totalBOQItems: boqItems.length,
-      boqItems: boqItems,
-      targetMonth: month
-    });
-    
-    // Filter BOQ items completed in this specific month
-    const monthlyBOQItems = boqItems.filter((item: any) => {
-      // Debug each item
-      console.log('Checking BOQ item:', {
-        item,
-        completion_date: item.completion_date,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        availableFields: Object.keys(item)
+
+  // Calculate period-specific revenue from revenue entries with real-time updates
+  const calculatePeriodRevenue = useMemo(() => {
+    return (periodKey: "period1" | "period2" | "period3") => {
+      const period = periods[periodKey];
+
+      // Validate dates before creating Date objects
+      if (!period.startDate || !period.endDate) {
+        console.log(`Invalid dates for ${periodKey}:`, period);
+        return 0;
+      }
+
+      const startDate = new Date(period.startDate);
+      const endDate = new Date(period.endDate);
+
+      // Check if dates are valid
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        console.log(`Invalid date objects for ${periodKey}:`, {
+          startDate: period.startDate,
+          endDate: period.endDate,
+          startDateValid: !isNaN(startDate.getTime()),
+          endDateValid: !isNaN(endDate.getTime()),
+        });
+        return 0;
+      }
+
+      console.log(`Calculating revenue for ${periodKey}:`, {
+        startDate: startDate.toISOString().split("T")[0],
+        endDate: endDate.toISOString().split("T")[0],
+        totalRevenueEntries: revenueEntries.length,
       });
-      
-      if (!item.completion_date && !item.created_at) return false;
-      
-      // Use completion_date if available, otherwise use created_at
-      const itemDate = item.completion_date || item.created_at;
-      const itemMonth = new Date(itemDate).toISOString().slice(0, 7);
-      
-      console.log('Date comparison:', {
-        itemDate,
-        itemMonth,
-        targetMonth: month,
-        matches: itemMonth === month
+
+      // Filter revenue entries for this specific period
+      const periodRevenues = revenueEntries.filter((revenue: any) => {
+        if (!revenue.from_date) return false;
+        const revenueDate = new Date(revenue.from_date);
+        const isInPeriod = revenueDate >= startDate && revenueDate <= endDate;
+
+        if (isInPeriod) {
+          console.log(`Revenue entry included in ${periodKey}:`, {
+            from_date: revenue.from_date,
+            amount: revenue.amount,
+            description: revenue.boq_description,
+          });
+        }
+
+        return isInPeriod;
       });
-      
-      return itemMonth === month;
-    });
-    
-    // Calculate revenue from BOQ items completed in this month
-    // Use rate field instead of unit_rate, and amount if completed_qty is 0
-    const monthlyBOQRevenue = monthlyBOQItems.reduce((total: number, item: any) => {
-      const completedQty = Number(item.completed_qty || 0);
-      const rate = Number(item.rate || item.unit_rate || 0);
-      const amount = Number(item.amount || 0);
-      
-      // If completed_qty is 0, use the full amount (assuming item is completed)
-      const itemValue = completedQty > 0 ? (completedQty * rate) : amount;
-      
-      console.log('BOQ item value calculation:', {
-        item: item.description,
-        completedQty,
-        rate,
-        amount,
-        itemValue
+
+      // Calculate total revenue for this period
+      const totalRevenue = periodRevenues.reduce(
+        (total: number, revenue: any) => {
+          return total + Number(revenue.amount || 0);
+        },
+        0
+      );
+
+      console.log(`${periodKey} revenue calculation:`, {
+        filteredEntries: periodRevenues.length,
+        totalRevenue,
       });
-      
-      return total + itemValue;
-    }, 0);
-    
-    console.log(`BOQ Revenue for ${month}:`, {
-      month,
-      monthlyBOQItems: monthlyBOQItems.length,
-      monthlyBOQRevenue,
-      totalBOQItems: boqItems.length
+
+      return totalRevenue;
+    };
+  }, [periods, revenueEntries]);
+
+  // Calculate total project revenue from selected periods only
+  const calculateTotalProjectRevenue = useMemo(() => {
+    // Sum revenue from all selected periods
+    const totalRevenue =
+      calculatePeriodRevenue("period1") +
+      calculatePeriodRevenue("period2") +
+      calculatePeriodRevenue("period3");
+
+    console.log("Total revenue calculation from selected periods:", {
+      period1: calculatePeriodRevenue("period1"),
+      period2: calculatePeriodRevenue("period2"),
+      period3: calculatePeriodRevenue("period3"),
+      total: totalRevenue,
     });
-    
-    return monthlyBOQRevenue;
-  };
-  
-  // Calculate total project revenue (BOQ + Budget) - used only for TOTAL column
-  const calculateTotalProjectRevenue = () => {
-    // Get project budget
-    const projectBudget = Number(selectedProject?.budget || 0);
-    
-    // Get total BOQ value (all completed work or full amounts)
-    const totalBOQValue = boqItems.reduce((total: number, item: any) => {
-      const completedQty = Number(item.completed_qty || 0);
-      const rate = Number(item.rate || item.unit_rate || 0);
-      const amount = Number(item.amount || 0);
-      
-      // If completed_qty is 0, use the full amount (assuming item is completed)
-      const itemValue = completedQty > 0 ? (completedQty * rate) : amount;
-      
-      return total + itemValue;
-    }, 0);
-    
-    // Total = BOQ completed work + Project budget
-    const totalRevenue = projectBudget + totalBOQValue;
-    
-    console.log('Total Project Revenue Calculation:', {
-      projectBudget,
-      totalBOQValue,
-      totalRevenue,
-      boqItemsCount: boqItems.length
-    });
-    
+
     return totalRevenue;
-  };
-  
-  // Calculate monthly expenses from existing data
-  const monthlyPayroll = (costSummary?.project_payroll || 0) / 3;
-  const monthlyMaterials = (costSummary?.manual_expenses || 0) / 3;
-  
-  // Calculate labour totals for each month using real trade data
-  const calculateTotalLabour = (monthKey: 'month1' | 'month2' | 'month3') => {
-    const month = selectedMonths[monthKey];
-    return projectTrades.reduce((total: number, trade: any) => {
-      return total + calculateTradePayroll(trade.id, month);
+  }, [calculatePeriodRevenue]);
+
+  // Calculate labour totals for each period using real trade data
+  const calculateTotalLabour = (
+    periodKey: "period1" | "period2" | "period3"
+  ) => {
+    const tradePayroll = projectTrades.reduce((total: number, trade: any) => {
+      return total + calculateTradePayroll(trade.id, periodKey);
     }, 0);
+
+    // Add the editable "Other" labour amount
+    return tradePayroll + otherLabour[periodKey];
   };
 
-  // Calculate totals
-  const calculateMonthlyExpenses = (monthKey: 'month1' | 'month2' | 'month3') => {
-    const month = selectedMonths[monthKey];
-    let totalExpenses = calculateTotalLabour(monthKey); // Labour costs from trades
-    
-    // Add database expense categories
-    expenseCategories.forEach(category => {
-      totalExpenses += calculateExpenseByCategory(category, month);
+  // Calculate total expenses for each period
+  const calculatePeriodExpenses = (
+    periodKey: "period1" | "period2" | "period3"
+  ) => {
+    let totalExpenses = calculateTotalLabour(periodKey); // Labour costs from trades + other labour
+
+    // Add database expense categories (Materials, Equipment, Overhead, etc.)
+    expenseCategories.forEach((category) => {
+      totalExpenses += calculateExpenseByCategory(category, periodKey);
     });
-    
+
     // Add editable other expenses
-    totalExpenses += otherExpenses[monthKey];
-    
+    totalExpenses += otherExpenses[periodKey];
+
     return totalExpenses;
   };
-  
-  const calculateMonthlyProfit = (monthKey: 'month1' | 'month2' | 'month3') => {
-    return calculateMonthlyBOQRevenue(monthKey) - calculateMonthlyExpenses(monthKey);
+
+  const calculatePeriodProfit = (
+    periodKey: "period1" | "period2" | "period3"
+  ) => {
+    return (
+      calculatePeriodRevenue(periodKey) - calculatePeriodExpenses(periodKey)
+    );
   };
-  
-  const calculateProfitMargin = (monthKey: 'month1' | 'month2' | 'month3') => {
-    const profit = calculateMonthlyProfit(monthKey);
-    const revenue = calculateMonthlyBOQRevenue(monthKey);
+
+  const calculateProfitMargin = (
+    periodKey: "period1" | "period2" | "period3"
+  ) => {
+    const profit = calculatePeriodProfit(periodKey);
+    const revenue = calculatePeriodRevenue(periodKey);
     return revenue > 0 ? (profit / revenue) * 100 : 0;
   };
 
-  // Total calculations
-  const totalRevenue = calculateTotalProjectRevenue();
-  const totalExpenses = calculateMonthlyExpenses('month1') + calculateMonthlyExpenses('month2') + calculateMonthlyExpenses('month3');
-  const totalProfit = totalRevenue - totalExpenses;
-  const totalProfitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+  // Total calculations with memoization for performance
+  const totalRevenue = calculateTotalProjectRevenue;
+
+  const totalExpenses = useMemo(() => {
+    return (
+      calculatePeriodExpenses("period1") +
+      calculatePeriodExpenses("period2") +
+      calculatePeriodExpenses("period3")
+    );
+  }, [
+    periods,
+    projectExpenses,
+    otherExpenses,
+    otherLabour,
+    projectTrades,
+    projectEmployees,
+    deductions,
+  ]);
+
+  const totalProfit = useMemo(() => {
+    return totalRevenue - totalExpenses;
+  }, [totalRevenue, totalExpenses]);
+
+  const totalProfitMargin = useMemo(() => {
+    return totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+  }, [totalProfit, totalRevenue]);
 
   // Excel export function
   const exportToExcel = () => {
-    // Debug trade objects to see their structure
-    console.log('Project Trades for Excel:', projectTrades);
-    projectTrades.forEach((trade: any, index: number) => {
-      console.log(`Trade ${index}:`, {
-        trade,
-        availableFields: Object.keys(trade),
-        name: trade.name,
-        trade_name: trade.trade_name,
-        position_name: trade.position_name
-      });
-    });
-
     // Create HTML content for Excel export
     const htmlContent = `
       <!DOCTYPE html>
@@ -439,24 +669,94 @@ const ProfitLossStatement = ({
           <div class="project-info">
               <h2>PROJECT INFORMATION</h2>
               <table>
-                  <tr><td><strong>Project Name:</strong></td><td>${selectedProject?.project_name || selectedProject?.name || 'N/A'}</td></tr>
-                  <tr><td><strong>Project Location:</strong></td><td>${selectedProject?.location_name || selectedProject?.location || 'N/A'}</td></tr>
-                  <tr><td><strong>Project Start Date:</strong></td><td>${selectedProject?.start_date || selectedProject?.startDate || 'N/A'}</td></tr>
-                  <tr><td><strong>Project Finish Date:</strong></td><td>${selectedProject?.end_date || selectedProject?.endDate || 'N/A'}</td></tr>
+                  <tr><td><strong>Project Name:</strong></td><td>${
+                    selectedProject?.project_name ||
+                    selectedProject?.name ||
+                    "N/A"
+                  }</td></tr>
+                  <tr><td><strong>Project Location:</strong></td><td>${
+                    selectedProject?.location_name ||
+                    selectedProject?.location ||
+                    "N/A"
+                  }</td></tr>
+                  <tr><td><strong>Project Start Date:</strong></td><td>${
+                    selectedProject?.start_date ||
+                    selectedProject?.startDate ||
+                    "N/A"
+                  }</td></tr>
+                  <tr><td><strong>Project Finish Date:</strong></td><td>${
+                    selectedProject?.end_date ||
+                    selectedProject?.endDate ||
+                    "N/A"
+                  }</td></tr>
               </table>
           </div>
           
           <h1>PROFIT & LOSS STATEMENT</h1>
-          <div>DECENT ENGINEERING CONSTRUCTION Ltd - ${new Date(selectedMonths.month1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} to ${new Date(selectedMonths.month3).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
+          <div>DECENT ENGINEERING CONSTRUCTION Ltd - September 2025</div>
           
           <table>
               <thead>
                   <tr>
                       <th>Description</th>
-                      <th>${new Date(selectedMonths.month1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</th>
-                      <th>${new Date(selectedMonths.month2).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</th>
-                      <th>${new Date(selectedMonths.month3).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</th>
-                      <th>TOTAL</th>
+                      <th>Period 1 (${
+                        periods.period1.startDate &&
+                        !isNaN(new Date(periods.period1.startDate).getTime())
+                          ? new Date(
+                              periods.period1.startDate
+                            ).toLocaleDateString("en-US", {
+                              day: "numeric",
+                              month: "short",
+                            })
+                          : "Invalid Date"
+                      } - ${
+      periods.period1.endDate &&
+      !isNaN(new Date(periods.period1.endDate).getTime())
+        ? new Date(periods.period1.endDate).toLocaleDateString("en-US", {
+            day: "numeric",
+            month: "short",
+          })
+        : "Invalid Date"
+    })</th>
+                      <th>Period 2 (${
+                        periods.period2.startDate &&
+                        !isNaN(new Date(periods.period2.startDate).getTime())
+                          ? new Date(
+                              periods.period2.startDate
+                            ).toLocaleDateString("en-US", {
+                              day: "numeric",
+                              month: "short",
+                            })
+                          : "Invalid Date"
+                      } - ${
+      periods.period2.endDate &&
+      !isNaN(new Date(periods.period2.endDate).getTime())
+        ? new Date(periods.period2.endDate).toLocaleDateString("en-US", {
+            day: "numeric",
+            month: "short",
+          })
+        : "Invalid Date"
+    })</th>
+                      <th>Period 3 (${
+                        periods.period3.startDate &&
+                        !isNaN(new Date(periods.period3.startDate).getTime())
+                          ? new Date(
+                              periods.period3.startDate
+                            ).toLocaleDateString("en-US", {
+                              day: "numeric",
+                              month: "short",
+                            })
+                          : "Invalid Date"
+                      } - ${
+      periods.period3.endDate &&
+      !isNaN(new Date(periods.period3.endDate).getTime())
+        ? new Date(periods.period3.endDate).toLocaleDateString("en-US", {
+            day: "numeric",
+            month: "short",
+          })
+        : "Invalid Date"
+    })</th>
+                      <th>TOTAL (${getUserCurrency()})</th>
                   </tr>
               </thead>
               <tbody>
@@ -465,70 +765,181 @@ const ProfitLossStatement = ({
                   </tr>
                   <tr>
                       <td class="indent">Invoice Revenue</td>
-                      <td class="number">${calculateMonthlyBOQRevenue('month1').toLocaleString()}</td>
-                      <td class="number">${calculateMonthlyBOQRevenue('month2').toLocaleString()}</td>
-                      <td class="number">${calculateMonthlyBOQRevenue('month3').toLocaleString()}</td>
-                      <td class="number">${totalRevenue.toLocaleString()}</td>
+                      <td class="number">${calculatePeriodRevenue(
+                        "period1"
+                      ).toLocaleString()}</td>
+                      <td class="number">${calculatePeriodRevenue(
+                        "period2"
+                      ).toLocaleString()}</td>
+                      <td class="number">${calculatePeriodRevenue(
+                        "period3"
+                      ).toLocaleString()}</td>
+                      <td class="number">${(
+                        calculatePeriodRevenue("period1") +
+                        calculatePeriodRevenue("period2") +
+                        calculatePeriodRevenue("period3")
+                      ).toLocaleString()}</td>
                   </tr>
                   <tr class="subtotal">
                       <td>TOTAL REVENUE</td>
-                      <td class="number">${calculateMonthlyBOQRevenue('month1').toLocaleString()}</td>
-                      <td class="number">${calculateMonthlyBOQRevenue('month2').toLocaleString()}</td>
-                      <td class="number">${calculateMonthlyBOQRevenue('month3').toLocaleString()}</td>
-                      <td class="number">${totalRevenue.toLocaleString()}</td>
+                      <td class="number">${calculatePeriodRevenue(
+                        "period1"
+                      ).toLocaleString()}</td>
+                      <td class="number">${calculatePeriodRevenue(
+                        "period2"
+                      ).toLocaleString()}</td>
+                      <td class="number">${calculatePeriodRevenue(
+                        "period3"
+                      ).toLocaleString()}</td>
+                      <td class="number">${(
+                        calculatePeriodRevenue("period1") +
+                        calculatePeriodRevenue("period2") +
+                        calculatePeriodRevenue("period3")
+                      ).toLocaleString()}</td>
                   </tr>
                   <tr class="section-header expenses">
                       <td>EXPENSES</td><td></td><td></td><td></td><td></td>
                   </tr>
-                  ${projectTrades.map((trade: any) => `
+                  ${projectTrades
+                    .map((trade: any) => {
+                      const tradeName =
+                        trade.name ||
+                        trade.trade_name ||
+                        trade.position_name ||
+                        trade.title ||
+                        "Unknown Trade";
+                      const period1Payroll = calculateTradePayroll(
+                        trade.id,
+                        "period1"
+                      );
+                      const period2Payroll = calculateTradePayroll(
+                        trade.id,
+                        "period2"
+                      );
+                      const period3Payroll = calculateTradePayroll(
+                        trade.id,
+                        "period3"
+                      );
+                      const totalTradePayroll =
+                        period1Payroll + period2Payroll + period3Payroll;
+                      return `
                   <tr>
-                      <td class="indent">${trade.name || trade.trade_name || trade.position_name || trade.title || 'Unknown Trade'}</td>
-                      <td class="number">${calculateTradePayroll(trade.id, selectedMonths.month1).toFixed(2)}</td>
-                      <td class="number">${calculateTradePayroll(trade.id, selectedMonths.month2).toFixed(2)}</td>
-                      <td class="number">${calculateTradePayroll(trade.id, selectedMonths.month3).toFixed(2)}</td>
-                      <td class="number">${(calculateTradePayroll(trade.id, selectedMonths.month1) + calculateTradePayroll(trade.id, selectedMonths.month2) + calculateTradePayroll(trade.id, selectedMonths.month3)).toFixed(2)}</td>
-                  </tr>`).join('')}
+                      <td class="indent">Labour ${tradeName}</td>
+                      <td class="number">${period1Payroll.toFixed(2)}</td>
+                      <td class="number">${period2Payroll.toFixed(2)}</td>
+                      <td class="number">${period3Payroll.toFixed(2)}</td>
+                      <td class="number">${totalTradePayroll.toFixed(2)}</td>
+                  </tr>`;
+                    })
+                    .join("")}
+                  <tr>
+                      <td class="indent">Other</td>
+                      <td class="number">${otherLabour.period1.toFixed(2)}</td>
+                      <td class="number">${otherLabour.period2.toFixed(2)}</td>
+                      <td class="number">${otherLabour.period3.toFixed(2)}</td>
+                      <td class="number">${(
+                        otherLabour.period1 +
+                        otherLabour.period2 +
+                        otherLabour.period3
+                      ).toFixed(2)}</td>
+                  </tr>
                   <tr class="subtotal">
                       <td class="indent">Total Labour</td>
-                      <td class="number">${calculateTotalLabour('month1').toFixed(2)}</td>
-                      <td class="number">${calculateTotalLabour('month2').toFixed(2)}</td>
-                      <td class="number">${calculateTotalLabour('month3').toFixed(2)}</td>
-                      <td class="number">${(calculateTotalLabour('month1') + calculateTotalLabour('month2') + calculateTotalLabour('month3')).toFixed(2)}</td>
+                      <td class="number">${calculateTotalLabour(
+                        "period1"
+                      ).toFixed(2)}</td>
+                      <td class="number">${calculateTotalLabour(
+                        "period2"
+                      ).toFixed(2)}</td>
+                      <td class="number">${calculateTotalLabour(
+                        "period3"
+                      ).toFixed(2)}</td>
+                      <td class="number">${(
+                        calculateTotalLabour("period1") +
+                        calculateTotalLabour("period2") +
+                        calculateTotalLabour("period3")
+                      ).toFixed(2)}</td>
                   </tr>
-                  ${expenseCategories.map((category: string) => `
+                  ${expenseCategories
+                    .map((category: string) => {
+                      const period1Amount = calculateExpenseByCategory(
+                        category,
+                        "period1"
+                      );
+                      const period2Amount = calculateExpenseByCategory(
+                        category,
+                        "period2"
+                      );
+                      const period3Amount = calculateExpenseByCategory(
+                        category,
+                        "period3"
+                      );
+                      const totalAmount =
+                        period1Amount + period2Amount + period3Amount;
+                      return `
                   <tr>
                       <td class="indent">${category}</td>
-                      <td class="number">${calculateExpenseByCategory(category, selectedMonths.month1).toFixed(2)}</td>
-                      <td class="number">${calculateExpenseByCategory(category, selectedMonths.month2).toFixed(2)}</td>
-                      <td class="number">${calculateExpenseByCategory(category, selectedMonths.month3).toFixed(2)}</td>
-                      <td class="number">${(calculateExpenseByCategory(category, selectedMonths.month1) + calculateExpenseByCategory(category, selectedMonths.month2) + calculateExpenseByCategory(category, selectedMonths.month3)).toFixed(2)}</td>
-                  </tr>`).join('')}
+                      <td class="number">${period1Amount.toFixed(2)}</td>
+                      <td class="number">${period2Amount.toFixed(2)}</td>
+                      <td class="number">${period3Amount.toFixed(2)}</td>
+                      <td class="number">${totalAmount.toFixed(2)}</td>
+                  </tr>`;
+                    })
+                    .join("")}
                   <tr>
                       <td class="indent">Other Expenses</td>
-                      <td class="number">${otherExpenses.month1.toFixed(2)}</td>
-                      <td class="number">${otherExpenses.month2.toFixed(2)}</td>
-                      <td class="number">${otherExpenses.month3.toFixed(2)}</td>
-                      <td class="number">${(otherExpenses.month1 + otherExpenses.month2 + otherExpenses.month3).toFixed(2)}</td>
+                      <td class="number">${otherExpenses.period1.toFixed(
+                        2
+                      )}</td>
+                      <td class="number">${otherExpenses.period2.toFixed(
+                        2
+                      )}</td>
+                      <td class="number">${otherExpenses.period3.toFixed(
+                        2
+                      )}</td>
+                      <td class="number">${(
+                        otherExpenses.period1 +
+                        otherExpenses.period2 +
+                        otherExpenses.period3
+                      ).toFixed(2)}</td>
                   </tr>
                   <tr class="subtotal">
                       <td>TOTAL EXPENSES</td>
-                      <td class="number">${calculateMonthlyExpenses('month1').toFixed(2)}</td>
-                      <td class="number">${calculateMonthlyExpenses('month2').toFixed(2)}</td>
-                      <td class="number">${calculateMonthlyExpenses('month3').toFixed(2)}</td>
+                      <td class="number">${calculatePeriodExpenses(
+                        "period1"
+                      ).toFixed(2)}</td>
+                      <td class="number">${calculatePeriodExpenses(
+                        "period2"
+                      ).toFixed(2)}</td>
+                      <td class="number">${calculatePeriodExpenses(
+                        "period3"
+                      ).toFixed(2)}</td>
                       <td class="number">${totalExpenses.toFixed(2)}</td>
                   </tr>
                   <tr class="total">
                       <td>NET PROFIT</td>
-                      <td class="number">${calculateMonthlyProfit('month1').toFixed(2)}</td>
-                      <td class="number">${calculateMonthlyProfit('month2').toFixed(2)}</td>
-                      <td class="number">${calculateMonthlyProfit('month3').toFixed(2)}</td>
+                      <td class="number">${calculatePeriodProfit(
+                        "period1"
+                      ).toFixed(2)}</td>
+                      <td class="number">${calculatePeriodProfit(
+                        "period2"
+                      ).toFixed(2)}</td>
+                      <td class="number">${calculatePeriodProfit(
+                        "period3"
+                      ).toFixed(2)}</td>
                       <td class="number">${totalProfit.toFixed(2)}</td>
                   </tr>
                   <tr class="margin">
                       <td>PROFIT MARGIN %</td>
-                      <td class="number">${calculateProfitMargin('month1').toFixed(1)}%</td>
-                      <td class="number">${calculateProfitMargin('month2').toFixed(1)}%</td>
-                      <td class="number">${calculateProfitMargin('month3').toFixed(1)}%</td>
+                      <td class="number">${calculateProfitMargin(
+                        "period1"
+                      ).toFixed(1)}%</td>
+                      <td class="number">${calculateProfitMargin(
+                        "period2"
+                      ).toFixed(1)}%</td>
+                      <td class="number">${calculateProfitMargin(
+                        "period3"
+                      ).toFixed(1)}%</td>
                       <td class="number">${totalProfitMargin.toFixed(1)}%</td>
                   </tr>
               </tbody>
@@ -538,11 +949,13 @@ const ProfitLossStatement = ({
     `;
 
     // Create and download the file
-    const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
+    const blob = new Blob([htmlContent], { type: "application/vnd.ms-excel" });
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = `${selectedProject?.name || 'Project'}_ProfitLoss_${new Date().toISOString().split('T')[0]}.xls`;
+    link.download = `${selectedProject?.name || "Project"}_ProfitLoss_${
+      new Date().toISOString().split("T")[0]
+    }.xls`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -556,7 +969,10 @@ const ProfitLossStatement = ({
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Project Information</span>
-            <Button onClick={exportToExcel} className="bg-green-600 hover:bg-green-700">
+            <Button
+              onClick={exportToExcel}
+              className="bg-green-600 hover:bg-green-700"
+            >
               <FileText className="w-4 h-4 mr-2" />
               Export to Excel
             </Button>
@@ -565,16 +981,24 @@ const ProfitLossStatement = ({
         <CardContent>
           <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
             <div>
-              <strong>Project Name:</strong> {selectedProject?.project_name || selectedProject?.name || 'N/A'}
+              <strong>Project Name:</strong>{" "}
+              {selectedProject?.project_name || selectedProject?.name || "N/A"}
             </div>
             <div>
-              <strong>Project Location:</strong> {selectedProject?.location_name || selectedProject?.location || 'N/A'}
+              <strong>Project Location:</strong>{" "}
+              {selectedProject?.location_name ||
+                selectedProject?.location ||
+                "N/A"}
             </div>
             <div>
-              <strong>Project Start Date:</strong> {selectedProject?.start_date || selectedProject?.startDate || 'N/A'}
+              <strong>Project Start Date:</strong>{" "}
+              {selectedProject?.start_date ||
+                selectedProject?.startDate ||
+                "N/A"}
             </div>
             <div>
-              <strong>Project Finish Date:</strong> {selectedProject?.end_date || selectedProject?.endDate || 'N/A'}
+              <strong>Project Finish Date:</strong>{" "}
+              {selectedProject?.end_date || selectedProject?.endDate || "N/A"}
             </div>
           </div>
         </CardContent>
@@ -585,19 +1009,303 @@ const ProfitLossStatement = ({
         <CardHeader>
           <CardTitle>Profit & Loss Statement</CardTitle>
           <p className="text-sm text-gray-600">
-            DECENT ENGINEERING CONSTRUCTION Ltd - {new Date(selectedMonths.month1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} to {new Date(selectedMonths.month3).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            DECENT ENGINEERING CONSTRUCTION Ltd - September 2025
           </p>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          {isRecalculating && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <span className="text-blue-700 text-sm font-medium">
+                  Updating table with new period data...
+                </span>
+              </div>
+            </div>
+          )}
+          <div
+            className={`overflow-x-auto ${
+              isRecalculating
+                ? "opacity-60 transition-opacity duration-300"
+                : ""
+            }`}
+          >
             <table className="w-full border-collapse border border-gray-300 text-sm">
               <thead>
                 <tr className="bg-gray-200">
-                  <th className="border border-gray-300 px-4 py-2 text-left font-bold">Description</th>
-                  <th className="border border-gray-300 px-4 py-2 text-center font-bold">{new Date(selectedMonths.month1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</th>
-                  <th className="border border-gray-300 px-4 py-2 text-center font-bold">{new Date(selectedMonths.month2).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</th>
-                  <th className="border border-gray-300 px-4 py-2 text-center font-bold">{new Date(selectedMonths.month3).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</th>
-                  <th className="border border-gray-300 px-4 py-2 text-center font-bold">TOTAL</th>
+                  <th className="border border-gray-300 px-4 py-2 text-left font-bold">
+                    Description
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-bold">
+                    <div className="flex flex-col items-center space-y-2">
+                      <span className="text-xs font-semibold">Period 1</span>
+                      <div className="flex flex-col space-y-1">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-28 h-7 text-xs justify-start text-left font-normal"
+                            >
+                              <CalendarIcon className="mr-1 h-3 w-3" />
+                              {periods.period1.startDate
+                                ? new Date(
+                                    periods.period1.startDate
+                                  ).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                : "Start"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={
+                                periods.period1.startDate
+                                  ? new Date(periods.period1.startDate)
+                                  : undefined
+                              }
+                              onSelect={(date) => {
+                                if (date) {
+                                  setPeriods((prev) => ({
+                                    ...prev,
+                                    period1: {
+                                      ...prev.period1,
+                                      startDate: date
+                                        .toISOString()
+                                        .split("T")[0],
+                                    },
+                                  }));
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-28 h-7 text-xs justify-start text-left font-normal"
+                            >
+                              <CalendarIcon className="mr-1 h-3 w-3" />
+                              {periods.period1.endDate
+                                ? new Date(
+                                    periods.period1.endDate
+                                  ).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                : "End"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={
+                                periods.period1.endDate
+                                  ? new Date(periods.period1.endDate)
+                                  : undefined
+                              }
+                              onSelect={(date) => {
+                                if (date) {
+                                  setPeriods((prev) => ({
+                                    ...prev,
+                                    period1: {
+                                      ...prev.period1,
+                                      endDate: date.toISOString().split("T")[0],
+                                    },
+                                  }));
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-bold">
+                    <div className="flex flex-col items-center space-y-2">
+                      <span className="text-xs font-semibold">Period 2</span>
+                      <div className="flex flex-col space-y-1">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-28 h-7 text-xs justify-start text-left font-normal"
+                            >
+                              <CalendarIcon className="mr-1 h-3 w-3" />
+                              {periods.period2.startDate
+                                ? new Date(
+                                    periods.period2.startDate
+                                  ).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                : "Start"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={
+                                periods.period2.startDate
+                                  ? new Date(periods.period2.startDate)
+                                  : undefined
+                              }
+                              onSelect={(date) => {
+                                if (date) {
+                                  setPeriods((prev) => ({
+                                    ...prev,
+                                    period2: {
+                                      ...prev.period2,
+                                      startDate: date
+                                        .toISOString()
+                                        .split("T")[0],
+                                    },
+                                  }));
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-28 h-7 text-xs justify-start text-left font-normal"
+                            >
+                              <CalendarIcon className="mr-1 h-3 w-3" />
+                              {periods.period2.endDate
+                                ? new Date(
+                                    periods.period2.endDate
+                                  ).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                : "End"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={
+                                periods.period2.endDate
+                                  ? new Date(periods.period2.endDate)
+                                  : undefined
+                              }
+                              onSelect={(date) => {
+                                if (date) {
+                                  setPeriods((prev) => ({
+                                    ...prev,
+                                    period2: {
+                                      ...prev.period2,
+                                      endDate: date.toISOString().split("T")[0],
+                                    },
+                                  }));
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-bold">
+                    <div className="flex flex-col items-center space-y-2">
+                      <span className="text-xs font-semibold">Period 3</span>
+                      <div className="flex flex-col space-y-1">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-28 h-7 text-xs justify-start text-left font-normal"
+                            >
+                              <CalendarIcon className="mr-1 h-3 w-3" />
+                              {periods.period3.startDate
+                                ? new Date(
+                                    periods.period3.startDate
+                                  ).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                : "Start"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={
+                                periods.period3.startDate
+                                  ? new Date(periods.period3.startDate)
+                                  : undefined
+                              }
+                              onSelect={(date) => {
+                                if (date) {
+                                  setPeriods((prev) => ({
+                                    ...prev,
+                                    period3: {
+                                      ...prev.period3,
+                                      startDate: date
+                                        .toISOString()
+                                        .split("T")[0],
+                                    },
+                                  }));
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-28 h-7 text-xs justify-start text-left font-normal"
+                            >
+                              <CalendarIcon className="mr-1 h-3 w-3" />
+                              {periods.period3.endDate
+                                ? new Date(
+                                    periods.period3.endDate
+                                  ).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                : "End"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={
+                                periods.period3.endDate
+                                  ? new Date(periods.period3.endDate)
+                                  : undefined
+                              }
+                              onSelect={(date) => {
+                                if (date) {
+                                  setPeriods((prev) => ({
+                                    ...prev,
+                                    period3: {
+                                      ...prev.period3,
+                                      endDate: date.toISOString().split("T")[0],
+                                    },
+                                  }));
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </th>
+                  <th className="border border-gray-300 px-4 py-2 text-center font-bold">
+                    TOTAL ({getUserCurrency()})
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -610,30 +1318,34 @@ const ProfitLossStatement = ({
                   <td className="border border-gray-300 px-4 py-2"></td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-2 pl-8">Invoice Revenue</td>
-                  <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateMonthlyBOQRevenue('month1'))}
+                  <td className="border border-gray-300 px-4 py-2 pl-8">
+                    Invoice Revenue
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateMonthlyBOQRevenue('month2'))}
+                    {formatCurrency(calculatePeriodRevenue("period1"))}
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateMonthlyBOQRevenue('month3'))}
+                    {formatCurrency(calculatePeriodRevenue("period2"))}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right">
+                    {formatCurrency(calculatePeriodRevenue("period3"))}
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right font-bold">
                     {formatCurrency(totalRevenue)}
                   </td>
                 </tr>
                 <tr className="bg-gray-100 font-bold">
-                  <td className="border border-gray-300 px-4 py-2">TOTAL REVENUE</td>
-                  <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateMonthlyBOQRevenue('month1'))}
+                  <td className="border border-gray-300 px-4 py-2">
+                    TOTAL REVENUE
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateMonthlyBOQRevenue('month2'))}
+                    {formatCurrency(calculatePeriodRevenue("period1"))}
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateMonthlyBOQRevenue('month3'))}
+                    {formatCurrency(calculatePeriodRevenue("period2"))}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right">
+                    {formatCurrency(calculatePeriodRevenue("period3"))}
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
                     {formatCurrency(totalRevenue)}
@@ -648,83 +1360,183 @@ const ProfitLossStatement = ({
                   <td className="border border-gray-300 px-4 py-2"></td>
                   <td className="border border-gray-300 px-4 py-2"></td>
                 </tr>
-                
-                {/* DYNAMIC TRADE ROWS */}
+
+                {/* LABOUR DIRECT - DYNAMIC TRADE ROWS */}
                 {projectTrades.map((trade: any) => {
-                  console.log('Rendering trade:', trade.name, 'ID:', trade.id);
+                  const tradeName =
+                    trade.name ||
+                    trade.trade_name ||
+                    trade.position_name ||
+                    trade.title ||
+                    "Unknown Trade";
+                  const period1Payroll = calculateTradePayroll(
+                    trade.id,
+                    "period1"
+                  );
+                  const period2Payroll = calculateTradePayroll(
+                    trade.id,
+                    "period2"
+                  );
+                  const period3Payroll = calculateTradePayroll(
+                    trade.id,
+                    "period3"
+                  );
+                  const totalTradePayroll =
+                    period1Payroll + period2Payroll + period3Payroll;
+
                   return (
                     <tr key={trade.id}>
-                    <td className="border border-gray-300 px-4 py-2 pl-8">{trade.name || trade.trade_name || trade.position_name || trade.title || 'Unknown Trade'}</td>
-                    <td className="border border-gray-300 px-4 py-2 text-right">
-                      {formatCurrency(calculateTradePayroll(trade.id, selectedMonths.month1))}
-                    </td>
-                    <td className="border border-gray-300 px-4 py-2 text-right">
-                      {formatCurrency(calculateTradePayroll(trade.id, selectedMonths.month2))}
-                    </td>
-                    <td className="border border-gray-300 px-4 py-2 text-right">
-                      {formatCurrency(calculateTradePayroll(trade.id, selectedMonths.month3))}
-                    </td>
-                    <td className="border border-gray-300 px-4 py-2 text-right">
-                      {formatCurrency(
-                        calculateTradePayroll(trade.id, selectedMonths.month1) + 
-                        calculateTradePayroll(trade.id, selectedMonths.month2) + 
-                        calculateTradePayroll(trade.id, selectedMonths.month3)
-                      )}
-                    </td>
-                  </tr>
+                      <td className="border border-gray-300 px-4 py-2 pl-8">
+                        Labour {tradeName}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-right">
+                        {formatCurrency(period1Payroll)}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-right">
+                        {formatCurrency(period2Payroll)}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-right">
+                        {formatCurrency(period3Payroll)}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-right">
+                        {formatCurrency(totalTradePayroll)}
+                      </td>
+                    </tr>
                   );
                 })}
-                
+
+                {/* OTHER LABOUR (EDITABLE) */}
+                <tr>
+                  <td className="border border-gray-300 px-4 py-2 pl-8">
+                    Other
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right bg-yellow-50">
+                    <Input
+                      type="number"
+                      value={otherLabour.period1}
+                      onChange={(e) =>
+                        setOtherLabour((prev) => ({
+                          ...prev,
+                          period1: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full text-right border-0 bg-transparent"
+                      placeholder="0.00"
+                    />
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right bg-yellow-50">
+                    <Input
+                      type="number"
+                      value={otherLabour.period2}
+                      onChange={(e) =>
+                        setOtherLabour((prev) => ({
+                          ...prev,
+                          period2: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full text-right border-0 bg-transparent"
+                      placeholder="0.00"
+                    />
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right bg-yellow-50">
+                    <Input
+                      type="number"
+                      value={otherLabour.period3}
+                      onChange={(e) =>
+                        setOtherLabour((prev) => ({
+                          ...prev,
+                          period3: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full text-right border-0 bg-transparent"
+                      placeholder="0.00"
+                    />
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right">
+                    {formatCurrency(
+                      otherLabour.period1 +
+                        otherLabour.period2 +
+                        otherLabour.period3
+                    )}
+                  </td>
+                </tr>
+
                 {/* TOTAL LABOUR ROW */}
                 <tr className="bg-gray-100 font-bold">
-                  <td className="border border-gray-300 px-4 py-2 pl-8">Total Labour</td>
-                  <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateTotalLabour('month1'))}
+                  <td className="border border-gray-300 px-4 py-2 pl-8">
+                    Total Labour
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateTotalLabour('month2'))}
+                    {formatCurrency(calculateTotalLabour("period1"))}
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateTotalLabour('month3'))}
+                    {formatCurrency(calculateTotalLabour("period2"))}
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateTotalLabour('month1') + calculateTotalLabour('month2') + calculateTotalLabour('month3'))}
+                    {formatCurrency(calculateTotalLabour("period3"))}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right">
+                    {formatCurrency(
+                      calculateTotalLabour("period1") +
+                        calculateTotalLabour("period2") +
+                        calculateTotalLabour("period3")
+                    )}
                   </td>
                 </tr>
-                {/* DATABASE EXPENSE CATEGORIES (UNEDITABLE) */}
+
+                {/* MANUAL EXPENSE CATEGORIES FROM DATABASE */}
                 {expenseCategories.map((category: string) => {
-                  console.log('Rendering expense category:', category);
+                  const period1Amount = calculateExpenseByCategory(
+                    category,
+                    "period1"
+                  );
+                  const period2Amount = calculateExpenseByCategory(
+                    category,
+                    "period2"
+                  );
+                  const period3Amount = calculateExpenseByCategory(
+                    category,
+                    "period3"
+                  );
+                  const totalAmount =
+                    period1Amount + period2Amount + period3Amount;
+
                   return (
-                  <tr key={category}>
-                    <td className="border border-gray-300 px-4 py-2 pl-8">{category}</td>
-                    <td className="border border-gray-300 px-4 py-2 text-right">
-                      {formatCurrency(calculateExpenseByCategory(category, selectedMonths.month1))}
-                    </td>
-                    <td className="border border-gray-300 px-4 py-2 text-right">
-                      {formatCurrency(calculateExpenseByCategory(category, selectedMonths.month2))}
-                    </td>
-                    <td className="border border-gray-300 px-4 py-2 text-right">
-                      {formatCurrency(calculateExpenseByCategory(category, selectedMonths.month3))}
-                    </td>
-                    <td className="border border-gray-300 px-4 py-2 text-right">
-                      {formatCurrency(
-                        calculateExpenseByCategory(category, selectedMonths.month1) + 
-                        calculateExpenseByCategory(category, selectedMonths.month2) + 
-                        calculateExpenseByCategory(category, selectedMonths.month3)
-                      )}
-                    </td>
-                  </tr>
+                    <tr key={category}>
+                      <td className="border border-gray-300 px-4 py-2 pl-8">
+                        {category}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-right">
+                        {formatCurrency(period1Amount)}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-right">
+                        {formatCurrency(period2Amount)}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-right">
+                        {formatCurrency(period3Amount)}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-right">
+                        {formatCurrency(totalAmount)}
+                      </td>
+                    </tr>
                   );
                 })}
-                
+
                 {/* OTHER EXPENSES (EDITABLE) */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-2 pl-8">Other Expenses</td>
+                  <td className="border border-gray-300 px-4 py-2 pl-8">
+                    Other Expenses
+                  </td>
                   <td className="border border-gray-300 px-4 py-2 text-right bg-yellow-50">
                     <Input
                       type="number"
-                      value={otherExpenses.month1}
-                      onChange={(e) => setOtherExpenses(prev => ({ ...prev, month1: Number(e.target.value) }))}
+                      value={otherExpenses.period1}
+                      onChange={(e) =>
+                        setOtherExpenses((prev) => ({
+                          ...prev,
+                          period1: Number(e.target.value),
+                        }))
+                      }
                       className="w-full text-right border-0 bg-transparent"
                       placeholder="0.00"
                     />
@@ -732,8 +1544,13 @@ const ProfitLossStatement = ({
                   <td className="border border-gray-300 px-4 py-2 text-right bg-yellow-50">
                     <Input
                       type="number"
-                      value={otherExpenses.month2}
-                      onChange={(e) => setOtherExpenses(prev => ({ ...prev, month2: Number(e.target.value) }))}
+                      value={otherExpenses.period2}
+                      onChange={(e) =>
+                        setOtherExpenses((prev) => ({
+                          ...prev,
+                          period2: Number(e.target.value),
+                        }))
+                      }
                       className="w-full text-right border-0 bg-transparent"
                       placeholder="0.00"
                     />
@@ -741,26 +1558,38 @@ const ProfitLossStatement = ({
                   <td className="border border-gray-300 px-4 py-2 text-right bg-yellow-50">
                     <Input
                       type="number"
-                      value={otherExpenses.month3}
-                      onChange={(e) => setOtherExpenses(prev => ({ ...prev, month3: Number(e.target.value) }))}
+                      value={otherExpenses.period3}
+                      onChange={(e) =>
+                        setOtherExpenses((prev) => ({
+                          ...prev,
+                          period3: Number(e.target.value),
+                        }))
+                      }
                       className="w-full text-right border-0 bg-transparent"
                       placeholder="0.00"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(otherExpenses.month1 + otherExpenses.month2 + otherExpenses.month3)}
+                    {formatCurrency(
+                      otherExpenses.period1 +
+                        otherExpenses.period2 +
+                        otherExpenses.period3
+                    )}
                   </td>
                 </tr>
+
                 <tr className="bg-gray-100 font-bold">
-                  <td className="border border-gray-300 px-4 py-2">TOTAL EXPENSES</td>
-                  <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateMonthlyExpenses('month1'))}
+                  <td className="border border-gray-300 px-4 py-2">
+                    TOTAL EXPENSES
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateMonthlyExpenses('month2'))}
+                    {formatCurrency(calculatePeriodExpenses("period1"))}
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateMonthlyExpenses('month3'))}
+                    {formatCurrency(calculatePeriodExpenses("period2"))}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right">
+                    {formatCurrency(calculatePeriodExpenses("period3"))}
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
                     {formatCurrency(totalExpenses)}
@@ -769,15 +1598,17 @@ const ProfitLossStatement = ({
 
                 {/* NET PROFIT */}
                 <tr className="bg-green-100 font-bold text-lg">
-                  <td className="border border-gray-300 px-4 py-2">NET PROFIT</td>
-                  <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateMonthlyProfit('month1'))}
+                  <td className="border border-gray-300 px-4 py-2">
+                    NET PROFIT
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateMonthlyProfit('month2'))}
+                    {formatCurrency(calculatePeriodProfit("period1"))}
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                    {formatCurrency(calculateMonthlyProfit('month3'))}
+                    {formatCurrency(calculatePeriodProfit("period2"))}
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right">
+                    {formatCurrency(calculatePeriodProfit("period3"))}
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
                     {formatCurrency(totalProfit)}
@@ -786,65 +1617,55 @@ const ProfitLossStatement = ({
 
                 {/* PROFIT MARGIN */}
                 <tr className="bg-yellow-100 font-bold">
-                  <td className="border border-gray-300 px-4 py-2">PROFIT MARGIN %</td>
-                  <td className="border border-gray-300 px-4 py-2 text-right">{calculateProfitMargin('month1').toFixed(1)}%</td>
-                  <td className="border border-gray-300 px-4 py-2 text-right">{calculateProfitMargin('month2').toFixed(1)}%</td>
-                  <td className="border border-gray-300 px-4 py-2 text-right">{calculateProfitMargin('month3').toFixed(1)}%</td>
-                  <td className="border border-gray-300 px-4 py-2 text-right">{totalProfitMargin.toFixed(1)}%</td>
+                  <td className="border border-gray-300 px-4 py-2">
+                    PROFIT MARGIN %
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right">
+                    {calculateProfitMargin("period1").toFixed(1)}%
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right">
+                    {calculateProfitMargin("period2").toFixed(1)}%
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right">
+                    {calculateProfitMargin("period3").toFixed(1)}%
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2 text-right">
+                    {totalProfitMargin.toFixed(1)}%
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          
           <div className="mt-4 text-sm text-gray-600">
-            <p>All amounts in {getUserCurrency()}</p>
-            <p>Yellow cells are editable - only "Other Expenses" can be customized</p>
-            <p>Labour costs are calculated from REAL attendance data including present days, late days, and paid leave (sick/vacation), with automatic late penalties and manual deductions applied</p>
-            <p>Revenue is calculated month-specifically based on project timeline with realistic distribution curve (60% early, 120% peak, 100% completion phases)</p>
-            <p>All amounts automatically converted to your selected currency: <strong>{getUserCurrency()}</strong></p>
-            <p>Click "Export to Excel" to download as .xls file</p>
-            <p><strong>Payroll Formula:</strong> (Present + Late + Paid Leave) × Daily Rate - Late Penalties (10%) - Manual Deductions</p>
-            <p><strong>Revenue Formula:</strong> Total Project Revenue ÷ Project Duration × Progress Multiplier</p>
-          </div>
-          
-          {/* Debug Information */}
-          <div className="mt-4 p-4 bg-gray-100 rounded text-xs">
-            <h4 className="font-bold mb-2">Debug Information:</h4>
-            <p><strong>Selected Project ID:</strong> {selectedProjectId}</p>
-            <p><strong>Total Employees:</strong> {employees.length}</p>
-            <p><strong>Project Employees:</strong> {projectEmployees.length}</p>
-            <p><strong>Total Trades:</strong> {trades.length}</p>
-            <p><strong>Project Trades:</strong> {projectTrades.length}</p>
-            <p><strong>Project Expenses:</strong> {projectExpenses.length}</p>
-            <p><strong>Expense Categories:</strong> {expenseCategories.join(', ')}</p>
-            <p><strong>Selected Months:</strong> {Object.values(selectedMonths).join(', ')}</p>
-            {selectedProject && (
-              <div className="mt-2 p-2 bg-yellow-100 rounded">
-                <p><strong>🔍 PROJECT DATA STRUCTURE:</strong></p>
-                <p><strong>Available Fields:</strong> {Object.keys(selectedProject).join(', ')}</p>
-                <p><strong>Project Object:</strong></p>
-                <pre className="text-xs bg-white p-2 rounded mt-1 overflow-auto max-h-32">
-                  {JSON.stringify(selectedProject, null, 2)}
-                </pre>
-              </div>
-            )}
-            {projectTrades.length > 0 && (
-              <p><strong>Sample Trade Payroll (Month 1):</strong> {calculateTradePayroll(projectTrades[0].id, selectedMonths.month1)}</p>
-            )}
-            {expenseCategories.length > 0 && (
-              <p><strong>Sample Expense Category ({expenseCategories[0]}, Month 1):</strong> {calculateExpenseByCategory(expenseCategories[0], selectedMonths.month1)}</p>
-            )}
-            <div className="mt-2 p-2 bg-blue-100 rounded">
-              <p><strong>💰 REVENUE CALCULATION DEBUG:</strong></p>
-              <p><strong>Project Budget:</strong> {Number(selectedProject?.budget || 0).toLocaleString()}</p>
-              <p><strong>Total BOQ Completed Value:</strong> {boqItems.reduce((total: number, item: any) => total + (Number(item.completed_qty || 0) * Number(item.unit_rate || 0)), 0).toLocaleString()}</p>
-              <p><strong>BOQ Items Count:</strong> {boqItems.length}</p>
-              <p><strong>Monthly BOQ Revenue (Sep):</strong> {calculateMonthlyBOQRevenue('month1').toLocaleString()}</p>
-              <p><strong>Monthly BOQ Revenue (Oct):</strong> {calculateMonthlyBOQRevenue('month2').toLocaleString()}</p>
-              <p><strong>Monthly BOQ Revenue (Nov):</strong> {calculateMonthlyBOQRevenue('month3').toLocaleString()}</p>
-              <p><strong>Total Revenue (Budget + BOQ):</strong> {calculateTotalProjectRevenue().toLocaleString()}</p>
-              <p><strong>Logic:</strong> Months show BOQ progress, Total shows Budget + BOQ</p>
-            </div>
+            <p>
+              All amounts in <strong>{getUserCurrency()}</strong>
+            </p>
+            <p>
+              <strong>Editable:</strong> Yellow cells ("Other" in Labour &
+              Expenses)
+            </p>
+            <p>
+              <strong>Labour:</strong> From real attendance (present, late, paid
+              leave) with auto penalties & manual deductions
+            </p>
+            <p>
+              <strong>Revenue:</strong> From “Add Revenue” entries within
+              selected dates
+            </p>
+            <p>
+              <strong>Expenses:</strong> Filtered by expense date
+            </p>
+            <p>
+              Auto converted to your currency. Click “Export to Excel” to
+              download.
+            </p>
+            <p>
+              <strong>Payroll:</strong> (Present + Late + Leave) × Rate −
+              Penalties (10%) − Deductions
+            </p>
+            <p>
+              <strong>Revenue:</strong> Sum of entries in selected period
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -855,17 +1676,32 @@ const ProfitLossStatement = ({
 // Old ConvertedAmount component removed - now using formatCurrency function directly
 
 interface BOQItem {
+  id?: string;
   item_code: string;
+  item_no?: string;
   description: string;
   unit: string;
   quantity: number;
   unit_rate: number;
+  rate?: number;
   total: number;
+  amount?: number;
+  completed_qty?: number;
   project_id: string;
   company_id: string;
 }
 
 const CostControlPage = () => {
+  const { toast } = useToast();
+
+  // Helper functions for different toast types
+  const showToast = {
+    success: (message: string) => toast({ title: message }),
+    error: (message: string) =>
+      toast({ title: message, variant: "destructive" }),
+    info: (message: string) => toast({ title: message }),
+  };
+
   const [activeTab, setActiveTab] = useState<
     "overview" | "boq" | "revenues" | "expenses" | "profit-loss"
   >("overview");
@@ -873,10 +1709,14 @@ const CostControlPage = () => {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [isClient, setIsClient] = useState(false);
 
+  // Get attendance data for payroll calculation
+  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+
   // Handle client-side mounting
   React.useEffect(() => {
     setIsClient(true);
-    const savedProject = localStorage.getItem('cost-control-selected-project') || "";
+    const savedProject =
+      localStorage.getItem("cost-control-selected-project") || "";
     if (savedProject) {
       setSelectedProjectId(savedProject);
     }
@@ -885,9 +1725,28 @@ const CostControlPage = () => {
   // Save selected project to localStorage whenever it changes
   React.useEffect(() => {
     if (isClient && selectedProjectId) {
-      localStorage.setItem('cost-control-selected-project', selectedProjectId);
+      localStorage.setItem("cost-control-selected-project", selectedProjectId);
     }
   }, [selectedProjectId, isClient]);
+
+  // Fetch attendance data for payroll calculation
+  React.useEffect(() => {
+    const fetchAttendanceData = async () => {
+      try {
+        const response = await fetch("http://localhost:4000/attendance/all", {
+          credentials: "include",
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setAttendanceData(data);
+        }
+      } catch (error) {
+        console.error("Error fetching attendance data:", error);
+      }
+    };
+
+    fetchAttendanceData();
+  }, []);
   const {
     data: sessionData = { user: {} },
     isLoading: isSessionLoading,
@@ -940,7 +1799,7 @@ const CostControlPage = () => {
   >({
     item_code: "",
     description: "",
-    unit: "",
+    unit: "pcs",
     quantity: 0,
     unit_rate: 0,
   });
@@ -959,192 +1818,239 @@ const CostControlPage = () => {
   // Get deductions data
   const { data: deductions = [] } = useGetDeductionsQuery();
 
-  // Calculate project payroll using real attendance and deduction data
-  const projectPayroll = useMemo(() => {
-    if (!selectedProjectId || !employees.length) {
-      console.log("Missing data:", {
-        selectedProjectId,
-        employeesLength: employees.length,
+  // State for project payroll data from backend
+  const [projectPayrollData, setProjectPayrollData] = useState<any>(null);
+  const [isLoadingProjectPayroll, setIsLoadingProjectPayroll] = useState(false);
+
+  // Fetch project payroll data from backend API
+  useEffect(() => {
+    const fetchProjectPayroll = async () => {
+      if (!selectedProjectId || !(sessionData.user as any)?.company_id) {
+        setProjectPayrollData(null);
+        return;
+      }
+
+      setIsLoadingProjectPayroll(true);
+
+      console.log("Fetching project payroll for:", {
+        projectId: selectedProjectId,
+        companyId: (sessionData.user as any)?.company_id,
+        url: `http://localhost:4000/employee/payroll/project/${selectedProjectId}?companyId=${
+          (sessionData.user as any)?.company_id
+        }`,
       });
+
+      try {
+        const response = await fetch(
+          `http://localhost:4000/employee/payroll/project/${selectedProjectId}?companyId=${
+            (sessionData.user as any)?.company_id
+          }`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          }
+        );
+
+        if (response.ok) {
+          const payrollData = await response.json();
+          console.log("Project payroll data from backend:", payrollData);
+          setProjectPayrollData(payrollData);
+        } else {
+          console.error(
+            "Failed to fetch project payroll data:",
+            response.status,
+            response.statusText
+          );
+          const errorText = await response.text();
+          console.error("Error response:", errorText);
+          console.error("Request details:", {
+            url: `http://localhost:4000/employee/payroll/project/${selectedProjectId}?companyId=${
+              (sessionData.user as any)?.company_id
+            }`,
+            projectId: selectedProjectId,
+            projectIdType: typeof selectedProjectId,
+            companyId: (sessionData.user as any)?.company_id,
+            companyIdType: typeof (sessionData.user as any)?.company_id,
+          });
+          setProjectPayrollData(null);
+        }
+      } catch (error) {
+        console.error("Error fetching project payroll:", error);
+        setProjectPayrollData(null);
+      } finally {
+        setIsLoadingProjectPayroll(false);
+      }
+    };
+
+    fetchProjectPayroll();
+  }, [selectedProjectId, sessionData]);
+
+  // Calculate project payroll from backend data with attendance-based fallback
+  const projectPayroll = useMemo(() => {
+    // Try to use backend data first
+    if (projectPayrollData) {
+      const totalNetPay = projectPayrollData.totalNetPay || 0;
+      console.log("Project payroll from backend:", {
+        totalGrossPay: projectPayrollData.totalGrossPay,
+        totalDeductions: projectPayrollData.totalDeductions,
+        totalNetPay: totalNetPay,
+        employeeCount: projectPayrollData.employees?.length || 0,
+      });
+      return totalNetPay;
+    }
+
+    // Fallback: Calculate using attendance data (matching attendance-payroll logic)
+    if (!selectedProjectId || !employees.length) {
+      console.log(
+        "No project payroll data available - using attendance-based fallback"
+      );
       return 0;
     }
 
-    console.log("All employees:", employees);
-    console.log("Selected project ID:", selectedProjectId);
+    const projectEmployees = employees.filter(
+      (emp: any) => emp.projectId === selectedProjectId
+    );
 
-    // Get employees assigned directly to the selected project using projectId field
-    const projectEmployees = employees.filter((emp: any) => {
-      console.log(
-        `Employee ${emp.username}: projectId=${emp.projectId} vs selectedProjectId=${selectedProjectId}`
-      );
-      return emp.projectId === selectedProjectId;
-    });
+    if (!projectEmployees.length) {
+      console.log("No employees found for project:", selectedProjectId);
+      return 0;
+    }
 
-    console.log("Project employees found:", projectEmployees);
-    console.log("Available deductions:", deductions);
-
-    // Calculate payroll for each employee using real attendance and deduction data
+    // Attendance-based calculation matching attendance-payroll page
     let totalPayroll = 0;
-
     for (const employee of projectEmployees) {
       const dailyRate = Number(employee.daily_rate || 0);
+      const monthlyRate = Number(employee.monthly_rate || 0);
 
-      // Based on the attendance data you showed, calculate working days
-      // From the database: Present, Late (with penalty), Absent (sick = paid), Absent (other = unpaid)
-      // For now, simulate based on the actual attendance data pattern
+      // Get employee attendance records from attendance data
+      const employeeAttendance =
+        attendanceData.filter((att: any) => att.employee_id === employee.id) ||
+        [];
 
-      // Simulate attendance status based on real data pattern
-      // Present: Samuel, David, Grace = full pay
-      // Late: Paul, Agnes = daily rate - 10% penalty
-      // Absent (sick): Eric = full pay (paid leave)
-      // Absent: others = no pay
+      // Calculate working days (exact logic from attendance-payroll)
+      const presentDays = employeeAttendance.filter(
+        (att: any) => att.status === "present"
+      ).length;
+      const lateDays = employeeAttendance.filter(
+        (att: any) => att.status === "late"
+      ).length;
+      const sickDays = employeeAttendance.filter(
+        (att: any) => att.status === "absent" && att.reason === "sick"
+      ).length;
+      const vacationDays = employeeAttendance.filter(
+        (att: any) => att.status === "absent" && att.reason === "vacation"
+      ).length;
 
+      // Working days = present + late + paid leave (sick + vacation)
+      const workingDays = presentDays + lateDays + sickDays + vacationDays;
+
+      // Calculate gross pay based on working days
       let grossPay = 0;
-      let workingDays = 0;
-
-      // Simulate attendance based on employee names (matching your database data)
-      if (
-        ["Samuel Mugisha", "David Nkurunziza", "Grace Mukamana"].includes(
-          employee.username
-        )
-      ) {
-        // Present employees - full daily rate
-        workingDays = 1;
-        grossPay = dailyRate * workingDays;
-      } else if (
-        ["Paul Habimana", "Agnes Mukeshimana"].includes(employee.username)
-      ) {
-        // Late employees - daily rate minus 10% penalty
-        workingDays = 1;
-        const latePenalty = dailyRate * 0.1;
-        grossPay = dailyRate * workingDays - latePenalty;
-      } else {
-        // Absent employees - no pay (except sick leave which would be paid)
-        workingDays = 0;
-        grossPay = 0;
+      if (monthlyRate > 0) {
+        grossPay = monthlyRate; // Use monthly rate if available
+      } else if (dailyRate > 0) {
+        grossPay = dailyRate * workingDays; // Use daily rate × working days
       }
 
-      // Get deductions for this employee
+      // Calculate deductions (exact logic from attendance-payroll)
+      const lateDeduction = lateDays * (dailyRate * 0.1); // 10% penalty per late day
+
+      // Get manual deductions
       const employeeDeductions = deductions.filter(
         (d: any) => d.employee_id === employee.id
       );
-      const totalDeductions = employeeDeductions.reduce(
+      const manualDeductions = employeeDeductions.reduce(
         (sum: number, d: any) => sum + Number(d.amount || 0),
         0
       );
 
-      // Calculate net pay
+      const totalDeductions = lateDeduction + manualDeductions;
       const netPay = Math.max(0, grossPay - totalDeductions);
-
-      console.log(`Employee ${employee.username}:`);
-      console.log(`  Daily Rate: ${dailyRate}`);
-      console.log(`  Working Days: ${workingDays}`);
-      console.log(`  Gross Pay: ${grossPay}`);
-      console.log(`  Deductions: ${totalDeductions}`);
-      console.log(`  Net Pay: ${netPay}`);
-
       totalPayroll += netPay;
-    }
 
-    console.log("Total calculated payroll:", totalPayroll);
-    return totalPayroll;
-  }, [selectedProjectId, employees, deductions]);
-
-  // Helper function to get user currency
-  const getUserCurrency = () => {
-    const currency = (sessionData.user as any)?.currency || 
-                    (sessionData.user as any)?.companies?.[0]?.base_currency || 
-                    "RWF";
-    console.log('User currency:', currency);
-    return currency;
-  };
-
-  // Currency conversion state
-  const [exchangeRates, setExchangeRates] = useState<{[key: string]: number}>({});
-  const [isLoadingRates, setIsLoadingRates] = useState(false);
-
-  // Fetch exchange rates when currency changes
-  React.useEffect(() => {
-    const fetchExchangeRates = async () => {
-      const userCurrency = getUserCurrency();
-      if (userCurrency === 'RWF') return; // No conversion needed for base currency
-      
-      setIsLoadingRates(true);
-      try {
-        // Fetch exchange rates for common currencies
-        const rates: {[key: string]: number} = {};
-        const currencies = ['USD', 'EUR', 'GBP', 'RWF'];
-        
-        for (const currency of currencies) {
-          if (currency !== userCurrency) {
-            try {
-              const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${currency}`);
-              const data = await response.json();
-              rates[`${currency}_TO_${userCurrency}`] = data.rates[userCurrency] || 1;
-            } catch (error) {
-              console.error(`Error fetching rate for ${currency}:`, error);
-              rates[`${currency}_TO_${userCurrency}`] = 1;
-            }
-          }
-        }
-        
-        setExchangeRates(rates);
-      } catch (error) {
-        console.error('Error fetching exchange rates:', error);
-      } finally {
-        setIsLoadingRates(false);
+      // Debug logging for Jean Baptiste
+      if (employee.username === "Jean Baptiste") {
+        console.log("Jean Baptiste payroll calculation:", {
+          dailyRate,
+          monthlyRate,
+          presentDays,
+          lateDays,
+          sickDays,
+          vacationDays,
+          workingDays,
+          grossPay,
+          lateDeduction,
+          manualDeductions,
+          totalDeductions,
+          netPay,
+        });
       }
-    };
+    }
 
-    if (sessionData) {
-      fetchExchangeRates();
-    }
-  }, [sessionData]);
+    console.log("Attendance-based fallback payroll calculation:", {
+      projectEmployees: projectEmployees.length,
+      totalPayroll,
+    });
 
-  // Currency conversion helper
-  const convertAmount = (amount: number, fromCurrency: string = 'RWF') => {
-    // Handle invalid amounts
-    if (typeof amount !== 'number' || isNaN(amount) || !isFinite(amount)) {
-      return 0;
-    }
-    
-    const userCurrency = getUserCurrency();
-    if (fromCurrency === userCurrency) return amount;
-    
-    const rateKey = `${fromCurrency}_TO_${userCurrency}`;
-    const rate = exchangeRates[rateKey] || 1;
-    
-    // Ensure rate is valid
-    if (typeof rate !== 'number' || isNaN(rate) || !isFinite(rate) || rate <= 0) {
-      return amount; // Return original amount if rate is invalid
-    }
-    
-    return amount * rate;
+    return totalPayroll;
+  }, [
+    projectPayrollData,
+    selectedProjectId,
+    employees,
+    deductions,
+    attendanceData,
+  ]);
+
+  // Helper function to safely format dates
+  const formatDateSafe = (
+    dateString: string,
+    options?: Intl.DateTimeFormatOptions
+  ) => {
+    if (!dateString) return "Invalid Date";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    return date.toLocaleDateString(
+      "en-US",
+      options || { day: "numeric", month: "short" }
+    );
   };
 
-  // Format currency with proper conversion
-  const formatCurrency = (amount: number, fromCurrency: string = 'RWF') => {
+  // Get user currency from session
+  const getUserCurrency = () => {
+    if (
+      sessionData &&
+      (sessionData.user as any)?.companies?.[0]?.base_currency
+    ) {
+      return (sessionData.user as any).companies[0].base_currency;
+    }
+    return "RWF"; // Default currency
+  };
+
+  // Simple currency formatting without conversion
+  const formatCurrency = (amount: number) => {
     // Handle invalid amounts
-    if (typeof amount !== 'number' || isNaN(amount) || !isFinite(amount)) {
+    if (typeof amount !== "number" || isNaN(amount) || !isFinite(amount)) {
       amount = 0;
     }
-    
+
     const userCurrency = getUserCurrency();
-    const convertedAmount = convertAmount(amount, fromCurrency);
-    
+
     try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
         currency: userCurrency,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-      }).format(convertedAmount);
+      }).format(amount);
     } catch (error) {
-      console.error('Currency formatting error:', error);
+      console.error("Currency formatting error:", error);
       // Fallback formatting with decimals
-      return `${userCurrency} ${convertedAmount.toLocaleString(undefined, {
+      return `${userCurrency} ${amount.toLocaleString(undefined, {
         minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+        maximumFractionDigits: 2,
       })}`;
     }
   };
@@ -1156,6 +2062,39 @@ const CostControlPage = () => {
     quantity: 1,
     unit: "pcs",
     unit_price: 0,
+  });
+
+  // State for revenue form and payroll fetching
+  const [revenueForm, setRevenueForm] = useState({
+    fromDate: new Date().toISOString().split("T")[0],
+    toDate: new Date().toISOString().split("T")[0],
+    selectedBOQItem: "",
+    quantityCompleted: 0,
+  });
+  const [isLoadingPayroll, setIsLoadingPayroll] = useState(false);
+  const [payrollFetched, setPayrollFetched] = useState(false);
+
+  // CSV Upload state
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [isUploadingCsv, setIsUploadingCsv] = useState(false);
+  const [csvUploadType, setCsvUploadType] = useState<"expenses" | "boq">(
+    "expenses"
+  );
+
+  // Backend integration for revenue entries
+  const [createRevenue, { isLoading: isCreatingRevenue }] =
+    useCreateRevenueMutation();
+  const [deleteRevenue, { isLoading: isDeletingRevenue }] =
+    useDeleteRevenueMutation();
+  const [updateBOQProgress] = useUpdateBOQProgressMutation();
+
+  // Fetch revenue entries from backend
+  const {
+    data: revenueEntries = [],
+    isLoading: isLoadingRevenues,
+    refetch: refetchRevenues,
+  } = useGetRevenuesByProjectQuery(selectedProjectId, {
+    skip: !selectedProjectId,
   });
 
   // Handle expense form input changes
@@ -1171,6 +2110,141 @@ const CostControlPage = () => {
           : value,
     }));
   };
+
+  // Handle revenue form input changes
+  const handleRevenueInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setRevenueForm((prev) => ({
+      ...prev,
+      [name]: name === "quantityCompleted" ? parseFloat(value) || 0 : value,
+    }));
+  };
+
+  // Function to fetch labor expenses from payroll data
+  const fetchLaborExpenses = async (fromDate: string, toDate: string) => {
+    if (!selectedProjectId || !fromDate || !toDate) {
+      showToast.error("Please select project and date range");
+      return;
+    }
+
+    setIsLoadingPayroll(true);
+    showToast.info("Fetching labor expenses from payroll data...");
+
+    try {
+      // Fetch project payroll data for the date range
+      const response = await fetch(
+        `http://localhost:4000/attendance/payroll/project/${selectedProjectId}?companyId=${
+          (sessionData.user as any)?.company_id
+        }&startDate=${fromDate}&endDate=${toDate}`,
+        {
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch payroll data");
+      }
+
+      const payrollData = await response.json();
+      console.log("Payroll data received:", payrollData);
+
+      // Process payroll data and add as labor expenses
+      if (
+        payrollData &&
+        payrollData.employees &&
+        payrollData.employees.length > 0
+      ) {
+        let addedCount = 0;
+
+        for (const employee of payrollData.employees) {
+          const laborExpenseId = `labor_${employee.id}_${fromDate}_${toDate}`;
+
+          // Check if this labor expense already exists to avoid duplicates
+          const existingExpense = expenses.find(
+            (exp: any) =>
+              exp.description.includes(employee.name || employee.username) &&
+              exp.category === "LABOR" &&
+              exp.created_at?.includes(fromDate.slice(0, 7)) // Same month
+          );
+
+          if (!existingExpense && employee.netPay > 0) {
+            try {
+              await createExpense({
+                project_id: selectedProjectId,
+                company_id: (sessionData.user as any).company_id,
+                description: `Labor - ${
+                  employee.name || employee.username
+                } (${fromDate} to ${toDate})`,
+                category: "LABOR",
+                quantity: employee.workingDays || 1,
+                unit: "days",
+                unit_price: Number(
+                  (employee.netPay / (employee.workingDays || 1)).toFixed(2)
+                ),
+                amount: Number(employee.netPay),
+              }).unwrap();
+              addedCount++;
+            } catch (error) {
+              console.error(
+                `Failed to add labor expense for ${employee.name}:`,
+                error
+              );
+            }
+          }
+        }
+
+        if (addedCount > 0) {
+          showToast.success(
+            `Successfully added ${addedCount} labor expense(s) from payroll data`
+          );
+          refetchExpenses(); // Refresh the expenses list
+          setPayrollFetched(true);
+        } else {
+          showToast.info(
+            "No new labor expenses to add (may already exist or no payroll data)"
+          );
+        }
+      } else {
+        showToast.info("No payroll data found for the selected date range");
+      }
+    } catch (error) {
+      console.error("Error fetching labor expenses:", error);
+      showToast.error("Failed to fetch labor expenses from payroll data");
+    } finally {
+      setIsLoadingPayroll(false);
+    }
+  };
+
+  // Auto-fetch labor expenses when date range changes
+  React.useEffect(() => {
+    if (
+      revenueForm.fromDate &&
+      revenueForm.toDate &&
+      selectedProjectId &&
+      activeTab === "revenues"
+    ) {
+      // Only auto-fetch if dates are different from default and not already fetched
+      const today = new Date().toISOString().split("T")[0];
+      if (
+        (revenueForm.fromDate !== today || revenueForm.toDate !== today) &&
+        !payrollFetched
+      ) {
+        const timeoutId = setTimeout(() => {
+          fetchLaborExpenses(revenueForm.fromDate, revenueForm.toDate);
+        }, 1000); // Debounce for 1 second
+
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [
+    revenueForm.fromDate,
+    revenueForm.toDate,
+    selectedProjectId,
+    activeTab,
+    payrollFetched,
+  ]);
 
   // Handle BOQ form input changes
   const handleBOQInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1194,7 +2268,7 @@ const CostControlPage = () => {
       !expenseForm.quantity ||
       !expenseForm.unit_price
     ) {
-      toast.error("Please fill in all required fields");
+      showToast.error("Please fill in all required fields");
       return;
     }
 
@@ -1222,13 +2296,13 @@ const CostControlPage = () => {
       });
 
       // Show success message
-      toast.success("Expense added successfully");
+      showToast.success("Expense added successfully");
 
       // Refresh expenses list
       refetchExpenses();
     } catch (error) {
       console.error("Error adding expense:", error);
-      toast.error("Failed to add expense. Please try again.");
+      showToast.error("Failed to add expense. Please try again.");
     }
   };
 
@@ -1236,7 +2310,7 @@ const CostControlPage = () => {
   const handleAddBOQItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProjectId || !(sessionData.user as any)?.company_id) {
-      toast.error(
+      showToast.error(
         "Please select a project and ensure you're logged in with a company"
       );
       return;
@@ -1244,11 +2318,11 @@ const CostControlPage = () => {
 
     // Validate numeric fields
     if (!boqForm.quantity || boqForm.quantity <= 0) {
-      toast.error("Please enter a valid quantity");
+      showToast.error("Please enter a valid quantity");
       return;
     }
     if (!boqForm.unit_rate || boqForm.unit_rate <= 0) {
-      toast.error("Please enter a valid unit rate");
+      showToast.error("Please enter a valid unit rate");
       return;
     }
     if (
@@ -1256,7 +2330,7 @@ const CostControlPage = () => {
       !boqForm.description.trim() ||
       !boqForm.unit.trim()
     ) {
-      toast.error("Please fill in all required fields");
+      showToast.error("Please fill in all required fields");
       return;
     }
 
@@ -1272,24 +2346,138 @@ const CostControlPage = () => {
         company_id: (sessionData.user as any).company_id,
       }).unwrap();
 
-      toast.success("BOQ item added successfully");
+      showToast.success("BOQ item added successfully");
       setBoqForm({
         item_code: "",
         description: "",
-        unit: "",
+        unit: "pcs",
         quantity: 0,
         unit_rate: 0,
       });
       refetchBOQ();
     } catch (error: any) {
       console.error("Failed to add BOQ item:", error);
-      toast.error(error.data.message);
+      showToast.error(error.data.message);
     }
   };
 
   console.log("financial metrics", financialMetrics);
 
   console.log("selected project", selectedProjectId);
+
+  // CSV Upload Functions
+  const handleCsvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === "text/csv") {
+      setCsvFile(file);
+    } else {
+      showToast.error("Please select a valid CSV file");
+    }
+  };
+
+  const downloadCsvTemplate = (type: "expenses" | "boq") => {
+    let csvContent = "";
+    let filename = "";
+
+    if (type === "expenses") {
+      csvContent = "description,category,quantity,unit,unit_price\n";
+      csvContent += "Sample Expense,MATERIALS,10,pcs,100\n";
+      csvContent += "Another Expense,LABOR,5,hours,50\n";
+      filename = "expenses_template.csv";
+    } else {
+      csvContent = "item_code,description,unit,quantity,unit_rate\n";
+      csvContent += "CONC-001,Concrete Work,m³,100,150\n";
+      csvContent += "STEEL-001,Steel Reinforcement,kg,500,2.5\n";
+      filename = "boq_template.csv";
+    }
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const processCsvFile = async () => {
+    if (!csvFile || !selectedProjectId) {
+      showToast.error("Please select a CSV file and project");
+      return;
+    }
+
+    setIsUploadingCsv(true);
+
+    try {
+      const text = await csvFile.text();
+      const lines = text.split("\n").filter((line) => line.trim());
+      const headers = lines[0].split(",").map((h) => h.trim());
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(",").map((v) => v.trim());
+
+        if (values.length !== headers.length) continue;
+
+        const rowData: any = {};
+        headers.forEach((header, index) => {
+          rowData[header] = values[index];
+        });
+
+        try {
+          if (csvUploadType === "expenses") {
+            await createExpense({
+              project_id: selectedProjectId,
+              company_id: (sessionData.user as any).company_id,
+              description: rowData.description || "",
+              category: rowData.category || "MATERIALS",
+              quantity: Number(rowData.quantity) || 1,
+              unit: rowData.unit || "pcs",
+              unit_price: Number(rowData.unit_price) || 0,
+              amount:
+                Number(rowData.quantity || 1) * Number(rowData.unit_price || 0),
+            }).unwrap();
+          } else {
+            await createBOQ({
+              item_no: rowData.item_code || "",
+              description: rowData.description || "",
+              unit: rowData.unit || "pcs",
+              quantity: Number(rowData.quantity) || 0,
+              rate: Number(rowData.unit_rate) || 0,
+              amount:
+                Number(rowData.quantity || 0) * Number(rowData.unit_rate || 0),
+              project_id: selectedProjectId,
+              company_id: (sessionData.user as any).company_id,
+            }).unwrap();
+          }
+          successCount++;
+        } catch (error) {
+          console.error(`Error processing row ${i}:`, error);
+          errorCount++;
+        }
+      }
+
+      showToast.success(
+        `CSV upload completed: ${successCount} items added, ${errorCount} errors`
+      );
+      setCsvFile(null);
+
+      // Refresh data
+      if (csvUploadType === "expenses") {
+        refetchExpenses();
+      } else {
+        refetchBOQ();
+      }
+    } catch (error) {
+      console.error("CSV processing error:", error);
+      showToast.error("Failed to process CSV file");
+    } finally {
+      setIsUploadingCsv(false);
+    }
+  };
+
   // Handle project selection change
   const handleProjectChange = (value: string) => {
     setSelectedProjectId(value);
@@ -1348,8 +2536,11 @@ const CostControlPage = () => {
       0
     );
 
-    // Total Revenue = Project Budget + Total BOQ Value (as per requirement)
-    const totalRevenues = projectBudget + totalBOQValue;
+    // Total Revenue = ONLY revenue entries from Add Revenue tab (NOT project budget)
+    const totalRevenues = revenueEntries.reduce(
+      (sum: number, revenue: any) => sum + Number(revenue.amount || 0),
+      0
+    );
     // Total Expenses = Project Payroll + Manual Expenses (as per requirement)
     const totalExpenses = projectPayroll + manualExpenses;
     const netProfit = totalRevenues - totalExpenses;
@@ -1375,6 +2566,7 @@ const CostControlPage = () => {
     projects,
     boqItems,
     projectPayroll,
+    revenueEntries,
   ]);
 
   // Old formatCurrency function removed - now using the enhanced version above
@@ -1410,7 +2602,9 @@ const CostControlPage = () => {
   }, [sessionData]);
 
   // Tab switch handler
-  const switchTab = (tab: "overview" | "boq" | "revenues" | "expenses") => {
+  const switchTab = (
+    tab: "overview" | "boq" | "revenues" | "expenses" | "profit-loss"
+  ) => {
     setActiveTab(tab);
   };
 
@@ -1418,8 +2612,8 @@ const CostControlPage = () => {
     <div className="flex h-screen bg-white">
       <Sidebar
         user={{
-          name: sessionData?.user?.username || "Current User",
-          role: sessionData?.user?.current_role || "user",
+          name: (sessionData?.user as any)?.username || "Current User",
+          role: (sessionData?.user as any)?.current_role || "user",
           avatar: "",
         }}
       />
@@ -1485,10 +2679,6 @@ const CostControlPage = () => {
             {isErrorProjects && (
               <div className="flex h-screen">
                 <div className="flex-1 p-8">
-                  <DashboardHeader
-                    title="Cost Control"
-                    description="Manage project costs, BOQ, and financials"
-                  />
                   <div
                     className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
                     role="alert"
@@ -1523,7 +2713,7 @@ const CostControlPage = () => {
                     {formatCurrency(costSummary?.total_revenues || 0)}
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
-                    From BOQ progress
+                    From Add Revenue Tab
                   </p>
                 </div>
 
@@ -1642,10 +2832,10 @@ const CostControlPage = () => {
                   {/* Overview Tab */}
                   {activeTab === "overview" && (
                     <div className="space-y-6">
-                      {/* BOQ Summary */}
+                      {/* Revenue Summary */}
                       <div>
                         <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                          BOQ Progress Summary
+                          Revenue Summary
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="bg-blue-50 rounded-lg p-4">
@@ -1655,13 +2845,30 @@ const CostControlPage = () => {
                             <p className="text-xl font-bold text-slate-800">
                               {formatCurrency(costSummary.total_boq_value)}
                             </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Available for Revenue
+                            </p>
                           </div>
                           <div className="bg-green-50 rounded-lg p-4">
                             <p className="text-sm text-slate-600 mb-1">
-                              Total Revenue
+                              Recorded Revenue
                             </p>
                             <p className="text-2xl font-bold text-green-600">
                               {formatCurrency(costSummary?.total_revenues || 0)}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              From Add Revenue Tab
+                            </p>
+                          </div>
+                          <div className="bg-amber-50 rounded-lg p-4">
+                            <p className="text-sm text-slate-600 mb-1">
+                              Revenue Entries
+                            </p>
+                            <p className="text-xl font-bold text-amber-600">
+                              {revenueEntries.length}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Total Records
                             </p>
                           </div>
                         </div>
@@ -1678,7 +2885,9 @@ const CostControlPage = () => {
                               Project Payroll
                             </p>
                             <p className="text-xl font-bold text-blue-600">
-                              {formatCurrency(costSummary?.project_payroll || 0)}
+                              {formatCurrency(
+                                costSummary?.project_payroll || 0
+                              )}
                             </p>
                             <p className="text-xs text-slate-500">
                               Actual Employee Costs
@@ -1689,7 +2898,9 @@ const CostControlPage = () => {
                               Manual Expenses
                             </p>
                             <p className="text-xl font-bold text-purple-600">
-                              {formatCurrency(costSummary?.manual_expenses || 0)}
+                              {formatCurrency(
+                                costSummary?.manual_expenses || 0
+                              )}
                             </p>
                             <p className="text-xs text-slate-500">
                               Materials, Equipment, etc.
@@ -1708,6 +2919,79 @@ const CostControlPage = () => {
                           </div>
                         </div>
                       </div>
+
+                      {/* Recent Revenue Entries */}
+                      {revenueEntries.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                            Recent Revenue Entries
+                          </h3>
+                          <div className="space-y-2">
+                            {revenueEntries
+                              .slice(-5)
+                              .reverse()
+                              .map((revenue) => (
+                                <div
+                                  key={revenue.id}
+                                  className="flex items-center justify-between bg-green-50 p-4 rounded-lg border border-green-200"
+                                >
+                                  <div className="flex-1">
+                                    <p className="font-medium text-slate-800">
+                                      {revenue.boq_item_no} -{" "}
+                                      {revenue.boq_description}
+                                    </p>
+                                    <p className="text-sm text-slate-600">
+                                      {revenue.from_date} to {revenue.to_date} •{" "}
+                                      {revenue.quantity_completed}{" "}
+                                      {revenue.unit} @{" "}
+                                      {formatCurrency(revenue.rate)}/
+                                      {revenue.unit}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <p className="text-lg font-bold text-green-600">
+                                      +{formatCurrency(Number(revenue.amount))}
+                                    </p>
+                                    <button
+                                      onClick={async () => {
+                                        if (!revenue.id) {
+                                          showToast.error(
+                                            "Revenue entry has no ID"
+                                          );
+                                          return;
+                                        }
+                                        try {
+                                          await deleteRevenue(
+                                            revenue.id
+                                          ).unwrap();
+                                          refetchRevenues();
+                                          refetchBOQ(); // Refresh BOQ to update completed quantities
+                                          showToast.success(
+                                            "Revenue entry deleted"
+                                          );
+                                        } catch (error: any) {
+                                          console.error(
+                                            "Failed to delete revenue:",
+                                            error
+                                          );
+                                          showToast.error(
+                                            "Failed to delete revenue: " +
+                                              (error.data?.message ||
+                                                error.message)
+                                          );
+                                        }
+                                      }}
+                                      disabled={isDeletingRevenue}
+                                      className="text-slate-400 hover:text-red-500 disabled:opacity-50"
+                                    >
+                                      {isDeletingRevenue ? "⏳" : "🗑️"}
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Manual Expenses by Category */}
                       <div>
@@ -1843,14 +3127,29 @@ const CostControlPage = () => {
                                 >
                                   Unit
                                 </label>
-                                <Input
-                                  id="unit"
-                                  name="unit"
+                                <Select
                                   value={boqForm.unit}
-                                  onChange={handleBOQInputChange}
-                                  placeholder="e.g., m³, kg, pcs"
-                                  required
-                                />
+                                  onValueChange={(value) =>
+                                    setBoqForm((prev) => ({
+                                      ...prev,
+                                      unit: value,
+                                    }))
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select unit" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {STANDARD_UNITS.map((unit) => (
+                                      <SelectItem
+                                        key={unit.value}
+                                        value={unit.value}
+                                      >
+                                        {unit.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
 
                               <div className="space-y-2">
@@ -1917,6 +3216,81 @@ const CostControlPage = () => {
                         </CardContent>
                       </Card>
 
+                      {/* CSV Upload for BOQ */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Upload className="h-5 w-5" />
+                            Bulk Upload BOQ Items
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-4">
+                              <Button
+                                variant="outline"
+                                onClick={() => downloadCsvTemplate("boq")}
+                                className="flex items-center gap-2"
+                              >
+                                <Download className="h-4 w-4" />
+                                Download Template
+                              </Button>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="file"
+                                  accept=".csv"
+                                  onChange={handleCsvFileChange}
+                                  className="hidden"
+                                  id="boq-csv-upload"
+                                />
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    setCsvUploadType("boq");
+                                    document
+                                      .getElementById("boq-csv-upload")
+                                      ?.click();
+                                  }}
+                                  className="flex items-center gap-2"
+                                >
+                                  <FileText className="h-4 w-4" />
+                                  Choose CSV File
+                                </Button>
+                                {csvFile && csvUploadType === "boq" && (
+                                  <span className="text-sm text-green-600">
+                                    {csvFile.name} selected
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {csvFile && csvUploadType === "boq" && (
+                              <div className="flex justify-end">
+                                <Button
+                                  onClick={processCsvFile}
+                                  disabled={isUploadingCsv}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Upload className="h-4 w-4" />
+                                  {isUploadingCsv
+                                    ? "Uploading..."
+                                    : "Upload BOQ Items"}
+                                </Button>
+                              </div>
+                            )}
+                            <div className="text-sm text-slate-600">
+                              <p>
+                                <strong>CSV Format:</strong> item_code,
+                                description, unit, quantity, unit_rate
+                              </p>
+                              <p>
+                                <strong>Example:</strong> CONC-001, Concrete
+                                Work, m³, 100, 150
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
                       {/* Add BOQ items table here */}
                       <Card>
                         <CardHeader>
@@ -1943,12 +3317,16 @@ const CostControlPage = () => {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {boqItems.map((item: BOQItem, index) => (
+                                  {boqItems.map((item: any, index: number) => (
                                     <tr
-                                      key={`${item.item_no}-${index}`}
+                                      key={`${
+                                        item.item_no || item.item_code
+                                      }-${index}`}
                                       className="border-b hover:bg-gray-50"
                                     >
-                                      <td className="p-4">{item.item_no}</td>
+                                      <td className="p-4">
+                                        {item.item_no || item.item_code}
+                                      </td>
                                       <td className="p-4">
                                         {item.description}
                                       </td>
@@ -1959,10 +3337,13 @@ const CostControlPage = () => {
                                         {item.unit}
                                       </td>
                                       <td className="text-right p-4">
-                                        {item.rate}
+                                        {item.rate || item.unit_rate}
                                       </td>
                                       <td className="text-right p-4 font-medium">
-                                        {(item.quantity * item.rate).toFixed(2)}
+                                        {(
+                                          item.quantity *
+                                          (item.rate || item.unit_rate)
+                                        ).toFixed(2)}
                                       </td>
                                     </tr>
                                   ))}
@@ -1981,8 +3362,432 @@ const CostControlPage = () => {
 
                   {/* Revenue Tab */}
                   {activeTab === "revenues" && (
-                    <div className="space-y-4">
-                      {/* Add revenue form here */}
+                    <div className="space-y-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Add Revenue from BOQ Progress</CardTitle>
+                          <p className="text-sm text-slate-600">
+                            Select a BOQ item, specify the work period, and
+                            enter completed quantity. Labor expenses will be
+                            automatically fetched from payroll data for the
+                            selected period.
+                          </p>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            {/* BOQ Item Selection */}
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                Select BOQ Item
+                              </label>
+                              <Select
+                                value={revenueForm.selectedBOQItem}
+                                onValueChange={(value) =>
+                                  setRevenueForm((prev) => ({
+                                    ...prev,
+                                    selectedBOQItem: value,
+                                  }))
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="-- Select BOQ Item --" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {boqItems.map((item: any) => (
+                                    <SelectItem key={item.id} value={item.id}>
+                                      {item.item_no || item.item_code} -{" "}
+                                      {item.description} (Rate:{" "}
+                                      {formatCurrency(
+                                        item.rate || item.unit_rate
+                                      )}
+                                      /{item.unit})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Date Range Selection */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium">
+                                  📅 From Date
+                                </label>
+                                <Input
+                                  type="date"
+                                  name="fromDate"
+                                  value={revenueForm.fromDate}
+                                  onChange={(e) => {
+                                    handleRevenueInputChange(e);
+                                    setPayrollFetched(false); // Reset payroll fetch status when date changes
+                                  }}
+                                  className="w-full"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium">
+                                  📅 To Date
+                                </label>
+                                <Input
+                                  type="date"
+                                  name="toDate"
+                                  value={revenueForm.toDate}
+                                  onChange={(e) => {
+                                    handleRevenueInputChange(e);
+                                    setPayrollFetched(false); // Reset payroll fetch status when date changes
+                                  }}
+                                  className="w-full"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Quantity Input */}
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                Quantity of Work Completed
+                              </label>
+                              <Input
+                                type="number"
+                                name="quantityCompleted"
+                                value={revenueForm.quantityCompleted || ""}
+                                onChange={handleRevenueInputChange}
+                                placeholder="0.00"
+                                step="0.01"
+                                min="0"
+                              />
+                            </div>
+
+                            {/* Selected BOQ Item Details */}
+                            {revenueForm.selectedBOQItem &&
+                              (() => {
+                                const selectedItem = boqItems.find(
+                                  (item: any) =>
+                                    item.id === revenueForm.selectedBOQItem
+                                );
+                                if (selectedItem) {
+                                  return (
+                                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                                      <h4 className="font-semibold text-slate-800 mb-2">
+                                        Selected Item Details
+                                      </h4>
+                                      <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div>
+                                          <span className="text-slate-600">
+                                            Total Quantity:
+                                          </span>
+                                          <span className="ml-2 font-semibold">
+                                            {selectedItem.quantity}{" "}
+                                            {selectedItem.unit}
+                                          </span>
+                                        </div>
+                                        <div>
+                                          <span className="text-slate-600">
+                                            Completed:
+                                          </span>
+                                          <span className="ml-2 font-semibold text-green-600">
+                                            {selectedItem.completed_qty || 0}{" "}
+                                            {selectedItem.unit}
+                                          </span>
+                                        </div>
+                                        <div>
+                                          <span className="text-slate-600">
+                                            Rate:
+                                          </span>
+                                          <span className="ml-2 font-semibold">
+                                            {formatCurrency(
+                                              selectedItem.rate ||
+                                                selectedItem.unit_rate
+                                            )}
+                                            /{selectedItem.unit}
+                                          </span>
+                                        </div>
+                                        <div>
+                                          <span className="text-slate-600">
+                                            Remaining:
+                                          </span>
+                                          <span className="ml-2 font-semibold text-amber-600">
+                                            {(
+                                              selectedItem.quantity -
+                                              (selectedItem.completed_qty || 0)
+                                            ).toFixed(2)}{" "}
+                                            {selectedItem.unit}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
+
+                            {/* Revenue Preview */}
+                            {revenueForm.selectedBOQItem &&
+                              revenueForm.quantityCompleted > 0 &&
+                              (() => {
+                                const selectedItem = boqItems.find(
+                                  (item: any) =>
+                                    item.id === revenueForm.selectedBOQItem
+                                );
+                                if (selectedItem) {
+                                  const calculatedRevenue =
+                                    revenueForm.quantityCompleted *
+                                    (selectedItem.rate ||
+                                      selectedItem.unit_rate);
+                                  return (
+                                    <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <p className="text-sm text-green-700 font-medium">
+                                            Calculated Revenue
+                                          </p>
+                                          <p className="text-xs text-green-600 mt-1">
+                                            {revenueForm.quantityCompleted}{" "}
+                                            {selectedItem.unit} ×{" "}
+                                            {formatCurrency(
+                                              selectedItem.rate ||
+                                                selectedItem.unit_rate
+                                            )}
+                                            /{selectedItem.unit}
+                                          </p>
+                                        </div>
+                                        <p className="text-3xl font-bold text-green-600">
+                                          {formatCurrency(calculatedRevenue)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
+
+                            {/* Labor Expense Fetch Section */}
+                            <div className="border-t pt-4">
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div>
+                                    <h4 className="font-medium text-slate-800">
+                                      🔄 Auto-Fetch Labor Expenses
+                                    </h4>
+                                    <p className="text-sm text-slate-600">
+                                      Labor costs are automatically fetched from
+                                      payroll data when you select a date range
+                                    </p>
+                                  </div>
+                                  <Button
+                                    onClick={() =>
+                                      fetchLaborExpenses(
+                                        revenueForm.fromDate,
+                                        revenueForm.toDate
+                                      )
+                                    }
+                                    disabled={
+                                      isLoadingPayroll ||
+                                      !selectedProjectId ||
+                                      !revenueForm.fromDate ||
+                                      !revenueForm.toDate
+                                    }
+                                    variant="outline"
+                                    className="bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                                  >
+                                    {isLoadingPayroll ? (
+                                      <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                                        Fetching...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Download className="w-4 h-4 mr-2" />
+                                        Fetch Labor Expenses
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+
+                                {isLoadingPayroll && (
+                                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+                                    <div className="flex items-center">
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600 mr-2"></div>
+                                      <p className="text-sm text-yellow-800">
+                                        ⏳ Fetching labor expenses from payroll
+                                        data for {revenueForm.fromDate} to{" "}
+                                        {revenueForm.toDate}...
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {payrollFetched && (
+                                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                    <p className="text-sm text-green-800">
+                                      ✅ Labor expenses have been successfully
+                                      fetched and added to the expenses list.
+                                      <span className="font-medium">
+                                        Check the "Add Expenses" tab to see
+                                        them.
+                                      </span>
+                                    </p>
+                                  </div>
+                                )}
+
+                                <div className="mt-3 text-xs text-blue-700">
+                                  <p>
+                                    <strong>Note:</strong> Labor expenses are
+                                    automatically added as category "Labor" and
+                                    duplicates are skipped.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Record Revenue Button */}
+                            <div className="flex justify-end">
+                              <Button
+                                onClick={async () => {
+                                  // Handle revenue recording logic here
+                                  if (
+                                    !revenueForm.selectedBOQItem ||
+                                    !revenueForm.quantityCompleted
+                                  ) {
+                                    showToast.error(
+                                      "Please select a BOQ item and enter quantity completed"
+                                    );
+                                    return;
+                                  }
+
+                                  // Auto-fetch labor expenses if not already fetched
+                                  if (
+                                    !payrollFetched &&
+                                    revenueForm.fromDate &&
+                                    revenueForm.toDate
+                                  ) {
+                                    await fetchLaborExpenses(
+                                      revenueForm.fromDate,
+                                      revenueForm.toDate
+                                    );
+                                  }
+
+                                  // Create revenue entry in backend
+                                  const selectedItem = boqItems.find(
+                                    (item: any) =>
+                                      item.id === revenueForm.selectedBOQItem
+                                  );
+                                  if (selectedItem) {
+                                    const revenueAmount =
+                                      revenueForm.quantityCompleted *
+                                      (selectedItem.rate ||
+                                        selectedItem.unit_rate);
+
+                                    try {
+                                      // Create revenue entry
+                                      await createRevenue({
+                                        project_id: selectedProjectId,
+                                        company_id: (sessionData.user as any)
+                                          .company_id,
+                                        boq_item_id: selectedItem.id,
+                                        boq_item_no:
+                                          selectedItem.item_no ||
+                                          selectedItem.item_code,
+                                        boq_description:
+                                          selectedItem.description,
+                                        from_date: revenueForm.fromDate,
+                                        to_date: revenueForm.toDate,
+                                        quantity_completed:
+                                          revenueForm.quantityCompleted,
+                                        rate:
+                                          selectedItem.rate ||
+                                          selectedItem.unit_rate,
+                                        unit: selectedItem.unit,
+                                        amount: revenueAmount,
+                                      }).unwrap();
+
+                                      // Update BOQ progress
+                                      const currentCompleted =
+                                        selectedItem.completed_qty || 0;
+                                      await updateBOQProgress({
+                                        id: selectedItem.id,
+                                        completed_quantity:
+                                          currentCompleted +
+                                          revenueForm.quantityCompleted,
+                                      }).unwrap();
+
+                                      // Refresh data
+                                      refetchRevenues();
+                                      refetchBOQ();
+                                    } catch (error: any) {
+                                      console.error(
+                                        "Failed to create revenue:",
+                                        error
+                                      );
+                                      showToast.error(
+                                        "Failed to record revenue: " +
+                                          (error.data?.message || error.message)
+                                      );
+                                      return;
+                                    }
+                                  }
+
+                                  showToast.success(
+                                    "Revenue recorded successfully! Labor expenses have been automatically added."
+                                  );
+
+                                  // Reset form
+                                  setRevenueForm({
+                                    fromDate: new Date()
+                                      .toISOString()
+                                      .split("T")[0],
+                                    toDate: new Date()
+                                      .toISOString()
+                                      .split("T")[0],
+                                    selectedBOQItem: "",
+                                    quantityCompleted: 0,
+                                  });
+                                  setPayrollFetched(false);
+                                }}
+                                disabled={
+                                  !revenueForm.selectedBOQItem ||
+                                  !revenueForm.quantityCompleted ||
+                                  isLoadingPayroll ||
+                                  isCreatingRevenue
+                                }
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                {isLoadingPayroll || isCreatingRevenue ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    {isCreatingRevenue
+                                      ? "Recording..."
+                                      : "Fetching Labor..."}
+                                  </>
+                                ) : (
+                                  <>➕ Record Revenue</>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* BOQ Items Status */}
+                      {boqItems.length === 0 && (
+                        <Card>
+                          <CardContent className="text-center py-8">
+                            <p className="text-amber-800 font-medium mb-2">
+                              No BOQ Items Available
+                            </p>
+                            <p className="text-amber-700 text-sm mb-4">
+                              Please add BOQ items first before recording
+                              revenue.
+                            </p>
+                            <Button
+                              onClick={() => switchTab("boq")}
+                              variant="outline"
+                              className="bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
+                            >
+                              Go to BOQ Tab
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      )}
                     </div>
                   )}
 
@@ -2028,22 +3833,37 @@ const CostControlPage = () => {
                                   required
                                 />
                               </div>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none">
-                                  Unit <span className="text-red-500">*</span>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                  Unit
                                 </label>
-                                <Input
-                                  name="unit"
+                                <Select
                                   value={expenseForm.unit}
-                                  onChange={handleExpenseInputChange}
-                                  placeholder="pcs, kg, m2, etc."
-                                  required
-                                />
+                                  onValueChange={(value) =>
+                                    setExpenseForm((prev) => ({
+                                      ...prev,
+                                      unit: value,
+                                    }))
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select unit" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {STANDARD_UNITS.map((unit) => (
+                                      <SelectItem
+                                        key={unit.value}
+                                        value={unit.value}
+                                      >
+                                        {unit.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none">
-                                  Unit Price{" "}
-                                  <span className="text-red-500">*</span>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                  Unit Price
                                 </label>
                                 <Input
                                   type="number"
@@ -2139,10 +3959,97 @@ const CostControlPage = () => {
                         </CardContent>
                       </Card>
 
+                      {/* CSV Upload for Expenses */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Upload className="h-5 w-5" />
+                            Bulk Upload Expenses
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-4">
+                              <Button
+                                variant="outline"
+                                onClick={() => downloadCsvTemplate("expenses")}
+                                className="flex items-center gap-2"
+                              >
+                                <Download className="h-4 w-4" />
+                                Download Template
+                              </Button>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="file"
+                                  accept=".csv"
+                                  onChange={handleCsvFileChange}
+                                  className="hidden"
+                                  id="expense-csv-upload"
+                                />
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    setCsvUploadType("expenses");
+                                    document
+                                      .getElementById("expense-csv-upload")
+                                      ?.click();
+                                  }}
+                                  className="flex items-center gap-2"
+                                >
+                                  <FileText className="h-4 w-4" />
+                                  Choose CSV File
+                                </Button>
+                                {csvFile && csvUploadType === "expenses" && (
+                                  <span className="text-sm text-green-600">
+                                    {csvFile.name} selected
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {csvFile && csvUploadType === "expenses" && (
+                              <div className="flex justify-end">
+                                <Button
+                                  onClick={processCsvFile}
+                                  disabled={isUploadingCsv}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Upload className="h-4 w-4" />
+                                  {isUploadingCsv
+                                    ? "Uploading..."
+                                    : "Upload Expenses"}
+                                </Button>
+                              </div>
+                            )}
+                            <div className="text-sm text-slate-600">
+                              <p>
+                                <strong>CSV Format:</strong> description,
+                                category, quantity, unit, unit_price
+                              </p>
+                              <p>
+                                <strong>Categories:</strong> MATERIALS, LABOR,
+                                EQUIPMENT, TRANSPORT, OTHER
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
                       {/* Expenses List */}
                       <Card>
                         <CardHeader>
-                          <CardTitle>Expenses</CardTitle>
+                          <CardTitle className="flex items-center justify-between">
+                            <span>Expenses</span>
+                            {expenses.some(
+                              (exp: any) => exp.category === "LABOR"
+                            ) && (
+                              <Badge
+                                variant="outline"
+                                className="bg-blue-50 text-blue-700 border-blue-300"
+                              >
+                                🔄 Includes Auto-Fetched Labor
+                              </Badge>
+                            )}
+                          </CardTitle>
                         </CardHeader>
                         <CardContent>
                           {isLoadingExpenses ? (
@@ -2154,33 +4061,130 @@ const CostControlPage = () => {
                               No expenses found. Add your first expense above.
                             </div>
                           ) : (
-                            <div className="space-y-4">
-                              {expenses.map((expense) => (
-                                <div
-                                  key={expense.id}
-                                  className="border rounded-lg p-4 flex justify-between items-center"
-                                >
-                                  <div>
-                                    <p className="font-medium">
-                                      {expense.description}
-                                    </p>
-                                    <p className="text-sm text-gray-500">
-                                      {expense.category}
-                                    </p>
+                            <>
+                              {/* Expense Summary */}
+                              {expenses.length > 0 && (
+                                <div className="bg-slate-50 rounded-lg p-4 mb-6">
+                                  <h4 className="font-medium text-slate-800 mb-3">
+                                    Expense Summary
+                                  </h4>
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {Object.entries(
+                                      expenses.reduce((acc: any, exp: any) => {
+                                        const category =
+                                          exp.category || "Other";
+                                        acc[category] =
+                                          (acc[category] || 0) +
+                                          Number(exp.amount || 0);
+                                        return acc;
+                                      }, {})
+                                    ).map(([category, amount]) => (
+                                      <div
+                                        key={category}
+                                        className="text-center"
+                                      >
+                                        <div
+                                          className={`p-3 rounded-lg ${
+                                            category === "LABOR"
+                                              ? "bg-blue-100 border border-blue-200"
+                                              : "bg-white border border-slate-200"
+                                          }`}
+                                        >
+                                          <p className="text-sm font-medium text-slate-600">
+                                            {category}
+                                          </p>
+                                          <p className="text-lg font-bold text-slate-800">
+                                            {formatCurrency(Number(amount))}
+                                          </p>
+                                          {category === "LABOR" && (
+                                            <p className="text-xs text-blue-600 mt-1">
+                                              Auto-Fetched
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
-                                  <div className="text-right">
-                                    <p className="font-medium">
-                                      {formatCurrency(Number(expense.amount))}
-                                    </p>
-                                    <p className="text-sm text-gray-500">
-                                      {new Date(
-                                        expense.created_at
-                                      ).toLocaleDateString()}
-                                    </p>
+                                  <div className="mt-4 pt-4 border-t border-slate-200">
+                                    <div className="flex justify-between items-center">
+                                      <span className="font-medium text-slate-700">
+                                        Total Expenses:
+                                      </span>
+                                      <span className="text-xl font-bold text-slate-800">
+                                        {formatCurrency(
+                                          expenses.reduce(
+                                            (sum: number, exp: any) =>
+                                              sum + Number(exp.amount || 0),
+                                            0
+                                          )
+                                        )}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
-                              ))}
-                            </div>
+                              )}
+
+                              <div className="space-y-4">
+                                {expenses.map((expense) => (
+                                  <div
+                                    key={expense.id}
+                                    className={`border rounded-lg p-4 flex justify-between items-center ${
+                                      expense.category === "LABOR"
+                                        ? "bg-blue-50 border-blue-200"
+                                        : "bg-white"
+                                    }`}
+                                  >
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-medium">
+                                          {expense.description}
+                                        </p>
+                                        {expense.category === "LABOR" && (
+                                          <Badge
+                                            variant="outline"
+                                            className="bg-blue-100 text-blue-700 border-blue-300 text-xs"
+                                          >
+                                            Auto-Fetched
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-4 mt-1">
+                                        <Badge
+                                          variant={
+                                            expense.category === "LABOR"
+                                              ? "default"
+                                              : "secondary"
+                                          }
+                                          className={
+                                            expense.category === "LABOR"
+                                              ? "bg-blue-600"
+                                              : ""
+                                          }
+                                        >
+                                          {expense.category}
+                                        </Badge>
+                                        <p className="text-sm text-gray-500">
+                                          {expense.quantity} {expense.unit} ×{" "}
+                                          {formatCurrency(
+                                            Number(expense.unit_price || 0)
+                                          )}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="font-medium text-lg">
+                                        {formatCurrency(Number(expense.amount))}
+                                      </p>
+                                      <p className="text-sm text-gray-500">
+                                        {new Date(
+                                          expense.created_at
+                                        ).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
                           )}
                         </CardContent>
                       </Card>
@@ -2189,7 +4193,7 @@ const CostControlPage = () => {
 
                   {/* Profit & Loss Tab */}
                   {activeTab === "profit-loss" && (
-                    <ProfitLossStatement 
+                    <ProfitLossStatement
                       selectedProjectId={selectedProjectId}
                       sessionData={sessionData}
                       costSummary={costSummary}
