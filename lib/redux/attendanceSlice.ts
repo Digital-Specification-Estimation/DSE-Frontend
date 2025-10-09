@@ -80,7 +80,7 @@ export const attendanceApi = createApi({
       query: (companyId) => `daily-percentage/${companyId}`,
     }),
     getDailyAttendanceMonthly: builder.query({
-      query: (companyId) => `daily-monthly/${companyId}`,
+      query: (companyId) => `daily-percentage-monthly`,
     }),
     // New payroll calculation endpoints
     calculateEmployeePayroll: builder.query({

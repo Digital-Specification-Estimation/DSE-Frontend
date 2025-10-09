@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Search, Filter } from "lucide-react";
-import { convertCurrency } from "@/lib/utils";
+import { convertCurrency, getExchangeRate } from "@/lib/utils";
 
 function ConvertedAmount({ 
   amount, 
@@ -110,7 +110,27 @@ export default function Dashboard() {
     role: "Personal Account",
     avatar: "/placeholder.svg?height=40&width=40",
   });
-
+  const {
+    data: sessionData = { user: { settings: [] } },
+    isLoading: isSessionLoading,
+    refetch: refetchSession,
+  } = useSessionQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    pollingInterval: 300000, // Poll every 5 minutes
+  });
+  console.log("session data", sessionData);
+  const {
+    data: attendanceData = [],
+    isLoading: isAttendanceLoading,
+    refetch: refetchAttendance,
+    isFetching: isAttendanceFetching,
+  } = useGetDailyAttendanceMonthlyQuery(sessionData.user.company_id, {
+    refetchOnMountOrArgChange: true,
+    pollingInterval: 300000, // Poll every 5 minutes
+  });
+  console.log("attendance data", attendanceData)
   // Redux query hooks with proper options for keeping data fresh
   const {
     data: employees = [],
@@ -123,26 +143,18 @@ export default function Dashboard() {
     pollingInterval: 300000, // Poll every 5 minutes
   });
 
-  const {
+  let {
     data: payrollData = [],
     isLoading: isPayrollLoading,
     refetch: refetchPayroll,
     isFetching: isPayrollFetching,
   } = useGetMonthlyStatsQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-    pollingInterval: 300000, // Poll every 5 minutes
+    refetchOnMountOrArgChange: false,
   });
 
-  const {
-    data: attendanceData = [],
-    isLoading: isAttendanceLoading,
-    refetch: refetchAttendance,
-    isFetching: isAttendanceFetching,
-  } = useGetDailyAttendanceMonthlyQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-    pollingInterval: 300000, // Poll every 5 minutes
-  });
-
+  console.log("payroll data", payrollData)
+ 
+ 
   // Combined loading state
   const isLoading =
     isEmployeesLoading ||
@@ -150,7 +162,41 @@ export default function Dashboard() {
     isAttendanceLoading;
   const isFetching =
     isEmployeesFetching || isPayrollFetching || isAttendanceFetching;
-
+    const handleRefreshData = useCallback(async () => {
+      try {
+        setIsRefreshing(true);
+        toast({
+          title: "Refreshing Data",
+          description: "Fetching the latest dashboard data...",
+        });
+  
+        // Refresh all data sources concurrently
+        await Promise.all([
+          refetchEmployees(),
+          refetchPayroll(),
+          refetchAttendance(),
+        ]);
+  
+        setIsRefreshing(false);
+        toast({
+          title: "Data Refreshed",
+          description: "Dashboard has been updated with the latest data.",
+        });
+      } catch (error) {
+        console.error("Error refreshing data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to refresh dashboard data. Please try again.",
+          variant: "destructive",
+        });
+        setIsRefreshing(false);
+      }
+    }, [
+      refetchEmployees,
+      refetchPayroll,
+      refetchAttendance,
+      toast,
+    ]);
   // Filters state
   const [filters, setFilters] = useState({
     trade: "",
@@ -160,41 +206,6 @@ export default function Dashboard() {
   });
 
   // Refresh all data sources
-  const handleRefreshData = useCallback(async () => {
-    try {
-      setIsRefreshing(true);
-      toast({
-        title: "Refreshing Data",
-        description: "Fetching the latest dashboard data...",
-      });
-
-      // Refresh all data sources concurrently
-      await Promise.all([
-        refetchEmployees(),
-        refetchPayroll(),
-        refetchAttendance(),
-      ]);
-
-      setIsRefreshing(false);
-      toast({
-        title: "Data Refreshed",
-        description: "Dashboard has been updated with the latest data.",
-      });
-    } catch (error) {
-      console.error("Error refreshing data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to refresh dashboard data. Please try again.",
-        variant: "destructive",
-      });
-      setIsRefreshing(false);
-    }
-  }, [
-    refetchEmployees,
-    refetchPayroll,
-    refetchAttendance,
-    toast,
-  ]);
 
   // Auto-refresh data when component mounts
   /**
@@ -220,16 +231,8 @@ export default function Dashboard() {
   }, [handleRefreshData, isRefreshing, isFetching]);
 
   // Set permissions based on user role
-  const {
-    data: sessionData = { user: { settings: [] } },
-    isLoading: isSessionLoading,
-    refetch: refetchSession,
-  } = useSessionQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-    refetchOnFocus: true,
-    refetchOnReconnect: true,
-    pollingInterval: 300000, // Poll every 5 minutes
-  });
+
+
 
   useEffect(() => {
     if (sessionData?.user?.settings && sessionData.user.current_role) {
@@ -245,6 +248,35 @@ export default function Dashboard() {
       }
     }
   }, [sessionData.user.settings, sessionData.user.current_role]);
+
+  const [exchangeRate, setExchangeRate] = useState(1); // Default to 1 to avoid multiplication by undefined
+
+  useEffect(() => {
+    const fetchExchangeRate = async () => {
+      if (sessionData?.user?.currency && sessionData?.user?.companies?.[0]?.base_currency) {
+        const rate = await getExchangeRate(
+          sessionData.user.currency,
+          sessionData.user.companies[0].base_currency
+        );
+        setExchangeRate(rate);
+      }
+    };
+    
+    fetchExchangeRate();
+  }, [sessionData?.user?.currency, sessionData?.user?.companies]);
+
+  payrollData = payrollData.map(item => {
+    // Convert the amount as needed (e.g., multiply by exchange rate, format, etc.)
+    const convertedCost = item.cost / exchangeRate;
+    const convertedPlanned = item.planned / exchangeRate;
+
+    // Return a new object with the converted values
+    return {
+      ...item,
+      cost: convertedCost.toFixed(4),
+      planned: convertedPlanned.toFixed(4)
+    };
+  });
 
   const handleFilterChange = (type: string, value: string) => {
     // Convert "all" to empty string for filter logic
@@ -267,17 +299,22 @@ export default function Dashboard() {
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm">Planned Cost</span>
             <span className="text-sm font-medium">
-              <ConvertedAmount 
-                amount={payload[0].value} 
-                currency={sessionData.user.currency} 
-              />
-            </span>
+              {/* <ConvertedAmount 
+                amount={payload[0].value ?? 0 } 
+                currency={sessionData.user.currency}
+                showCurrency={true} 
+              /> */}
+              {sessionData.user.currency}{payload[0].value  ?? 0 }
+            </span> 
             <span className="text-sm">Actual Cost</span>
             <span className="text-sm font-medium">
-              <ConvertedAmount 
-                amount={payload[1].value} 
-                currency={sessionData.user.currency} 
-              />
+              {/* <ConvertedAmount 
+                amount={payload[1].value ?? 0} 
+                currency={sessionData.user.currency}
+                showCurrency={true}
+              /> */}
+              {sessionData.user.currency}
+              {payload[1].value ?? 0} 
             </span>
           </div>
         </div>
@@ -807,13 +844,18 @@ export default function Dashboard() {
                         <YAxis
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fontSize: 9, fill: "#888888" }}
+                          tick={{ fontSize: 12, fill: "#888888" }}
                           tickFormatter={(value) => {
-                            const amount = value / 1000;
-                            return `${amount.toFixed(1)}K`;
+                            return new Intl.NumberFormat('en-US', {
+                              style: 'decimal',
+                              maximumFractionDigits: 0
+                            }).format(value);
                           }}
-                          domain={["auto", "auto"]}
+                          domain={[0, (dataMax) =>`${Math.ceil(dataMax)}`]}
                           allowDataOverflow={false}
+                          width={80}
+                          tickCount={6}
+                          interval={0}
                         />
                         <Tooltip
                           content={(props) => <PayrollTooltip {...props} />}

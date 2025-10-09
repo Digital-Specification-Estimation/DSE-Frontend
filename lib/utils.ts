@@ -18,7 +18,7 @@ export async function convertCurrency(amount: number, to: string,from:string) {
     }
 
     const response = await fetch(
-      `https://v6.exchangerate-api.com/v6/3e9718e441089f8cbd4de05a/latest/${from}`
+      `https://v6.exchangerate-api.com/v6/2e09af4bea5daff1450ee848/latest/${from}`
     );
     
     if (!response.ok) {
@@ -59,7 +59,7 @@ export async function getExchangeRate(fromCurrency: string, toCurrency: string):
     }
 
     const response = await fetch(
-      `https://v6.exchangerate-api.com/v6/3e9718e441089f8cbd4de05a/latest/${fromCurrency}`
+      `https://v6.exchangerate-api.com/v6/2e09af4bea5daff1450ee848/latest/${fromCurrency}`
     );
     
     if (!response.ok) {
