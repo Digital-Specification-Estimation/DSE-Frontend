@@ -43,47 +43,46 @@ import {
 import { Input } from "@/components/ui/input";
 import { Search, Filter } from "lucide-react";
 import { convertCurrency, getExchangeRate } from "@/lib/utils";
-
-function ConvertedAmount({ 
-  amount, 
-  currency, 
-  showCurrency = true 
-}: { 
-  amount: number; 
-  currency: string; 
+function ConvertedAmount({
+  amount,
+  currency,
+  showCurrency = true,
+  sessionData,
+}: {
+  amount: number;
+  currency: string;
   showCurrency?: boolean;
+  sessionData: any;
 }) {
-  const [convertedAmount, setConvertedAmount] = useState<string>('...');
-  const {
-    data: sessionData = { user: { settings: [] } },
-    isLoading: isSessionLoading,
-    refetch: refetchSession,
-  } = useSessionQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-    refetchOnFocus: true,
-    refetchOnReconnect: true,
-    pollingInterval: 300000, // Poll every 5 minutes
-  });
+  const [convertedAmount, setConvertedAmount] = useState<string>("...");
 
   useEffect(() => {
     const convert = async () => {
       try {
-        if (!sessionData?.user?.companies[0]?.base_currency) return;
-        
-        const result = await convertCurrency(amount, currency, sessionData.user.companies[0].base_currency);
-        setConvertedAmount(result.toLocaleString());
+        const result = await convertCurrency(
+          amount,
+          currency,
+          sessionData.user.companies[0].base_currency
+        );
+        setConvertedAmount(result);
       } catch (error) {
-        console.error('Error converting currency:', error);
-        setConvertedAmount('Error');
+        console.error("Error converting currency:", error);
+        setConvertedAmount("Error");
       }
     };
 
     if (amount !== undefined) {
       convert();
     }
-  }, [amount, currency, sessionData?.user?.companies[0]?.base_currency]);
-
-  return <>{showCurrency ? `${currency} ${Number(convertedAmount).toLocaleString()}` : Number(convertedAmount).toLocaleString()}</>;
+  }, [amount, currency]);
+  console.log("convertedAmount", convertedAmount);
+  return (
+    <>
+      {showCurrency
+        ? `${currency} ${Number(convertedAmount).toLocaleString()}`
+        : Number(convertedAmount).toLocaleString()}
+    </>
+  );
 }
 
 export default function Dashboard() {
@@ -603,6 +602,7 @@ export default function Dashboard() {
     numberOfLateArrivals,
     payrollPercentage,
   } = processEmployeeData();
+  console.log("total actual payroll", totalActualPayroll);
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
@@ -787,8 +787,9 @@ export default function Dashboard() {
                 value={
                   <>
                     <ConvertedAmount 
-                      amount={totalActualPayroll} 
+                      amount={Number(totalActualPayroll)} 
                       currency={sessionData.user.currency}
+                      sessionData={sessionData}
                     />
                   </>
                 }
@@ -816,6 +817,8 @@ export default function Dashboard() {
                     <ConvertedAmount 
                       amount={totalActualPayroll} 
                       currency={sessionData.user.currency}
+                      showCurrency={true}
+                      sessionData={sessionData}
                     />
                   </div>
                 </div>
@@ -998,12 +1001,14 @@ export default function Dashboard() {
                             <ConvertedAmount 
                               amount={tradeStatistics[trade].planned_budget} 
                               currency={sessionData.user.currency}
+                              sessionData={sessionData}
                             />
                           </td>
                           <td className="p-4">
                             <ConvertedAmount 
                               amount={tradeStatistics[trade].actual_cost} 
                               currency={sessionData.user.currency}
+                              sessionData={sessionData}
                             />
                           </td>
                           <td className="p-4">
@@ -1030,6 +1035,7 @@ export default function Dashboard() {
                               <ConvertedAmount 
                                 amount={Math.abs(tradeStatistics[trade].difference)} 
                                 currency={sessionData.user.currency}
+                                sessionData={sessionData}
                               />
                             </div>
                           </td>
