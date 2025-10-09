@@ -159,8 +159,8 @@ export function Sidebar({ user }: SidebarProps) {
       required: "manage_employees",
     },
     {
-      name: "Attendance & Payroll",
-      href: "/attendance-payroll",
+      name: "Attendance",
+      href: "/attendance",
       icon: NotepadText,
       required: "manage_payroll",
     },

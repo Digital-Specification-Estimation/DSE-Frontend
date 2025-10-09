@@ -1886,7 +1886,7 @@ export default function BusinessSetup() {
     };
     try {
       const response = await fetch(
-        `http://localhost:4000/project/budget`,
+        `https://dse-backend-uv5d.onrender.com/project/budget`,
         {
           method: "PATCH",
           headers: {
