@@ -25,6 +25,7 @@ import {
   Minus,
   DollarSign,
   Receipt,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,6 +65,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import jsPDF from "jspdf";
+import { useCreateDeductionMutation, useGetDeductionsQuery, useDeleteDeductionMutation } from "@/lib/redux/deductionSlice";
 
 export default function AttendanceHistory() {
   const params = useParams();
@@ -85,7 +87,6 @@ export default function AttendanceHistory() {
 
   // Deduction states
   const [isDeductionModalOpen, setIsDeductionModalOpen] = useState(false);
-  const [deductions, setDeductions] = useState<any[]>([]);
   const [newDeduction, setNewDeduction] = useState({
     type: "",
     amount: "",
@@ -93,6 +94,11 @@ export default function AttendanceHistory() {
     date: format(new Date(), "yyyy-MM-dd"),
     description: "",
   });
+
+  // Redux hooks for deductions
+  const { data: deductions = [], refetch: refetchDeductions } = useGetDeductionsQuery({ employeeId });
+  const [createDeduction, { isLoading: isCreatingDeduction }] = useCreateDeductionMutation();
+  const [deleteDeduction, { isLoading: isDeletingDeduction }] = useDeleteDeductionMutation();
 
   // Memoize query parameters to prevent unnecessary refetches
   const queryParams = useMemo(() => {
@@ -116,6 +122,7 @@ export default function AttendanceHistory() {
   } = useGetUserAttendanceHistoryQuery(
     queryParams || { employeeId: "", startDate: "", endDate: "" }
   );
+
   const { data: attendancesWithReasons, refetch: refetchReasons } =
     useGetAttendancesWithReasonsQuery(
       queryParams || { employeeId: "", startDate: "", endDate: "" }
@@ -275,45 +282,81 @@ export default function AttendanceHistory() {
   }, [employee, attendanceData, deductions, sessionData]);
 
   // Deduction management functions
-  const addDeduction = () => {
-    if (!newDeduction.type || !newDeduction.amount || !newDeduction.reason) {
+  const addDeduction = async () => {
+    if (!newDeduction.amount || !newDeduction.reason) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields (Reason and Amount)",
         variant: "destructive",
       });
       return;
     }
 
-    const deduction = {
-      id: Date.now().toString(),
-      ...newDeduction,
-      amount: parseFloat(newDeduction.amount),
-      createdAt: new Date().toISOString(),
-    };
+    if (!employeeId) {
+      toast({
+        title: "Error",
+        description: "Employee ID is required",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setDeductions((prev) => [...prev, deduction]);
-    setNewDeduction({
-      type: "",
-      amount: "",
-      reason: "",
-      date: format(new Date(), "yyyy-MM-dd"),
-      description: "",
-    });
-    setIsDeductionModalOpen(false);
+    try {
+      await createDeduction({
+        name: newDeduction.reason,
+        amount: parseFloat(newDeduction.amount),
+        type: newDeduction.type || "other",
+        reason: newDeduction.description || newDeduction.reason,
+        date: newDeduction.date,
+        employee_id: employeeId,
+      }).unwrap();
 
-    toast({
-      title: "Success",
-      description: "Deduction added successfully",
-    });
+      // Reset form
+      setNewDeduction({
+        type: "",
+        amount: "",
+        reason: "",
+        date: format(new Date(), "yyyy-MM-dd"),
+        description: "",
+      });
+      setIsDeductionModalOpen(false);
+
+      // Refetch deductions to update the list
+      refetchDeductions();
+
+      toast({
+        title: "Success",
+        description: "Deduction added successfully",
+      });
+    } catch (error) {
+      console.error("Error creating deduction:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add deduction. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const removeDeduction = (deductionId: string) => {
-    setDeductions((prev) => prev.filter((d) => d.id !== deductionId));
-    toast({
-      title: "Success",
-      description: "Deduction removed successfully",
-    });
+  const removeDeduction = async (deductionId: string) => {
+    try {
+      await deleteDeduction(deductionId).unwrap();
+      
+      // Refetch deductions to update the list
+      refetchDeductions();
+      
+      toast({
+        title: "Success",
+        description: "Deduction removed successfully",
+      });
+    } catch (error) {
+      console.error("Error deleting deduction:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove deduction. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -1313,9 +1356,17 @@ export default function AttendanceHistory() {
                   />
                 </div>
 
-                <Button onClick={addDeduction} className="w-full gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Deduction
+                <Button 
+                  onClick={addDeduction} 
+                  className="w-full gap-2"
+                  disabled={isCreatingDeduction}
+                >
+                  {isCreatingDeduction ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  {isCreatingDeduction ? "Adding..." : "Add Deduction"}
                 </Button>
               </CardContent>
             </Card>

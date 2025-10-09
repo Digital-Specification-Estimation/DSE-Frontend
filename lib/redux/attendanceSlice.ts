@@ -68,7 +68,7 @@ export const attendanceApi = createApi({
     }),
     getAttendancesWithReasons: builder.query({
       query: ({ employeeId, startDate, endDate }) => {
-        let url = `with-reason/${employeeId}`;
+        let url = `history/${employeeId}`;
         const params = new URLSearchParams();
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);

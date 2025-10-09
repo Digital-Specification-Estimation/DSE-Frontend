@@ -320,16 +320,14 @@ export default function Dashboard() {
     if (typeof window !== "undefined") {
       window.location.href = "/pending-role";
     }
-  }
-
-  // Redirect users whose role request is not yet approved
-  if (
-    sessionData?.user?.role_request_approval &&
-    sessionData.user.role_request_approval !== "APPROVED"
-  ) {
-    if (typeof window !== "undefined") {
-      window.location.href = "/pending-role";
-    }
+    // Return early to prevent rendering dashboard content
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <p>Redirecting to pending role page...</p>
+        </div>
+      </div>
+    );
   }
 
   if (isLoading || isSessionLoading) {

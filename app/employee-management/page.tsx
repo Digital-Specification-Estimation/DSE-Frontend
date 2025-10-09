@@ -329,28 +329,24 @@ export default function EmployeeManagement() {
 
       // Show detailed results
       const successMessage = [
-        result.locations.created > 0 && `${result.locations.created} locations`,
-        result.projects.created > 0 && `${result.projects.created} projects`,
-        result.trades.created > 0 && `${result.trades.created} trades`,
-        result.employees.created > 0 && `${result.employees.created} employees`,
+        result.details?.locations?.created > 0 && `${result.details.locations.created} locations`,
+        result.details?.projects?.created > 0 && `${result.details.projects.created} projects`,
+        result.details?.trades?.created > 0 && `${result.details.trades.created} trades`,
+        result.details?.employees?.created > 0 && `${result.details.employees.created} employees`,
       ]
         .filter(Boolean)
         .join(", ");
 
       const skippedMessage = [
-        result.locations.skipped > 0 && `${result.locations.skipped} locations`,
-        result.projects.skipped > 0 && `${result.projects.skipped} projects`,
-        result.trades.skipped > 0 && `${result.trades.skipped} trades`,
-        result.employees.skipped > 0 && `${result.employees.skipped} employees`,
+        result.details?.locations?.existing > 0 && `${result.details.locations.existing} locations`,
+        result.details?.projects?.existing > 0 && `${result.details.projects.existing} projects`,
+        result.details?.trades?.existing > 0 && `${result.details.trades.existing} trades`,
+        result.details?.employees?.existing > 0 && `${result.details.employees.existing} employees`,
       ]
         .filter(Boolean)
         .join(", ");
 
-      const hasErrors =
-        result.locations.errors.length > 0 ||
-        result.projects.errors.length > 0 ||
-        result.trades.errors.length > 0 ||
-        result.employees.errors.length > 0;
+      const hasErrors = result.errors && result.errors.length > 0;
 
       if (successMessage) {
         toast({
@@ -359,40 +355,29 @@ export default function EmployeeManagement() {
             skippedMessage ? `. Skipped (already exist): ${skippedMessage}` : ""
           }`,
         });
-      }
 
-      if (hasErrors) {
-        const allErrors = [
-          ...result.locations.errors,
-          ...result.projects.errors,
-          ...result.trades.errors,
-          ...result.employees.errors,
-        ];
-        console.error("Upload errors:", allErrors);
-        
-        // Check specifically for trade rate mismatch errors
-        const tradeRateErrors = result.trades.errors.filter((error: string) => 
-          error.includes('mismatched rates') || error.includes('different rates')
-        );
-
-        if (tradeRateErrors.length > 0) {
-          toast({
-            title: "Trade Rate Validation Failed",
-            description: `${tradeRateErrors.length} trade(s) have rate mismatches. Only the first occurrence of each trade was processed.`,
-            variant: "destructive",
-          });
+        if (hasErrors) {
+          console.error("Upload errors:", result.errors);
           
-          // Show detailed trade rate errors
-          setCsvParseError(
-            `TRADE RATE VALIDATION ERRORS:\n${tradeRateErrors.join('\n')}\n\nOther errors: ${allErrors.filter(e => !tradeRateErrors.includes(e)).length}`
+          // Check specifically for trade rate mismatch errors
+          const tradeRateErrors = result.errors.filter((error: string) => 
+            error.includes('mismatched rates') || error.includes('different rates')
           );
-        } else {
-          toast({
-            title: "Partial Success",
-            description: `Some items had errors. Check console for details.`,
-            variant: "destructive",
-          });
-          setCsvParseError(allErrors.join('\n'));
+
+          if (tradeRateErrors.length > 0) {
+            toast({
+              title: "Trade Rate Validation Failed",
+              description: `${tradeRateErrors.length} trade(s) have rate mismatches. Only the first occurrence of each trade was processed.`,
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Upload Completed with Errors",
+              description: `Some items could not be processed. Check console for details.`,
+              variant: "destructive",
+            });
+          }
+          setCsvParseError(result.errors.join('\n'));
         }
       }
 
