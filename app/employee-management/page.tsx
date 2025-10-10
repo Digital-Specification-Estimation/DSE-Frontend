@@ -201,11 +201,12 @@ export default function EmployeeManagement() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
-  
+
   // State for expired contracts management
   const [showExpiredContracts, setShowExpiredContracts] = useState(false);
   const [expiredEmployeeIds, setExpiredEmployeeIds] = useState<string[]>([]);
-  const [showExpiredDeleteConfirm, setShowExpiredDeleteConfirm] = useState(false);
+  const [showExpiredDeleteConfirm, setShowExpiredDeleteConfirm] =
+    useState(false);
   const [filters, setFilters] = useState({
     trade: "",
     project: "",
@@ -310,7 +311,7 @@ export default function EmployeeManagement() {
 
       // Send to backend bulk upload endpoint
       const response = await fetch(
-        "https://dse-backend-uv5d.onrender.com/employee/bulk-upload",
+        "http://localhost:4000/employee/bulk-upload",
         {
           method: "POST",
           body: formData,
@@ -329,19 +330,27 @@ export default function EmployeeManagement() {
 
       // Show detailed results
       const successMessage = [
-        result.details?.locations?.created > 0 && `${result.details.locations.created} locations`,
-        result.details?.projects?.created > 0 && `${result.details.projects.created} projects`,
-        result.details?.trades?.created > 0 && `${result.details.trades.created} trades`,
-        result.details?.employees?.created > 0 && `${result.details.employees.created} employees`,
+        result.details?.locations?.created > 0 &&
+          `${result.details.locations.created} locations`,
+        result.details?.projects?.created > 0 &&
+          `${result.details.projects.created} projects`,
+        result.details?.trades?.created > 0 &&
+          `${result.details.trades.created} trades`,
+        result.details?.employees?.created > 0 &&
+          `${result.details.employees.created} employees`,
       ]
         .filter(Boolean)
         .join(", ");
 
       const skippedMessage = [
-        result.details?.locations?.existing > 0 && `${result.details.locations.existing} locations`,
-        result.details?.projects?.existing > 0 && `${result.details.projects.existing} projects`,
-        result.details?.trades?.existing > 0 && `${result.details.trades.existing} trades`,
-        result.details?.employees?.existing > 0 && `${result.details.employees.existing} employees`,
+        result.details?.locations?.existing > 0 &&
+          `${result.details.locations.existing} locations`,
+        result.details?.projects?.existing > 0 &&
+          `${result.details.projects.existing} projects`,
+        result.details?.trades?.existing > 0 &&
+          `${result.details.trades.existing} trades`,
+        result.details?.employees?.existing > 0 &&
+          `${result.details.employees.existing} employees`,
       ]
         .filter(Boolean)
         .join(", ");
@@ -358,10 +367,12 @@ export default function EmployeeManagement() {
 
         if (hasErrors) {
           console.error("Upload errors:", result.errors);
-          
+
           // Check specifically for trade rate mismatch errors
-          const tradeRateErrors = result.errors.filter((error: string) => 
-            error.includes('mismatched rates') || error.includes('different rates')
+          const tradeRateErrors = result.errors.filter(
+            (error: string) =>
+              error.includes("mismatched rates") ||
+              error.includes("different rates")
           );
 
           if (tradeRateErrors.length > 0) {
@@ -377,7 +388,7 @@ export default function EmployeeManagement() {
               variant: "destructive",
             });
           }
-          setCsvParseError(result.errors.join('\n'));
+          setCsvParseError(result.errors.join("\n"));
         }
       }
 
@@ -609,7 +620,7 @@ export default function EmployeeManagement() {
     const fetchCompanies = async () => {
       setIsLoadingCompanies(true);
       try {
-        const response = await fetch("https://dse-backend-uv5d.onrender.com/company/companies");
+        const response = await fetch("http://localhost:4000/company/companies");
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
@@ -664,13 +675,13 @@ export default function EmployeeManagement() {
   const getExpiredEmployees = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
-    
+
     return employees.filter((employee: any) => {
       if (!employee.contract_finish_date) return false;
-      
+
       const contractEndDate = new Date(employee.contract_finish_date);
       contractEndDate.setHours(0, 0, 0, 0);
-      
+
       return contractEndDate < today;
     });
   };
@@ -680,12 +691,12 @@ export default function EmployeeManagement() {
     const today = new Date();
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(today.getDate() + 30);
-    
+
     return employees.filter((employee: any) => {
       if (!employee.contract_finish_date) return false;
-      
+
       const contractEndDate = new Date(employee.contract_finish_date);
-      
+
       return contractEndDate >= today && contractEndDate <= thirtyDaysFromNow;
     });
   };
@@ -693,12 +704,12 @@ export default function EmployeeManagement() {
   // Calculate days until contract expiry
   const getDaysUntilExpiry = (contractEndDate: string) => {
     if (!contractEndDate) return null;
-    
+
     const today = new Date();
     const endDate = new Date(contractEndDate);
     const timeDiff = endDate.getTime() - today.getTime();
     const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-    
+
     return daysDiff;
   };
 
@@ -744,7 +755,9 @@ export default function EmployeeManagement() {
       } else {
         toast({
           title: "Error",
-          description: `Failed to delete employees: ${failedEmployees.join(", ")}`,
+          description: `Failed to delete employees: ${failedEmployees.join(
+            ", "
+          )}`,
           variant: "destructive",
         });
       }
@@ -753,14 +766,15 @@ export default function EmployeeManagement() {
       setExpiredEmployeeIds([]);
       setShowExpiredDeleteConfirm(false);
       setShowExpiredContracts(false);
-      
+
       // Refresh employee data to reflect changes
       refetchEmployees();
     } catch (error) {
       console.error("Error during bulk deletion:", error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred during deletion. Please try again.",
+        description:
+          "An unexpected error occurred during deletion. Please try again.",
         variant: "destructive",
       });
     }
@@ -1232,7 +1246,6 @@ export default function EmployeeManagement() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                       
                             <span className="font-medium">
                               {employee.username}
                               {employee._isOptimistic && (
@@ -1288,19 +1301,21 @@ export default function EmployeeManagement() {
                               !employee._isOptimistic &&
                               !employee._isUpdating && (
                                 <>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
                                     className="h-8 w-8"
                                     onClick={() => handleEditEmployee(employee)}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
                                     className="h-8 w-8 text-red-500 hover:text-red-600"
-                                    onClick={() => handleDeleteEmployee(employee)}
+                                    onClick={() =>
+                                      handleDeleteEmployee(employee)
+                                    }
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -1462,12 +1477,15 @@ export default function EmployeeManagement() {
                     </label>
                     <Select
                       onValueChange={(value) => {
-                        const selectedTrade = tradesFetched.find((trade: any) => trade.id === value);
+                        const selectedTrade = tradesFetched.find(
+                          (trade: any) => trade.id === value
+                        );
                         setNewEmployee({
                           ...newEmployee,
                           trade_position_id: value,
                           daily_rate: selectedTrade?.daily_planned_cost || "",
-                          monthly_rate: selectedTrade?.monthly_planned_cost || "",
+                          monthly_rate:
+                            selectedTrade?.monthly_planned_cost || "",
                         });
                       }}
                     >
@@ -1500,7 +1518,8 @@ export default function EmployeeManagement() {
                       htmlFor={getRateFieldName()}
                       className="text-sm font-medium"
                     >
-                      {isMonthlyRate ? "Monthly Rate" : "Daily Rate"} (Auto-filled from trade)
+                      {isMonthlyRate ? "Monthly Rate" : "Daily Rate"}{" "}
+                      (Auto-filled from trade)
                     </label>
                     <div className="relative">
                       <p className="absolute left-[5px] top-[15px] -translate-y-1/2 h-2 w-2 text-sm text-gray-400">
@@ -1524,7 +1543,9 @@ export default function EmployeeManagement() {
                     </div>
                     {newEmployee.trade_position_id && (
                       <p className="text-xs text-gray-500">
-                        Rate from selected trade: {newEmployee[getRateFieldName()]}. This is for reference only.
+                        Rate from selected trade:{" "}
+                        {newEmployee[getRateFieldName()]}. This is for reference
+                        only.
                       </p>
                     )}
                   </div>
@@ -1903,7 +1924,10 @@ export default function EmployeeManagement() {
       </Dialog>
 
       {/* Expired Contracts Modal */}
-      <Dialog open={showExpiredContracts} onOpenChange={setShowExpiredContracts}>
+      <Dialog
+        open={showExpiredContracts}
+        onOpenChange={setShowExpiredContracts}
+      >
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1911,7 +1935,7 @@ export default function EmployeeManagement() {
               Contract Management
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             {/* Expired Contracts Section */}
             <div className="space-y-4">
@@ -1941,7 +1965,7 @@ export default function EmployeeManagement() {
                   </Button>
                 )}
               </div>
-              
+
               {getExpiredEmployees().length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -1953,10 +1977,15 @@ export default function EmployeeManagement() {
                     <div className="flex items-center gap-4">
                       <input
                         type="checkbox"
-                        checked={expiredEmployeeIds.length === getExpiredEmployees().length}
+                        checked={
+                          expiredEmployeeIds.length ===
+                          getExpiredEmployees().length
+                        }
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setExpiredEmployeeIds(getExpiredEmployees().map(emp => emp.id));
+                            setExpiredEmployeeIds(
+                              getExpiredEmployees().map((emp) => emp.id)
+                            );
                           } else {
                             setExpiredEmployeeIds([]);
                           }
@@ -1968,29 +1997,40 @@ export default function EmployeeManagement() {
                   </div>
                   <div className="divide-y">
                     {getExpiredEmployees().map((employee: any) => (
-                      <div key={employee.id} className="flex items-center justify-between p-4 hover:bg-gray-50">
+                      <div
+                        key={employee.id}
+                        className="flex items-center justify-between p-4 hover:bg-gray-50"
+                      >
                         <div className="flex items-center gap-4">
                           <input
                             type="checkbox"
                             checked={expiredEmployeeIds.includes(employee.id)}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                setExpiredEmployeeIds(prev => [...prev, employee.id]);
+                                setExpiredEmployeeIds((prev) => [
+                                  ...prev,
+                                  employee.id,
+                                ]);
                               } else {
-                                setExpiredEmployeeIds(prev => prev.filter(id => id !== employee.id));
+                                setExpiredEmployeeIds((prev) =>
+                                  prev.filter((id) => id !== employee.id)
+                                );
                               }
                             }}
                             className="h-4 w-4"
                           />
                           <Avatar className="h-10 w-10">
                             <AvatarFallback>
-                              {employee.username?.charAt(0)?.toUpperCase() || "U"}
+                              {employee.username?.charAt(0)?.toUpperCase() ||
+                                "U"}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="font-medium">{employee.username}</p>
                             <p className="text-sm text-gray-500">
-                              {tradesFetched.find(t => t.id === employee.trade_position_id)?.trade_name || "Unknown Trade"}
+                              {tradesFetched.find(
+                                (t) => t.id === employee.trade_position_id
+                              )?.trade_name || "Unknown Trade"}
                             </p>
                           </div>
                         </div>
@@ -1999,7 +2039,12 @@ export default function EmployeeManagement() {
                             Expired: {formatDate(employee.contract_finish_date)}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {Math.abs(getDaysUntilExpiry(employee.contract_finish_date) || 0)} days ago
+                            {Math.abs(
+                              getDaysUntilExpiry(
+                                employee.contract_finish_date
+                              ) || 0
+                            )}{" "}
+                            days ago
                           </p>
                         </div>
                       </div>
@@ -2015,7 +2060,7 @@ export default function EmployeeManagement() {
                 <AlertTriangle className="h-5 w-5" />
                 Expiring Soon ({getExpiringSoonEmployees().length})
               </h3>
-              
+
               {getExpiringSoonEmployees().length === 0 ? (
                 <div className="text-center py-6 text-gray-500">
                   <p>No contracts expiring in the next 30 days</p>
@@ -2024,17 +2069,23 @@ export default function EmployeeManagement() {
                 <div className="border rounded-lg overflow-hidden">
                   <div className="divide-y">
                     {getExpiringSoonEmployees().map((employee: any) => (
-                      <div key={employee.id} className="flex items-center justify-between p-4 hover:bg-gray-50">
+                      <div
+                        key={employee.id}
+                        className="flex items-center justify-between p-4 hover:bg-gray-50"
+                      >
                         <div className="flex items-center gap-4">
                           <Avatar className="h-10 w-10">
                             <AvatarFallback>
-                              {employee.username?.charAt(0)?.toUpperCase() || "U"}
+                              {employee.username?.charAt(0)?.toUpperCase() ||
+                                "U"}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="font-medium">{employee.username}</p>
                             <p className="text-sm text-gray-500">
-                              {tradesFetched.find(t => t.id === employee.trade_position_id)?.trade_name || "Unknown Trade"}
+                              {tradesFetched.find(
+                                (t) => t.id === employee.trade_position_id
+                              )?.trade_name || "Unknown Trade"}
                             </p>
                           </div>
                         </div>
@@ -2043,7 +2094,8 @@ export default function EmployeeManagement() {
                             Expires: {formatDate(employee.contract_finish_date)}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {getDaysUntilExpiry(employee.contract_finish_date)} days remaining
+                            {getDaysUntilExpiry(employee.contract_finish_date)}{" "}
+                            days remaining
                           </p>
                         </div>
                       </div>
@@ -2069,7 +2121,10 @@ export default function EmployeeManagement() {
       </Dialog>
 
       {/* Expired Employees Delete Confirmation Modal */}
-      <Dialog open={showExpiredDeleteConfirm} onOpenChange={setShowExpiredDeleteConfirm}>
+      <Dialog
+        open={showExpiredDeleteConfirm}
+        onOpenChange={setShowExpiredDeleteConfirm}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -2077,25 +2132,29 @@ export default function EmployeeManagement() {
               Delete Expired Employees
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <p className="text-gray-600">
-              Are you sure you want to delete {expiredEmployeeIds.length} expired employee(s)?
+              Are you sure you want to delete {expiredEmployeeIds.length}{" "}
+              expired employee(s)?
             </p>
-            
+
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <p className="text-sm text-red-800 font-medium mb-2">
                 ⚠️ This action cannot be undone
               </p>
               <p className="text-sm text-red-700">
-                All employee data, attendance records, and related information will be permanently deleted.
+                All employee data, attendance records, and related information
+                will be permanently deleted.
               </p>
             </div>
-            
+
             <div className="max-h-32 overflow-y-auto">
-              <p className="text-sm font-medium mb-2">Employees to be deleted:</p>
+              <p className="text-sm font-medium mb-2">
+                Employees to be deleted:
+              </p>
               <ul className="text-sm text-gray-600 space-y-1">
-                {expiredEmployeeIds.map(id => {
+                {expiredEmployeeIds.map((id) => {
                   const employee = employees.find((emp: any) => emp.id === id);
                   return (
                     <li key={id} className="flex items-center gap-2">
