@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const expenseApi = createApi({
   reducerPath: "expenseApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:4000/expenses",
+    baseUrl: "https://dse-backend-uv5d.onrender.com/expenses",
     credentials: "include",
     prepareHeaders: (headers) => {
       const token = localStorage.getItem('authToken');
