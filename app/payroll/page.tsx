@@ -40,6 +40,8 @@ import { convertCurrency } from "@/lib/utils";
 import { useGetDeductionsQuery } from "@/lib/redux/deductionSlice";
 import { jsPDF } from "jspdf";
 import { FileText } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 interface PayrollRecord {
   id: string;
@@ -120,12 +122,11 @@ export default function PayrollPage() {
     
     const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [filters, setFilters] = useState({
     trade: "all",
     project: "all",
-    dailyRate: "all",
-    remainingDays: "all",
+    status: "all",
+    dailyRate: "all"
   });
   const [isLoading, setIsLoading] = useState(true);
   const [payrollData, setPayrollData] = useState<PayrollRecord[]>([]);
@@ -318,38 +319,57 @@ export default function PayrollPage() {
     const filteredEmployees = useMemo(() => {
         return enhancedEmployees.filter((employee: any) => {
           if (!employee) return false;
+          
+          // Search term filter
           if (
             searchTerm &&
             employee.username &&
-            !employee.username.toLowerCase().includes(searchTerm.toLowerCase())
-          )
+            !employee.username.toLowerCase().includes(searchTerm.toLowerCase()) &&
+            !employee.trade_position?.trade_name?.toLowerCase().includes(searchTerm.toLowerCase())
+          ) {
             return false;
+          }
+
+          // Trade filter
           if (
             filters.trade &&
             filters.trade !== "all" &&
             employee.trade_position?.trade_name !== filters.trade
-          )
+          ) {
             return false;
+          }
+
+          // Project filter
           if (
             filters.project &&
             filters.project !== "all" &&
             employee.project?.project_name !== filters.project
-          )
+          ) {
             return false;
+          }
+
+          // Status filter
+          if (filters.status && filters.status !== "all") {
+            const status = employee.status?.toLowerCase();
+            if (filters.status === "paid" && status !== "paid") return false;
+            if (filters.status === "pending" && status !== "pending") return false;
+          }
+
+          // Daily rate filter
           if (filters.dailyRate && filters.dailyRate !== "all") {
-            const employeeRate = `${currencyShort}${Math.round(
-              employee.daily_rate || 0
-            )}`;
-            if (employeeRate !== filters.dailyRate) return false;
+            const rateRanges: { [key: string]: [number, number] } = {
+              "0-100": [0, 100],
+              "100-300": [100, 300],
+              "300-500": [300, 500],
+              "500+": [500, Infinity]
+            };
+            
+            const [min, max] = rateRanges[filters.dailyRate] || [0, Infinity];
+            const dailyRate = Number(employee.daily_rate) || 0;
+            
+            if (dailyRate < min || dailyRate >= max) return false;
           }
-          if (filters.remainingDays && filters.remainingDays !== "all") {
-            const days = Number(employee.remaining_days) || 0;
-            if (filters.remainingDays === "few" && (days > 10 || days < 0))
-              return false;
-            if (filters.remainingDays === "moderate" && (days <= 10 || days > 30))
-              return false;
-            if (filters.remainingDays === "many" && days <= 30) return false;
-          }
+
           return true;
         });
       }, [enhancedEmployees, searchTerm, filters]);
@@ -437,7 +457,7 @@ export default function PayrollPage() {
   const filteredData = payrollData.filter(record => {
     const matchesSearch = record.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          record.period.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || record.status.toLowerCase() === statusFilter.toLowerCase();
+    const matchesStatus = filters.status === 'all' || record.status.toLowerCase() === filters.status.toLowerCase();
     
     return matchesSearch && matchesStatus;
   });
@@ -628,21 +648,139 @@ export default function PayrollPage() {
         <div className="flex-1 flex flex-col overflow-hidden">
               <DashboardHeader />
       <div className="flex-1 overflow-auto  p-6">
-        <div className="flex justify-between items-center p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <h1 className="text-2xl font-bold">Payroll Management</h1>
-          <Button
-            variant="outline"
-            className="gap-2 flex items-center border-2 border-gray-300 rounded-full h-14 bg-transparent"
-            onClick={handleGeneratePayrollReport}
-            disabled={isGeneratingReport}
-          >
-            {isGeneratingReport ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileText className="h-5 w-5" />
-            )}
-            {isGeneratingReport ? "Generating..." : "View Payroll Report"}
-          </Button>
+          <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search employees..."
+                className="w-full pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full md:w-auto">
+                  <Filter className="mr-2 h-4 w-4" />
+                  Filters
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4">
+                <div className="space-y-4">
+                  <div>
+                    <Label>Trade</Label>
+                    <Select
+                      value={filters.trade}
+                      onValueChange={(value) =>
+                        setFilters({ ...filters, trade: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select trade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Trades</SelectItem>
+                        {trades.map((trade) => (
+                          <SelectItem key={trade.trade_name} value={trade.trade_name}>
+                            {trade.trade_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Project</Label>
+                    <Select
+                      value={filters.project}
+                      onValueChange={(value) =>
+                        setFilters({ ...filters, project: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Projects</SelectItem>
+                        {projects.map((project) => (
+                          <SelectItem key={project.project_name} value={project.project_name}>
+                            {project.project_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Status</Label>
+                    <Select
+                      value={filters.status}
+                      onValueChange={(value) =>
+                        setFilters({ ...filters, status: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Daily Rate</Label>
+                    <Select
+                      value={filters.dailyRate}
+                      onValueChange={(value) =>
+                        setFilters({ ...filters, dailyRate: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select rate range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Rates</SelectItem>
+                        <SelectItem value="0-100">$0 - $100</SelectItem>
+                        <SelectItem value="100-300">$100 - $300</SelectItem>
+                        <SelectItem value="300-500">$300 - $500</SelectItem>
+                        <SelectItem value="500+">$500+</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() =>
+                      setFilters({
+                        trade: "all",
+                        project: "all",
+                        status: "all",
+                        dailyRate: "all"
+                      })
+                    }
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Button
+              variant="outline"
+              className="gap-2 flex items-center border-2 border-gray-300 rounded-full h-14 bg-transparent"
+              onClick={handleGeneratePayrollReport}
+              disabled={isGeneratingReport}
+            >
+              {isGeneratingReport ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="h-5 w-5" />
+              )}
+              {isGeneratingReport ? "Generating..." : "View Payroll Report"}
+            </Button>
+          </div>
         </div>
         <main className="p-6 space-y-6">
           <div className="px-4 pb-4">
