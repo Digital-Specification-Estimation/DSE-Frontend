@@ -23,6 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import { useSessionQuery } from "@/lib/redux/authSlice";
 import { useToast } from "@/hooks/use-toast";
 import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
@@ -346,6 +352,26 @@ export default function PayrollPage() {
         });
       }, [enhancedEmployees, searchTerm, filters]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Calculate pagination
+  const totalItems = filteredEmployees.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const currentItems = filteredEmployees.slice(startIndex, endIndex);
+
+  // Handle page change
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
 
     useEffect(() => {
       
@@ -437,164 +463,270 @@ export default function PayrollPage() {
       <Sidebar user={sessionData?.user} />
       <div className="flex-1 overflow-auto">
         <DashboardHeader title="Payroll Management" />
-        
         <main className="p-6 space-y-6">
-       
-       
-                     <div className="px-4 pb-4">
-                             <div className="grid grid-cols-5 gap-4 mb-4">
-                               <div className="bg-white border rounded-lg p-4">
-                                 <div className="text-sm text-gray-500 mb-1">
-                                   Total Employees
-                                 </div>
-                                 <div className="text-xl font-bold">
-                                   {enhancedEmployees.length}
-                                 </div>
-                               </div>
-                               <div className="bg-white border rounded-lg p-4">
-                                 <div className="text-sm text-gray-500 mb-1">
-                                   Total Days Worked
-                                 </div>
-                                 <div className="text-xl font-bold">
-                                   {totals.totalDaysWorked}
-                                 </div>
-                               </div>
-                               <div className="bg-white border rounded-lg p-4">
-                                 <div className="text-sm text-gray-500 mb-1">
-                                   Total Budget Baseline
-                                 </div>
-                                 <div className="text-xl font-bold">
-                                   {
-                                     <ConvertedAmount
-                                       amount={totals.totalBaseline}
-                                       currency={sessionData.user.currency}
-                                       sessionData={sessionData}
-                                     />
-                                   }
-                                 </div>
-                               </div>
-                               <div className="bg-white border rounded-lg p-4">
-                                 <div className="text-sm text-gray-500 mb-1">
-                                   Total Actual Payroll
-                                 </div>
-                                 <div className="text-xl font-bold">
-                                   {
-                                     <ConvertedAmount
-                                       amount={totals.totalActualPayroll}
-                                       currency={sessionData.user.currency}
-                                       sessionData={sessionData}
-                                     />
-                                   }
-                                 </div>
-                               </div>
-                               <div className="bg-white border rounded-lg p-4">
-                                 <div className="text-sm text-gray-500 mb-1">
-                                   Daily Actual Payroll
-                                 </div>
-                                 <div className="text-xl font-bold">
-                                   {
-                                     <ConvertedAmount
-                                       amount={totals.totalDailyActuallPayroll}
-                                       currency={sessionData.user.currency}
-                                       sessionData={sessionData}
-                                     />
-                                   }
-                                 </div>
-                               </div>
-                             </div>
-                           </div>
-         
-                           <div className="overflow-x-auto">
-                             <table className="w-full border rounded-md">
-                               <thead>
-                                 <tr className="border-t border-b text-[14px] text-gray-500">
-                                   <th className="px-4 py-3 text-left border-r">
-                                     Employee Name
-                                   </th>
-                                   <th className="px-4 py-3 text-left border-r">
-                                     Daily Rate
-                                   </th>
-                                   <th className="px-4 py-3 text-left border-r">
-                                     Days Worked
-                                   </th>
-                                   <th className="px-4 py-3 text-left border-r">
-                                     Budget Baseline
-                                   </th>
-                                   <th className="px-4 py-3 text-left border-r">
-                                     Total Actual
-                                   </th>
-                                   <th className="px-4 py-3 text-left border-r">
-                                     Planned vs Actual
-                                   </th>
-                                 </tr>
-                               </thead>
-                               <tbody className="text-[14px]">
-                                 {filteredEmployees.map((employee: any) => (
-                                   <tr
-                                     key={employee.id}
-                                     className="border-b hover:bg-gray-50"
-                                   >
-                                     <td className="px-4 py-3 border-r">
-                                       <div className="flex items-center gap-2">
-                                         <span className="font-medium">
-                                           {employee.username}
-                                         </span>
-                                       </div>
-                                     </td>
-                                     <td className="px-4 py-3 border-r">
-                                       {
-                                         <ConvertedAmount
-                                           amount={employee.daily_rate}
-                                           currency={sessionData.user.currency}
-                                           sessionData={sessionData}
-                                         />
-                                       }
-                                     </td>
-                                     <td className="px-4 py-3 border-r">
-                                       {employee.days_worked}
-                                     </td>
-                                     <td className="px-4 py-3 border-r">
-                                       {
-                                         <ConvertedAmount
-                                           amount={employee.budget_baseline}
-                                           currency={sessionData.user.currency}
-                                           sessionData={sessionData}
-                                         />
-                                       }
-                                     </td>
-                                     <td className="px-4 py-3 border-r">
-                                       {
-                                         <ConvertedAmount
-                                           amount={employee.totalActualPayroll}
-                                           currency={sessionData.user.currency}
-                                           sessionData={sessionData}
-                                         />
-                                       }
-                                     </td>
-                                     <td className="px-4 py-3 border-r">
-                                       {employee.plannedVsActual?.includes(
-                                         "Over Budget"
-                                       ) ? (
-                                         <Badge className="bg-red-50 text-red-700 border-0">
-                                           {employee.plannedVsActual}
-                                         </Badge>
-                                       ) : employee.plannedVsActual?.includes(
-                                           "Planned"
-                                         ) ? (
-                                         <span className="text-gray-700">
-                                           {employee.plannedVsActual}
-                                         </span>
-                                       ) : (
-                                         <Badge className="bg-green-50 text-green-700 border-0">
-                                           {employee.plannedVsActual}
-                                         </Badge>
-                                       )}
-                                     </td>
-                                   </tr>
-                                 ))}
-                               </tbody>
-                             </table>
-                           </div>
+          <div className="px-4 pb-4">
+            <div className="grid grid-cols-5 gap-4 mb-4">
+              <div className="bg-white border rounded-lg p-4">
+                <div className="text-sm text-gray-500 mb-1">
+                  Total Employees
+                </div>
+                <div className="text-xl font-bold">
+                  {enhancedEmployees.length}
+                </div>
+              </div>
+              <div className="bg-white border rounded-lg p-4">
+                <div className="text-sm text-gray-500 mb-1">
+                  Total Days Worked
+                </div>
+                <div className="text-xl font-bold">
+                  {totals.totalDaysWorked}
+                </div>
+              </div>
+              <div className="bg-white border rounded-lg p-4">
+                <div className="text-sm text-gray-500 mb-1">
+                  Total Budget Baseline
+                </div>
+                <div className="text-xl font-bold">
+                  {
+                    <ConvertedAmount
+                      amount={totals.totalBaseline}
+                      currency={sessionData.user.currency}
+                      sessionData={sessionData}
+                    />
+                  }
+                </div>
+              </div>
+              <div className="bg-white border rounded-lg p-4">
+                <div className="text-sm text-gray-500 mb-1">
+                  Total Actual Payroll
+                </div>
+                <div className="text-xl font-bold">
+                  {
+                    <ConvertedAmount
+                      amount={totals.totalActualPayroll}
+                      currency={sessionData.user.currency}
+                      sessionData={sessionData}
+                    />
+                  }
+                </div>
+              </div>
+              <div className="bg-white border rounded-lg p-4">
+                <div className="text-sm text-gray-500 mb-1">
+                  Daily Actual Payroll
+                </div>
+                <div className="text-xl font-bold">
+                  {
+                    <ConvertedAmount
+                      amount={totals.totalDailyActuallPayroll}
+                      currency={sessionData.user.currency}
+                      sessionData={sessionData}
+                    />
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border rounded-md">
+              <thead>
+                <tr className="border-t border-b text-[14px] text-gray-500">
+                  <th className="px-4 py-3 text-left border-r">
+                    Employee Name
+                  </th>
+                  <th className="px-4 py-3 text-left border-r">
+                    Daily Rate
+                  </th>
+                  <th className="px-4 py-3 text-left border-r">
+                    Days Worked
+                  </th>
+                  <th className="px-4 py-3 text-left border-r">
+                    Budget Baseline
+                  </th>
+                  <th className="px-4 py-3 text-left border-r">
+                    Total Actual
+                  </th>
+                  <th className="px-4 py-3 text-left border-r">
+                    Planned vs Actual
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="text-[14px]">
+                {currentItems.map((employee: any) => (
+                  <tr
+                    key={employee.id}
+                    className="border-b hover:bg-gray-50"
+                  >
+                    <td className="px-4 py-3 border-r">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {employee.username}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 border-r">
+                      {
+                        <ConvertedAmount
+                          amount={employee.daily_rate}
+                          currency={sessionData.user.currency}
+                          sessionData={sessionData}
+                        />
+                      }
+                    </td>
+                    <td className="px-4 py-3 border-r">
+                      {employee.days_worked}
+                    </td>
+                    <td className="px-4 py-3 border-r">
+                      {
+                        <ConvertedAmount
+                          amount={employee.budget_baseline}
+                          currency={sessionData.user.currency}
+                          sessionData={sessionData}
+                        />
+                      }
+                    </td>
+                    <td className="px-4 py-3 border-r">
+                      {
+                        <ConvertedAmount
+                          amount={employee.totalActualPayroll}
+                          currency={sessionData.user.currency}
+                          sessionData={sessionData}
+                        />
+                      }
+                    </td>
+                    <td className="px-4 py-3 border-r">
+                      {employee.plannedVsActual?.includes(
+                        "Over Budget"
+                      ) ? (
+                        <Badge className="bg-red-50 text-red-700 border-0">
+                          {employee.plannedVsActual}
+                        </Badge>
+                      ) : employee.plannedVsActual?.includes(
+                          "Planned"
+                        ) ? (
+                        <span className="text-gray-700">
+                          {employee.plannedVsActual}
+                        </span>
+                      ) : (
+                        <Badge className="bg-green-50 text-green-700 border-0">
+                          {employee.plannedVsActual}
+                        </Badge>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white border rounded-b-md">
+              <div className="flex items-center space-x-2">
+                <p className="text-sm text-gray-700">
+                  Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                  <span className="font-medium">{endIndex}</span> of{' '}
+                  <span className="font-medium">{totalItems}</span> employees
+                </p>
+                <Select
+                  value={itemsPerPage.toString()}
+                  onValueChange={handleItemsPerPageChange}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue placeholder={itemsPerPage} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[5, 10, 20, 50, 100].map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-gray-700">per page</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => goToPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  <span className="sr-only">Go to first page</span>
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <span className="sr-only">Go to previous page</span>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                {/* Page Numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  // Calculate page numbers to show (current page in the middle when possible)
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  if (pageNum > 0 && pageNum <= totalPages) {
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        className={`h-8 w-8 p-0 ${currentPage === pageNum ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
+                        onClick={() => goToPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  }
+                  return null;
+                })}
+                
+                {/* Show ellipsis if there are more pages */}
+                {totalPages > 5 && currentPage < totalPages - 2 && (
+                  <span className="px-2 text-gray-500">...</span>
+                )}
+                
+                {/* Show last page if not already visible */}
+                {totalPages > 5 && currentPage < totalPages - 2 && (
+                  <Button
+                    variant={currentPage === totalPages ? "default" : "outline"}
+                    className={`h-8 w-8 p-0 ${currentPage === totalPages ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
+                    onClick={() => goToPage(totalPages)}
+                  >
+                    {totalPages}
+                  </Button>
+                )}
+                
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                >
+                  <span className="sr-only">Go to next page</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => goToPage(totalPages)}
+                  disabled={currentPage >= totalPages}
+                >
+                  <span className="sr-only">Go to last page</span>
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
         </main>
       </div>
     </div>

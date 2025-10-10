@@ -310,7 +310,7 @@ export default function EmployeeManagement() {
 
       // Send to backend bulk upload endpoint
       const response = await fetch(
-        "https://dse-backend-uv5d.onrender.com/employee/bulk-upload",
+        "http://localhost:4000/employee/bulk-upload",
         {
           method: "POST",
           body: formData,
@@ -609,7 +609,7 @@ export default function EmployeeManagement() {
     const fetchCompanies = async () => {
       setIsLoadingCompanies(true);
       try {
-        const response = await fetch("https://dse-backend-uv5d.onrender.com/company/companies");
+        const response = await fetch("http://localhost:4000/company/companies");
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
