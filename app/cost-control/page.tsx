@@ -1733,7 +1733,7 @@ const CostControlPage = () => {
   React.useEffect(() => {
     const fetchAttendanceData = async () => {
       try {
-        const response = await fetch("https://dse-backend-uv5d.onrender.com/attendance/all", {
+        const response = await fetch("http://localhost:4000/attendance/all", {
           credentials: "include",
         });
         if (response.ok) {
@@ -1835,14 +1835,14 @@ const CostControlPage = () => {
       console.log("Fetching project payroll for:", {
         projectId: selectedProjectId,
         companyId: (sessionData.user as any)?.company_id,
-        url: `https://dse-backend-uv5d.onrender.com/employee/payroll/project/${selectedProjectId}?companyId=${
+        url: `http://localhost:4000/employee/payroll/project/${selectedProjectId}?companyId=${
           (sessionData.user as any)?.company_id
         }`,
       });
 
       try {
         const response = await fetch(
-          `https://dse-backend-uv5d.onrender.com/employee/payroll/project/${selectedProjectId}?companyId=${
+          `http://localhost:4000/employee/payroll/project/${selectedProjectId}?companyId=${
             (sessionData.user as any)?.company_id
           }`,
           {
@@ -1867,7 +1867,7 @@ const CostControlPage = () => {
           const errorText = await response.text();
           console.error("Error response:", errorText);
           console.error("Request details:", {
-            url: `https://dse-backend-uv5d.onrender.com/employee/payroll/project/${selectedProjectId}?companyId=${
+            url: `http://localhost:4000/employee/payroll/project/${selectedProjectId}?companyId=${
               (sessionData.user as any)?.company_id
             }`,
             projectId: selectedProjectId,
@@ -2135,7 +2135,7 @@ const CostControlPage = () => {
     try {
       // Fetch project payroll data for the date range
       const response = await fetch(
-        `https://dse-backend-uv5d.onrender.com/attendance/payroll/project/${selectedProjectId}?companyId=${
+        `http://localhost:4000/attendance/payroll/project/${selectedProjectId}?companyId=${
           (sessionData.user as any)?.company_id
         }&startDate=${fromDate}&endDate=${toDate}`,
         {
