@@ -1,7 +1,17 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Search, RefreshCw, FileText, FileCheck, Edit } from "lucide-react";
+import {
+  Search,
+  RefreshCw,
+  FileText,
+  FileCheck,
+  Edit,
+  Calendar,
+  Users,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
 
 import {
   Dialog,
@@ -25,12 +35,22 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import DashboardHeader from "@/components/DashboardHeader";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
 import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
 import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
 import {
@@ -76,7 +96,7 @@ function ConvertedAmount({
           currency,
           sessionData.user.companies[0].base_currency
         );
-        setConvertedAmount(result);
+        setConvertedAmount(result.toString());
       } catch (error) {
         console.error("Error converting currency:", error);
         setConvertedAmount("Error");
@@ -134,18 +154,24 @@ export default function AttendancePayroll() {
 
   const [addReason, { isLoading: isAdding }] = useAddReasonMutation();
   useEffect(() => {
-    if (sessionData?.user?.settings && sessionData.user.current_role) {
-      const userPermission = sessionData.user.settings.find(
+    if (
+      (sessionData?.user as any)?.settings &&
+      (sessionData.user as any).current_role
+    ) {
+      const userPermission = (sessionData.user as any).settings.find(
         (setting: any) =>
-          setting.company_id === sessionData.user.company_id &&
-          setting.role === sessionData.user.current_role
+          setting.company_id === (sessionData.user as any).company_id &&
+          setting.role === (sessionData.user as any).current_role
       );
 
       if (userPermission) {
         setPermissions(userPermission);
       }
     }
-  }, [sessionData.user.settings, sessionData.user.current_role]);
+  }, [
+    (sessionData.user as any)?.settings,
+    (sessionData.user as any)?.current_role,
+  ]);
 
   const splitCurrencyValue = (str: string | undefined | null) => {
     if (!str) return null;
@@ -158,9 +184,11 @@ export default function AttendancePayroll() {
   };
 
   const currencyValue = Number(
-    splitCurrencyValue(sessionData.user.currency)?.value
+    splitCurrencyValue((sessionData.user as any)?.currency)?.value
   );
-  const currencyShort = splitCurrencyValue(sessionData.user.currency)?.currency;
+  const currencyShort = splitCurrencyValue(
+    (sessionData.user as any)?.currency
+  )?.currency;
   const { toast } = useToast();
   const [user] = useState({
     name: "Kristin Watson",
@@ -181,6 +209,24 @@ export default function AttendancePayroll() {
   >(null);
   const [isGeneratingPayslips, setIsGeneratingPayslips] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [showMarkAllModal, setShowMarkAllModal] = useState(false);
+  const [selectedBulkDate, setSelectedBulkDate] = useState<Date>(new Date());
+  const [isMarkingAllPresent, setIsMarkingAllPresent] = useState(false);
+  const [bulkAttendanceStatus, setBulkAttendanceStatus] = useState<
+    "Present" | "Absent"
+  >("Present");
+  const [showIndividualDateModal, setShowIndividualDateModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [selectedIndividualDate, setSelectedIndividualDate] = useState<Date>(
+    new Date()
+  );
+  const [pendingAttendanceAction, setPendingAttendanceAction] = useState<{
+    employee: any;
+    status: string;
+    date: Date;
+  } | null>(null);
+  const [showEditConfirmation, setShowEditConfirmation] = useState(false);
+  const [existingAttendance, setExistingAttendance] = useState<any>(null);
 
   // RTK Query hook for fetching employees
   const { data: employees = [], isLoading, refetch } = useGetEmployeesQuery();
@@ -306,12 +352,16 @@ export default function AttendancePayroll() {
         permissions.approve_attendance ||
         permissions.mark_attendance
       ) {
-        await updateAttendance({
+        // For today's attendance, use 'today' time parameter
+        const attendanceData = {
           employeeId,
           status,
-          date: getCurrentDate(),
-          time: "today",
-        }).unwrap();
+          date: getCurrentDate(), // Current date in MM/DD/YYYY format
+          time: "today", // This tells backend to use today's date range
+        };
+
+        console.log("Sending today attendance data:", attendanceData);
+        await updateAttendance(attendanceData).unwrap();
         setOpenAttendanceDropdown(null);
         await refetch();
 
@@ -336,6 +386,337 @@ export default function AttendancePayroll() {
     }
   };
 
+  // Get valid date range for employee based on project dates
+  const getValidDateRange = (employee: any) => {
+    const project = employee.project;
+    console.log(
+      `Getting date range for ${employee.username}, project:`,
+      project
+    );
+
+    if (!project) {
+      // If no project, allow a wide date range (past year to next year)
+      const today = new Date();
+      const pastYear = new Date(today.getFullYear() - 1, 0, 1);
+      const nextYear = new Date(today.getFullYear() + 1, 11, 31);
+      console.log(
+        `No project for ${
+          employee.username
+        }, using wide range: ${pastYear.toDateString()} to ${nextYear.toDateString()}`
+      );
+      return { from: pastYear, to: nextYear };
+    }
+
+    const projectStart = project.start_date
+      ? new Date(project.start_date)
+      : new Date(new Date().getFullYear(), 0, 1); // Start of current year if no start date
+    const projectEnd = project.end_date
+      ? new Date(project.end_date)
+      : new Date(new Date().getFullYear(), 11, 31); // End of current year if no end date
+
+    console.log(
+      `Project dates for ${
+        employee.username
+      }: ${projectStart.toDateString()} to ${projectEnd.toDateString()}`
+    );
+    return { from: projectStart, to: projectEnd };
+  };
+
+  // Check if date is within valid range
+  const isDateValid = (date: Date, employee: any) => {
+    const { from, to } = getValidDateRange(employee);
+    const isValid = date >= from && date <= to;
+    console.log(
+      `Date validation for ${
+        employee.username
+      }: ${date.toDateString()} between ${from.toDateString()} and ${to.toDateString()} = ${isValid}`
+    );
+    return isValid;
+  };
+
+  // Check if employee has attendance for specific date
+  const hasAttendanceForDate = (employee: any, date: Date) => {
+    return employee.attendance?.find((a: any) => {
+      const attendanceDate = new Date(a.date);
+      return attendanceDate.toDateString() === date.toDateString();
+    });
+  };
+
+  // Mark all employees as present
+  const handleMarkAllPresent = async () => {
+    setBulkAttendanceStatus("Present");
+    await handleBulkAttendanceMarking("Present");
+  };
+
+  // Mark all employees as absent
+  const handleMarkAllAbsent = async () => {
+    setBulkAttendanceStatus("Absent");
+    await handleBulkAttendanceMarking("Absent");
+  };
+
+  // Mark all employees with selected status for selected date
+  const handleBulkAttendanceMarking = async (status?: string) => {
+    const attendanceStatus = status || bulkAttendanceStatus;
+    if (
+      !permissions.full_access &&
+      !permissions.approve_attendance &&
+      !permissions.mark_attendance
+    ) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to mark attendance.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!filteredEmployees.length) {
+      toast({
+        title: "No Employees",
+        description: "No employees available to mark as present.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsMarkingAllPresent(true);
+
+      toast({
+        title: `Marking All ${attendanceStatus}`,
+        description: `Marking ${
+          filteredEmployees.length
+        } employees as ${attendanceStatus.toLowerCase()} for ${selectedBulkDate.toLocaleDateString()}...`,
+      });
+
+      // Format date for backend (MM/DD/YYYY format expected by backend)
+      const selectedDateString = `${
+        selectedBulkDate.getMonth() + 1
+      }/${selectedBulkDate.getDate()}/${selectedBulkDate.getFullYear()}`;
+
+      let successCount = 0;
+      let skippedCount = 0;
+      let failedEmployees: string[] = [];
+
+      // Mark each employee as present for the selected date
+      console.log("Processing employees:", filteredEmployees.length);
+      console.log("Selected date:", selectedBulkDate);
+
+      for (const employee of filteredEmployees) {
+        try {
+          console.log(
+            `Processing employee: ${employee.username}, Project:`,
+            employee.project
+          );
+
+          // Check if date is valid for this employee's project
+          const dateValid = isDateValid(selectedBulkDate, employee);
+          console.log(`Date valid for ${employee.username}:`, dateValid);
+
+          if (!dateValid) {
+            console.log(`Skipping ${employee.username} - invalid date`);
+            skippedCount++;
+            continue;
+          }
+
+          // Format the attendance data properly for backend
+          // Use ISO date format for better parsing
+          const attendanceData = {
+            employeeId: employee.id,
+            status: attendanceStatus,
+            date: selectedBulkDate.toISOString(), // ISO format for better date parsing
+            time: "bulk_mark", // Use specific time identifier
+          };
+
+          // Validate data before sending
+          if (!validateAttendanceData(attendanceData)) {
+            console.error(
+              "Invalid attendance data for employee:",
+              employee.username
+            );
+            failedEmployees.push(employee.username);
+            continue;
+          }
+
+          console.log("Sending attendance data:", attendanceData);
+          console.log("Status being sent:", attendanceStatus);
+          const result = await updateAttendance(attendanceData).unwrap();
+          console.log("Backend response:", result);
+          successCount++;
+        } catch (error) {
+          console.error(
+            `Failed to mark ${
+              employee.username
+            } as ${attendanceStatus.toLowerCase()}:`,
+            error
+          );
+          failedEmployees.push(employee.username);
+        }
+      }
+
+      await refetch();
+      setShowMarkAllModal(false);
+      setIsMarkingAllPresent(false);
+
+      // Show results
+      let message = `Successfully marked ${successCount} employees as ${attendanceStatus.toLowerCase()}.`;
+      if (skippedCount > 0) {
+        message += ` ${skippedCount} employees were skipped (already marked or invalid date).`;
+      }
+      if (failedEmployees.length > 0) {
+        message += ` ${failedEmployees.length} failed: ${failedEmployees.join(
+          ", "
+        )}.`;
+      }
+
+      toast({
+        title: successCount > 0 ? "Success" : "No Changes Made",
+        description: message,
+        variant: failedEmployees.length > 0 ? "destructive" : "default",
+      });
+    } catch (error) {
+      console.error("Error marking all present:", error);
+      toast({
+        title: "Error",
+        description:
+          "Failed to mark all employees as present. Please try again.",
+        variant: "destructive",
+      });
+      setIsMarkingAllPresent(false);
+    }
+  };
+
+  // Handle individual attendance marking with date selection
+  const handleIndividualAttendanceMark = (employee: any, status: string) => {
+    setSelectedEmployee(employee);
+    setPendingAttendanceAction({
+      employee,
+      status,
+      date: selectedIndividualDate,
+    });
+    setShowIndividualDateModal(true);
+  };
+
+  // Confirm individual attendance marking
+  const confirmIndividualAttendance = async () => {
+    if (!pendingAttendanceAction) return;
+
+    const { employee, status, date } = pendingAttendanceAction;
+
+    // Check if date is valid for this employee's project
+    if (!isDateValid(date, employee)) {
+      toast({
+        title: "Invalid Date",
+        description:
+          "Selected date is outside the employee's project date range.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if employee already has attendance for this date
+    const existing = hasAttendanceForDate(employee, date);
+    if (existing) {
+      setExistingAttendance(existing);
+      setShowEditConfirmation(true);
+      setShowIndividualDateModal(false);
+      return;
+    }
+
+    // Mark attendance
+    await markAttendanceForDate(employee, status, date);
+    setShowIndividualDateModal(false);
+    setPendingAttendanceAction(null);
+  };
+
+  // Validate attendance data before sending to backend
+  const validateAttendanceData = (data: any) => {
+    const required = ["employeeId", "status", "date", "time"];
+    const missing = required.filter((field) => !data[field]);
+
+    if (missing.length > 0) {
+      console.error("Missing required fields:", missing);
+      return false;
+    }
+
+    // Validate status values
+    const validStatuses = ["Present", "Absent", "Late"];
+    if (!validStatuses.includes(data.status)) {
+      console.error("Invalid status:", data.status);
+      return false;
+    }
+
+    // Validate employeeId is not empty
+    if (!data.employeeId || data.employeeId.trim() === "") {
+      console.error("Invalid employeeId:", data.employeeId);
+      return false;
+    }
+
+    return true;
+  };
+
+  // Mark attendance for specific date
+  const markAttendanceForDate = async (
+    employee: any,
+    status: string,
+    date: Date
+  ) => {
+    try {
+      // Format date for backend (MM/DD/YYYY format expected by backend)
+      const dateString = `${
+        date.getMonth() + 1
+      }/${date.getDate()}/${date.getFullYear()}`;
+
+      const attendanceData = {
+        employeeId: employee.id,
+        status: status,
+        date: date.toISOString(), // Use ISO format for better date parsing
+        time: "manual_mark", // Use specific time identifier
+      };
+
+      // Validate data before sending
+      if (!validateAttendanceData(attendanceData)) {
+        toast({
+          title: "Invalid Data",
+          description: "Invalid attendance data. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log("Sending individual attendance data:", attendanceData);
+      await updateAttendance(attendanceData).unwrap();
+
+      await refetch();
+
+      toast({
+        title: "Attendance Updated",
+        description: `${
+          employee.username
+        } has been marked as ${status} for ${date.toLocaleDateString()}.`,
+      });
+    } catch (error) {
+      console.error("Error updating attendance:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update attendance. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle edit confirmation
+  const handleEditConfirmation = async () => {
+    if (!pendingAttendanceAction) return;
+
+    const { employee, status, date } = pendingAttendanceAction;
+    await markAttendanceForDate(employee, status, date);
+
+    setShowEditConfirmation(false);
+    setPendingAttendanceAction(null);
+    setExistingAttendance(null);
+  };
+
   const handleAddReasonSubmit = async () => {
     try {
       await addReason(newReason).unwrap();
@@ -345,7 +726,6 @@ export default function AttendancePayroll() {
       setShowAddReason(false);
 
       toast({
-        title: "Reason Added",
         title: "Reason Added",
         description: `Successfully added the reason to the user`,
       });
@@ -1211,7 +1591,9 @@ export default function AttendancePayroll() {
                           {
                             <ConvertedAmount
                               amount={0}
-                              currency={sessionData.user.currency}
+                              currency={
+                                (sessionData.user as any)?.currency || "USD"
+                              }
                               sessionData={sessionData}
                             />
                           }
@@ -1225,7 +1607,9 @@ export default function AttendancePayroll() {
                           {
                             <ConvertedAmount
                               amount={0}
-                              currency={sessionData.user.currency}
+                              currency={
+                                (sessionData.user as any)?.currency || "USD"
+                              }
                               sessionData={sessionData}
                             />
                           }
@@ -1260,7 +1644,21 @@ export default function AttendancePayroll() {
                             permissions.approve_attendance ||
                             permissions.mark_attendance) && (
                             <th className="px-4 py-3 text-left border-r">
-                              Attendance Today
+                              <div className="flex items-center justify-between">
+                                <span>Mark Attendance</span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1 text-xs h-7 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+                                  onClick={() => {
+                                    setBulkAttendanceStatus("Present");
+                                    setShowMarkAllModal(true);
+                                  }}
+                                >
+                                  <Users className="h-3 w-3" />
+                                  Mark Bulk Attendance
+                                </Button>
+                              </div>
                             </th>
                           )}
                           <th className="w-fit px-4 py-3 text-center">
@@ -1334,63 +1732,42 @@ export default function AttendancePayroll() {
                                         <div className="text-sm font-medium text-muted-foreground mb-2">
                                           Mark Attendance
                                         </div>
-                                        {!employee.attendance?.some(
-                                          (a: any) =>
-                                            formatDate(a.date) ===
-                                              getCurrentDate() &&
-                                            a.status === "present"
-                                        ) && (
-                                          <Button
-                                            variant="outline"
-                                            className="w-full justify-center bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-100"
-                                            onClick={() =>
-                                              updateEmployeeAttendance(
-                                                employee.id,
-                                                "Present"
-                                              )
-                                            }
-                                          >
-                                            Present
-                                          </Button>
-                                        )}
-                                        {!employee.attendance?.some(
-                                          (a: any) =>
-                                            formatDate(a.date) ===
-                                              getCurrentDate() &&
-                                            a.status === "late"
-                                        ) && (
-                                          <Button
-                                            variant="outline"
-                                            className="w-full justify-center bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 border-orange-100"
-                                            onClick={() =>
-                                              updateEmployeeAttendance(
-                                                employee.id,
-                                                "Late"
-                                              )
-                                            }
-                                          >
-                                            Late
-                                          </Button>
-                                        )}
-                                        {!employee.attendance?.some(
-                                          (a: any) =>
-                                            formatDate(a.date) ===
-                                              getCurrentDate() &&
-                                            a.status === "absent"
-                                        ) && (
-                                          <Button
-                                            variant="outline"
-                                            className="w-full justify-center bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 border-red-100"
-                                            onClick={() =>
-                                              updateEmployeeAttendance(
-                                                employee.id,
-                                                "Absent"
-                                              )
-                                            }
-                                          >
-                                            Absent
-                                          </Button>
-                                        )}
+                                        <Button
+                                          variant="outline"
+                                          className="w-full justify-center bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-100"
+                                          onClick={() =>
+                                            handleIndividualAttendanceMark(
+                                              employee,
+                                              "Present"
+                                            )
+                                          }
+                                        >
+                                          Present
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          className="w-full justify-center bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 border-orange-100"
+                                          onClick={() =>
+                                            handleIndividualAttendanceMark(
+                                              employee,
+                                              "Late"
+                                            )
+                                          }
+                                        >
+                                          Late
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          className="w-full justify-center bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 border-red-100"
+                                          onClick={() =>
+                                            handleIndividualAttendanceMark(
+                                              employee,
+                                              "Absent"
+                                            )
+                                          }
+                                        >
+                                          Absent
+                                        </Button>
                                       </div>
                                     </PopoverContent>
                                   </Popover>
@@ -1834,6 +2211,287 @@ export default function AttendancePayroll() {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Mark All Present Modal */}
+          <Dialog open={showMarkAllModal} onOpenChange={setShowMarkAllModal}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  Mark All Employees Attendance
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    Select Attendance Status
+                  </label>
+                  <div className="flex gap-2 mb-4">
+                    <Button
+                      type="button"
+                      variant="default"
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      disabled={isMarkingAllPresent}
+                      onClick={handleMarkAllPresent}
+                    >
+                      {isMarkingAllPresent &&
+                      bulkAttendanceStatus === "Present" ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Marking Present...
+                        </>
+                      ) : (
+                        <>
+                          <Users className="h-4 w-4 mr-2" />
+                          Mark All Present
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="default"
+                      className="flex-1 bg-red-600 hover:bg-red-700"
+                      disabled={isMarkingAllPresent}
+                      onClick={handleMarkAllAbsent}
+                    >
+                      {isMarkingAllPresent &&
+                      bulkAttendanceStatus === "Absent" ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Marking Absent...
+                        </>
+                      ) : (
+                        <>
+                          <Users className="h-4 w-4 mr-2" />
+                          Mark All Absent
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    Select Date
+                  </label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {selectedBulkDate
+                          ? selectedBulkDate.toLocaleDateString()
+                          : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={selectedBulkDate}
+                        onSelect={(date) => date && setSelectedBulkDate(date)}
+                        disabled={(date) => {
+                          // Disable dates that are invalid for most employees
+                          const validEmployeesForDate =
+                            filteredEmployees.filter((emp) =>
+                              isDateValid(date, emp)
+                            );
+                          return validEmployeesForDate.length === 0;
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div
+                  className={`p-3 rounded-lg ${
+                    bulkAttendanceStatus === "Present"
+                      ? "bg-green-50"
+                      : "bg-red-50"
+                  }`}
+                >
+                  <div
+                    className={`text-sm ${
+                      bulkAttendanceStatus === "Present"
+                        ? "text-green-800"
+                        : "text-red-800"
+                    }`}
+                  >
+                    <strong>Action:</strong> Mark {filteredEmployees.length}{" "}
+                    employees as {bulkAttendanceStatus.toLowerCase()} for{" "}
+                    {selectedBulkDate.toLocaleDateString()}
+                  </div>
+                  <div
+                    className={`text-xs mt-1 ${
+                      bulkAttendanceStatus === "Present"
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    Only employees with valid project dates and no existing
+                    attendance will be marked.
+                  </div>
+                  <div
+                    className={`text-xs mt-1 ${
+                      bulkAttendanceStatus === "Present"
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    Valid employees:{" "}
+                    {
+                      filteredEmployees.filter((emp) =>
+                        isDateValid(selectedBulkDate, emp)
+                      ).length
+                    }{" "}
+                    out of {filteredEmployees.length}
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Individual Date Selection Modal */}
+          <Dialog
+            open={showIndividualDateModal}
+            onOpenChange={setShowIndividualDateModal}
+          >
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-green-600" />
+                  Select Date for {selectedEmployee?.username}
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    Select Date
+                  </label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {selectedIndividualDate
+                          ? selectedIndividualDate.toLocaleDateString()
+                          : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={selectedIndividualDate}
+                        onSelect={(date) =>
+                          date && setSelectedIndividualDate(date)
+                        }
+                        disabled={(date) => {
+                          if (!selectedEmployee) return true;
+                          return !isDateValid(date, selectedEmployee);
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {selectedEmployee && (
+                  <div className="bg-green-50 p-3 rounded-lg">
+                    <div className="text-sm text-green-800">
+                      <strong>Action:</strong> Mark {selectedEmployee.username}{" "}
+                      as {pendingAttendanceAction?.status} for{" "}
+                      {selectedIndividualDate.toLocaleDateString()}
+                    </div>
+                    <div className="text-xs text-green-600 mt-1">
+                      Project:{" "}
+                      {selectedEmployee.project?.project_name ||
+                        "No Project Assigned"}
+                    </div>
+                    {selectedEmployee.project && (
+                      <div className="text-xs text-green-600">
+                        Valid dates:{" "}
+                        {new Date(
+                          selectedEmployee.project.start_date || new Date()
+                        ).toLocaleDateString()}{" "}
+                        -{" "}
+                        {new Date(
+                          selectedEmployee.project.end_date || new Date()
+                        ).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowIndividualDateModal(false);
+                    setPendingAttendanceAction(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={confirmIndividualAttendance}
+                  disabled={
+                    !selectedEmployee ||
+                    !isDateValid(selectedIndividualDate, selectedEmployee)
+                  }
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Confirm Attendance
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Confirmation Modal */}
+          <AlertDialog
+            open={showEditConfirmation}
+            onOpenChange={setShowEditConfirmation}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                  Attendance Already Exists
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {selectedEmployee?.username} already has attendance marked as
+                  "{existingAttendance?.status}" for{" "}
+                  {pendingAttendanceAction?.date.toLocaleDateString()}.
+                  <br />
+                  <br />
+                  Do you want to update it to "{pendingAttendanceAction?.status}
+                  "?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  onClick={() => {
+                    setShowEditConfirmation(false);
+                    setPendingAttendanceAction(null);
+                    setExistingAttendance(null);
+                  }}
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={handleEditConfirmation}>
+                  Update Attendance
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </main>
       </div>
     </div>

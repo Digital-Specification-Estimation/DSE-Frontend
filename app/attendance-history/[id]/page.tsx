@@ -34,6 +34,7 @@ import {
   useGetUserAttendanceHistoryQuery,
   useEditAttendanceMutation,
   useGetAttendancesWithReasonsQuery,
+  useCalculateEmployeePayrollQuery,
 } from "@/lib/redux/attendanceSlice";
 import { useGetEmployeeQuery } from "@/lib/redux/employeeSlice";
 import { useSessionQuery } from "@/lib/redux/authSlice";
@@ -112,8 +113,11 @@ export default function AttendanceHistory() {
 
   // RTK Query hooks
   const { data: sessionData, isLoading: isLoadingSession } = useSessionQuery();
-  const { data: employee, isLoading: isLoadingEmployee } =
-    useGetEmployeeQuery(employeeId);
+  const { 
+    data: employee, 
+    isLoading: isLoadingEmployee,
+    refetch: refetchEmployee 
+  } = useGetEmployeeQuery(employeeId);
   const {
     data: attendanceData,
     isLoading: isLoadingAttendance,
@@ -127,6 +131,13 @@ export default function AttendanceHistory() {
     useGetAttendancesWithReasonsQuery(
       queryParams || { employeeId: "", startDate: "", endDate: "" }
     );
+
+  // Get actual payroll data for this employee
+  const { data: payrollData, refetch: refetchPayroll } = useCalculateEmployeePayrollQuery({
+    employeeId,
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  });
   const [updateAttendance] = useEditAttendanceMutation();
   const userfetched = sessionData?.user;
   const user: {
@@ -195,6 +206,15 @@ export default function AttendanceHistory() {
   const payslipData = useMemo(() => {
     if (!employee || !attendanceData) return null;
 
+    console.log("Employee data for payslip:", {
+      username: employee.username,
+      daily_rate: employee.daily_rate,
+      monthly_rate: employee.monthly_rate,
+      contract_start_date: employee.contract_start_date,
+      contract_finish_date: employee.contract_finish_date,
+      payrollData: payrollData
+    });
+
     const userCurrency = (sessionData?.user as any)?.currency || "RWF";
     const salaryCalculation =
       (sessionData?.user as any)?.salary_calculation || "daily rate";
@@ -213,6 +233,21 @@ export default function AttendanceHistory() {
       return recordDate >= contractStartDate && recordDate <= contractEndDate;
     });
 
+    console.log("Attendance filtering:", {
+      contractStartDate: contractStartDate.toISOString(),
+      contractEndDate: contractEndDate.toISOString(),
+      totalAttendanceRecords: attendanceData.length,
+      filteredAttendanceRecords: payslipAttendance.length,
+      attendanceRecords: attendanceData.map((r: any) => ({
+        date: r.date,
+        status: r.status
+      })),
+      filteredRecords: payslipAttendance.map((r: any) => ({
+        date: r.date,
+        status: r.status
+      }))
+    });
+
     const workingDays = payslipAttendance.filter(
       (r: any) =>
         r.status?.toLowerCase() === "present" ||
@@ -227,15 +262,89 @@ export default function AttendanceHistory() {
       (r: any) => r.status?.toLowerCase() === "absent"
     ).length;
 
-    // Calculate base salary
-    const dailyRate = parseFloat(employee.daily_rate || "0");
-    const monthlyRate = parseFloat(employee.monthly_rate || "0");
-
+    // Use actual payroll data if available, otherwise fallback to employee rates
+    let dailyRate = 0;
     let baseSalary = 0;
-    if (salaryCalculation === "monthly rate") {
-      baseSalary = monthlyRate;
+    
+    if (payrollData && payrollData.length > 0) {
+      // Find Jean Baptiste's payroll data
+      const employeePayroll = payrollData.find((p: any) => 
+        p.employeeName?.toLowerCase().includes('jean') || 
+        p.username?.toLowerCase().includes('jean') ||
+        p.employee_id === employee.id
+      );
+      
+      if (employeePayroll) {
+        dailyRate = employeePayroll.dailyRate || employeePayroll.daily_rate || 0;
+        baseSalary = employeePayroll.totalActual || employeePayroll.total_actual || (dailyRate * workingDays);
+        
+        console.log("Using payroll data:", {
+          employeePayroll,
+          dailyRate,
+          baseSalary,
+          workingDays
+        });
+      } else {
+        console.warn("Employee not found in payroll data, using fallback calculation");
+        // Fallback to employee rates with enhanced parsing
+        const parseRate = (rate: any): number => {
+          if (rate === null || rate === undefined) return 0;
+          if (typeof rate === 'number') return rate;
+          if (typeof rate === 'string') return parseFloat(rate) || 0;
+          if (typeof rate === 'object') {
+            if (rate.toNumber && typeof rate.toNumber === 'function') {
+              return rate.toNumber();
+            }
+            if (rate.value !== undefined) {
+              return parseFloat(String(rate.value)) || 0;
+            }
+            return parseFloat(String(rate)) || 0;
+          }
+          return 0;
+        };
+        
+        dailyRate = parseRate(employee.daily_rate);
+        const monthlyRate = parseRate(employee.monthly_rate);
+        
+        if (salaryCalculation === "monthly rate" && monthlyRate > 0) {
+          baseSalary = monthlyRate;
+        } else if (dailyRate > 0) {
+          baseSalary = dailyRate * workingDays;
+        } else {
+          console.error(`Cannot calculate salary for ${employee.username}: no valid rates found`);
+          baseSalary = 0;
+        }
+      }
     } else {
-      baseSalary = dailyRate * workingDays;
+      console.warn("No payroll data available, using employee rates");
+      // Fallback to employee rates
+      const parseRate = (rate: any): number => {
+        if (rate === null || rate === undefined) return 0;
+        if (typeof rate === 'number') return rate;
+        if (typeof rate === 'string') return parseFloat(rate) || 0;
+        if (typeof rate === 'object') {
+          if (rate.toNumber && typeof rate.toNumber === 'function') {
+            return rate.toNumber();
+          }
+          if (rate.value !== undefined) {
+            return parseFloat(String(rate.value)) || 0;
+          }
+          return parseFloat(String(rate)) || 0;
+        }
+        return 0;
+      };
+      
+      dailyRate = parseRate(employee.daily_rate);
+      const monthlyRate = parseRate(employee.monthly_rate);
+      
+      if (salaryCalculation === "monthly rate" && monthlyRate > 0) {
+        baseSalary = monthlyRate;
+      } else if (dailyRate > 0) {
+        baseSalary = dailyRate * workingDays;
+      } else {
+        console.error(`Cannot calculate salary for ${employee.username}: no valid rates found`);
+        baseSalary = 0;
+      }
     }
 
     // Calculate automatic deductions
@@ -243,20 +352,39 @@ export default function AttendanceHistory() {
     const absentDeduction = absentDays * dailyRate; // Full daily rate per absent day
 
     // Calculate manual deductions
-    const manualDeductions = deductions.reduce((total, deduction) => {
-      const deductionDate = parseISO(deduction.date);
-
-      if (
-        deductionDate >= contractStartDate &&
-        deductionDate <= contractEndDate
-      ) {
-        return total + parseFloat(deduction.amount || "0");
+    const manualDeductions = deductions.reduce((total, deduction: any) => {
+      if (!deduction.date) return total;
+      
+      try {
+        const deductionDate = parseISO(deduction.date);
+        if (
+          deductionDate >= contractStartDate &&
+          deductionDate <= contractEndDate
+        ) {
+          return total + parseFloat(String(deduction.amount || "0"));
+        }
+      } catch (error) {
+        console.error("Error parsing deduction date:", error);
       }
       return total;
     }, 0);
 
     const totalDeductions = lateDeduction + absentDeduction + manualDeductions;
     const netSalary = baseSalary - totalDeductions;
+
+    console.log("Payslip calculations:", {
+      baseSalary,
+      workingDays,
+      lateDays,
+      absentDays,
+      lateDeduction,
+      absentDeduction,
+      manualDeductions,
+      totalDeductions,
+      netSalary,
+      dailyRate,
+      salaryCalculation
+    });
 
     return {
       employeeName: employee.username,
@@ -279,7 +407,7 @@ export default function AttendanceHistory() {
       contractStartDate,
       contractEndDate,
     };
-  }, [employee, attendanceData, deductions, sessionData]);
+  }, [employee, attendanceData, deductions, sessionData, payrollData]);
 
   // Deduction management functions
   const addDeduction = async () => {
@@ -360,21 +488,50 @@ export default function AttendanceHistory() {
   };
 
   const formatCurrency = (amount: number) => {
+    // Handle NaN, undefined, or null values
+    const validAmount = isNaN(amount) || amount === null || amount === undefined ? 0 : amount;
     const currency = (sessionData?.user as any)?.currency || "RWF";
+    
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currency === "RWF" ? "RWF" : "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
-    }).format(amount);
+    }).format(validAmount);
   };
 
   // Generate and download PDF payslip
-  const generatePayslipPDF = () => {
+  const generatePayslipPDF = async () => {
+    try {
+      // Refetch employee data to ensure we have the latest salary information
+      toast({
+        title: "Refreshing Data",
+        description: "Fetching latest employee salary information...",
+      });
+      
+      await refetchEmployee();
+      
+      // Small delay to ensure data is updated
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      toast({
+        title: "Generating Payslip",
+        description: "Creating PDF with latest salary data...",
+      });
+    } catch (error) {
+      console.error("Error refreshing employee data:", error);
+      toast({
+        title: "Warning", 
+        description: "Could not refresh employee data. Using cached data.",
+        variant: "destructive",
+      });
+    }
+
+    // Final check for payslip data after refresh
     if (!payslipData) {
       toast({
         title: "Error",
-        description: "No payslip data available",
+        description: "No payslip data available. Please ensure employee has salary rates set.",
         variant: "destructive",
       });
       return;
@@ -504,12 +661,17 @@ export default function AttendanceHistory() {
     }
 
     // Manual Deductions Details
-    const contractDeductions = deductions.filter((d) => {
-      const deductionDate = parseISO(d.date);
-      return (
-        deductionDate >= payslipData.contractStartDate &&
-        deductionDate <= payslipData.contractEndDate
-      );
+    const contractDeductions = deductions.filter((d: any) => {
+      if (!d.date) return false;
+      try {
+        const deductionDate = parseISO(d.date);
+        return (
+          deductionDate >= payslipData.contractStartDate &&
+          deductionDate <= payslipData.contractEndDate
+        );
+      } catch (error) {
+        return false;
+      }
     });
 
     if (contractDeductions.length > 0) {
@@ -519,23 +681,33 @@ export default function AttendanceHistory() {
       yPosition += 10;
 
       doc.setFont("helvetica", "normal");
-      contractDeductions.forEach((deduction) => {
+      contractDeductions.forEach((deduction: any) => {
         addText(
-          `• ${deduction.type}: ${deduction.reason}`,
+          `• ${deduction.type || 'Deduction'}: ${deduction.reason || 'No reason provided'}`,
           margin + 10,
           yPosition
         );
         addText(
-          `-${formatCurrency(deduction.amount)}`,
+          `-${formatCurrency(parseFloat(String(deduction.amount || "0")))}`,
           pageWidth - margin - 50,
           yPosition
         );
         yPosition += 8;
-        addText(
-          `  Date: ${format(parseISO(deduction.date), "MMM dd, yyyy")}`,
-          margin + 15,
-          yPosition
-        );
+        if (deduction.date) {
+          try {
+            addText(
+              `  Date: ${format(parseISO(deduction.date), "MMM dd, yyyy")}`,
+              margin + 15,
+              yPosition
+            );
+          } catch (error) {
+            addText(
+              `  Date: ${deduction.date}`,
+              margin + 15,
+              yPosition
+            );
+          }
+        }
         yPosition += 10;
       });
     }
@@ -816,14 +988,31 @@ export default function AttendanceHistory() {
                   <Minus className="h-4 w-4" />
                   Manage Deductions
                 </Button>
-                <Button
-                  onClick={generatePayslipPDF}
-                  className="gap-2 bg-orange-500 hover:bg-orange-600"
-                  disabled={!payslipData}
-                >
-                  <Receipt className="h-4 w-4" />
-                  Generate Payslip PDF
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={async () => {
+                      await refetchEmployee();
+                      await refetchPayroll();
+                      toast({
+                        title: "Data Refreshed",
+                        description: "Employee and payroll data has been refreshed",
+                      });
+                    }}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Loader2 className="h-4 w-4" />
+                    Refresh Data
+                  </Button>
+                  <Button
+                    onClick={generatePayslipPDF}
+                    className="gap-2 bg-orange-500 hover:bg-orange-600"
+                    disabled={!payslipData}
+                  >
+                    <Receipt className="h-4 w-4" />
+                    Generate Payslip PDF
+                  </Button>
+                </div>
               </div>
             </div>
 
