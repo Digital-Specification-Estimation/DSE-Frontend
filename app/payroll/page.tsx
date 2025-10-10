@@ -446,7 +446,7 @@ export default function PayrollPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-white">
         <Sidebar user={sessionData?.user} />
         <div className="flex-1 overflow-auto">
           <DashboardHeader title="Payroll Management" />
@@ -459,7 +459,7 @@ export default function PayrollPage() {
   }
     console.log("payrollData", payrollData);
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-white">
       <Sidebar user={sessionData?.user} />
       <div className="flex-1 overflow-auto">
         <DashboardHeader title="Payroll Management" />

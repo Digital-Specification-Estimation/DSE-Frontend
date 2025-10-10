@@ -385,9 +385,9 @@ export default function AttendancePayroll() {
       setIsGeneratingReport(true);
 
       toast({
-        title: "Generating Comprehensive Report",
+        title: "Generating Attendance Report",
         description:
-          "Please wait while we generate your detailed payroll report with real-time data...",
+          "Please wait while we generate your detailed attendance report...",
       });
 
       const doc = new jsPDF();
@@ -398,464 +398,146 @@ export default function AttendancePayroll() {
       // Helper functions
       const addText = (text: string, x: number, y: number, options?: any) => {
         doc.text(text, x, y, options);
+        return y + 7;
       };
 
-      const checkPageBreak = (requiredSpace: number) => {
-        if (yPosition + requiredSpace > doc.internal.pageSize.height - 20) {
-          doc.addPage();
-          yPosition = 30;
-          return true;
-        }
-        return false;
-      };
-
-      // Document properties
-      doc.setProperties({
-        title: "Comprehensive Payroll Report",
-        subject: "Detailed Company Payroll Analysis",
-        author:
-          (sessionData?.user as any)?.companies?.[0]?.name ||
-          "Construction Company",
-        creator: "DSE Payroll System",
-      });
-
-      // Header
-      doc.setFontSize(24);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(33, 33, 33);
-      addText(
-        (sessionData?.user as any)?.companies?.[0]?.name ||
-          "CONSTRUCTION COMPANY",
-        pageWidth / 2,
-        yPosition,
-        { align: "center" }
-      );
-
-      yPosition += 15;
+      // Add header
       doc.setFontSize(18);
-      addText("COMPREHENSIVE PAYROLL REPORT", pageWidth / 2, yPosition, {
-        align: "center",
-      });
-
-      yPosition += 10;
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "normal");
-      addText(
-        `Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
-        pageWidth / 2,
-        yPosition,
-        { align: "center" }
-      );
-
-      yPosition += 5;
-      addText(
-        `Report Period: ${new Date().toLocaleDateString()}`,
-        pageWidth / 2,
-        yPosition,
-        { align: "center" }
-      );
-
-      yPosition += 20;
-
-      // Calculate comprehensive statistics
-      let totalEmployees = employees.length;
-      let totalBudget = 0;
-      let totalActual = 0;
-      let totalDays = 0;
-      let totalPresentDays = 0;
-      let totalLateDays = 0;
-      let totalAbsentDays = 0;
-      let totalEarnings = 0;
-      let totalDeductions = 0;
-
-      // Group by trades and projects
-      const tradeStats = new Map();
-      const projectStats = new Map();
-
-      employees.forEach((employee: any) => {
-        const daysWorked =
-          employee.attendance?.filter(
-            (a: any) => a.status === "present" || a.status === "late"
-          ).length || 0;
-        const presentDays =
-          employee.attendance?.filter((a: any) => a.status === "present")
-            .length || 0;
-        const lateDays =
-          employee.attendance?.filter((a: any) => a.status === "late").length ||
-          0;
-        const absentDays =
-          employee.attendance?.filter((a: any) => a.status === "absent")
-            .length || 0;
-
-        const dailyRate = Number(employee.daily_rate) || 0;
-        const monthlyRate = Number(employee.monthly_rate) || 0;
-        const budgetBaseline = Number(employee.budget_baseline) || 0;
-
-        // Calculate earnings based on salary calculation preference
-        const salaryCalculation =
-          (sessionData?.user as any)?.salary_calculation || "daily rate";
-
-        totalBudget += budgetBaseline;
-        totalDays += employee.attendance?.length || 0;
-        totalPresentDays += presentDays;
-        totalLateDays += lateDays;
-        totalAbsentDays += absentDays;
-
-        // Trade statistics
-        const tradeName = employee.trade_position?.trade_name || "Unassigned";
-        if (!tradeStats.has(tradeName)) {
-          tradeStats.set(tradeName, {
-            employees: 0,
-            totalEarnings: 0,
-            totalDays: 0,
-            avgDailyRate: 0,
-            totalRates: 0,
-          });
-        }
-        const tradeData = tradeStats.get(tradeName);
-        tradeData.employees += 1;
-        tradeData.totalDays += daysWorked;
-        tradeData.totalRates += dailyRate;
-        tradeData.avgDailyRate = tradeData.totalRates / tradeData.employees;
-      });
-
-      // Executive Summary
-      doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      addText("EXECUTIVE SUMMARY", margin, yPosition);
-      yPosition += 15;
+      yPosition = addText(
+        `Attendance Report - ${new Date().toLocaleDateString()}`,
+        margin,
+        yPosition
+      );
+
+      // Add company info
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      yPosition = addText(
+        `Company: ${sessionData?.user?.companies?.[0]?.name || 'N/A'}`,
+        margin,
+        yPosition + 10
+      );
+      yPosition = addText(
+        `Generated on: ${new Date().toLocaleString()}`,
+        margin,
+        yPosition
+      );
+
+      // Add summary section
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      yPosition = addText("Attendance Summary", margin, yPosition + 15);
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
+      
+      // Calculate attendance summary
+      const totalEmployees = employees.length;
+      const presentCount = employees.filter(e => e.attendance_status === 'present').length;
+      const absentCount = employees.filter(e => e.attendance_status === 'absent').length;
+      const leaveCount = employees.filter(e => e.attendance_status === 'on_leave').length;
+      const attendanceRate = totalEmployees > 0 ? (presentCount / totalEmployees * 100).toFixed(1) : 0;
 
-      const summaryData = [
-        ["Total Employees", totalEmployees.toString()],
-        ["Total Working Days", totalPresentDays.toString()],
-        ["Total Late Days", totalLateDays.toString()],
-        ["Total Absent Days", totalAbsentDays.toString()],
-        [
-          "Attendance Rate",
-          `${
-            totalDays > 0
-              ? ((totalPresentDays / totalDays) * 100).toFixed(1)
-              : 0
-          }%`,
-        ],
-        [
-          "Total Budget Allocated",
-          `${currencyShort} ${(totalBudget * currencyValue).toLocaleString()}`,
-        ],
-        [
-          "Total Actual Payroll",
-          `${currencyShort} ${(totalActual * currencyValue).toLocaleString()}`,
-        ],
-        [
-          "Total Deductions",
-          `${currencyShort} ${(
-            totalDeductions * currencyValue
-          ).toLocaleString()}`,
-        ],
-        [
-          "Net Payroll",
-          `${currencyShort} ${(
-            (totalActual - totalDeductions) *
-            currencyValue
-          ).toLocaleString()}`,
-        ],
-        [
-          "Budget Variance",
-          `${currencyShort} ${(
-            (totalBudget - totalActual) *
-            currencyValue
-          ).toLocaleString()}`,
-        ],
-        [
-          "Cost per Working Day",
-          `${currencyShort} ${
-            totalPresentDays > 0
-              ? (
-                  (totalActual / totalPresentDays) *
-                  currencyValue
-                ).toLocaleString()
-              : 0
-          }`,
-        ],
-      ];
-
-      autoTable(doc, {
-        startY: yPosition,
-        head: [["Metric", "Value"]],
-        body: summaryData,
-        theme: "grid",
-        headStyles: { fillColor: [52, 152, 219], textColor: 255 },
-        styles: { fontSize: 9 },
-        margin: { left: margin, right: margin },
-      });
-
-      yPosition = (doc as any).lastAutoTable.finalY + 20;
-      checkPageBreak(60);
-
-      // Trade Analysis
-      doc.setFontSize(16);
-      doc.setFont("helvetica", "bold");
-      addText("TRADE ANALYSIS", margin, yPosition);
-      yPosition += 15;
-
-      const tradeData = Array.from(tradeStats.entries()).map(
-        ([trade, stats]: [string, any]) => [
-          trade,
-          stats.employees.toString(),
-          `${currencyShort} ${(
-            stats.avgDailyRate * currencyValue
-          ).toLocaleString()}`,
-          stats.totalDays.toString(),
-          `${currencyShort} ${(
-            stats.totalEarnings * currencyValue
-          ).toLocaleString()}`,
-          `${currencyShort} ${
-            stats.totalDays > 0
-              ? (
-                  (stats.totalEarnings / stats.totalDays) *
-                  currencyValue
-                ).toLocaleString()
-              : 0
-          }`,
-        ]
+      yPosition = addText(
+        `Total Employees: ${totalEmployees}`,
+        margin,
+        yPosition + 5
+      );
+      yPosition = addText(
+        `Present: ${presentCount} (${attendanceRate}% attendance rate)`,
+        margin,
+        yPosition
+      );
+      yPosition = addText(
+        `Absent: ${absentCount}`,
+        margin,
+        yPosition
+      );
+      yPosition = addText(
+        `On Leave: ${leaveCount}`,
+        margin,
+        yPosition
       );
 
-      autoTable(doc, {
-        startY: yPosition,
-        head: [
-          [
-            "Trade",
-            "Employees",
-            "Avg Daily Rate",
-            "Total Days",
-            "Total Earnings",
-            "Cost/Day",
-          ],
-        ],
-        body: tradeData,
-        theme: "grid",
-        headStyles: { fillColor: [46, 125, 50], textColor: 255 },
-        styles: { fontSize: 8 },
-        margin: { left: margin, right: margin },
-      });
-
-      yPosition = (doc as any).lastAutoTable.finalY + 20;
-      checkPageBreak(60);
-
-      // Detailed Employee Report
-      doc.setFontSize(16);
+      // Add detailed attendance table
+      doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      addText("DETAILED EMPLOYEE REPORT", margin, yPosition);
-      yPosition += 15;
+      yPosition = addText("Attendance Details", margin, yPosition + 15);
 
-      const employeeData = employees.map((employee: any) => {
-        const presentDays =
-          employee.attendance?.filter((a: any) => a.status === "present")
-            .length || 0;
-        const lateDays =
-          employee.attendance?.filter((a: any) => a.status === "late").length ||
-          0;
-        const absentDays =
-          employee.attendance?.filter((a: any) => a.status === "absent")
-            .length || 0;
-        const daysWorked = presentDays + lateDays;
-
-        const dailyRate = Number(employee.daily_rate) || 0;
-        const salaryCalculation =
-          (sessionData?.user as any)?.salary_calculation || "daily rate";
-
-        let grossEarnings = 0;
-        if (salaryCalculation === "monthly rate") {
-          grossEarnings = Number(employee.monthly_rate) || 0;
-        } else {
-          grossEarnings = daysWorked * dailyRate;
-        }
-
-        const lateDeduction = lateDays * (dailyRate * 0.1); // 10% penalty per late day
-        const absentDeduction = absentDays * dailyRate; // Full daily rate per absent day
-
-        // Get manual deductions for this employee
-        const employeeManualDeductions = deductions
-          .filter((deduction: any) => deduction.employee_id === employee.id)
-          .reduce(
-            (total: number, deduction: any) =>
-              total + Number(deduction.amount || 0),
-            0
-          );
-
-        const employeeDeductions =
-          lateDeduction + absentDeduction + employeeManualDeductions;
-
-        const attendanceRate =
-          (employee.attendance?.length || 0) > 0
-            ? (
-                (presentDays / (employee.attendance?.length || 1)) *
-                100
-              ).toFixed(1)
-            : "0";
-
-        return [
-          employee.username || "N/A",
-          employee.trade_position?.trade_name || "N/A",
-          `${presentDays}/${lateDays}/${absentDays}`,
-          `${attendanceRate}%`,
-          `${currencyShort} ${(dailyRate * currencyValue).toLocaleString()}`,
-          `${currencyShort} ${(
-            grossEarnings * currencyValue
-          ).toLocaleString()}`,
-          `${currencyShort} ${(
-            employeeDeductions * currencyValue
-          ).toLocaleString()}`,
-          `${currencyShort} ${
-            (grossEarnings - employeeDeductions) * currencyValue
-          }.toLocaleString()}`,
-        ];
-      });
-
-      autoTable(doc, {
-        startY: yPosition,
-        head: [
-          [
-            "Employee",
-            "Trade",
-            "P/L/A Days",
-            "Attendance %",
-            "Daily Rate",
-            "Gross Pay",
-            "Deductions",
-            "Net Pay",
-          ],
-        ],
-        body: employeeData,
-        theme: "grid",
-        headStyles: { fillColor: [156, 39, 176], textColor: 255 },
-        styles: { fontSize: 7 },
-        margin: { left: margin, right: margin },
-        columnStyles: {
-          0: { cellWidth: 25 },
-          1: { cellWidth: 20 },
-          2: { cellWidth: 18 },
-          3: { cellWidth: 15 },
-          4: { cellWidth: 20 },
-          5: { cellWidth: 22 },
-          6: { cellWidth: 20 },
-          7: { cellWidth: 22 },
-        },
-      });
-
-      yPosition = (doc as any).lastAutoTable.finalY + 20;
-      checkPageBreak(40);
-
-      // Performance Metrics
-      doc.setFontSize(16);
-      doc.setFont("helvetica", "bold");
-      addText("PERFORMANCE METRICS", margin, yPosition);
-      yPosition += 15;
-
-      const performanceData = [
-        [
-          "Average Daily Cost per Employee",
-          `${currencyShort} ${
-            totalEmployees > 0
-              ? (
-                  (totalActual / totalEmployees) *
-                  currencyValue
-                ).toLocaleString()
-              : 0
-          }`,
-        ],
-        [
-          "Cost Efficiency (Actual vs Budget)",
-          `${
-            totalBudget > 0
-              ? (((totalBudget - totalActual) / totalBudget) * 100).toFixed(1)
-              : 0
-          }%`,
-        ],
-        [
-          "Productivity Rate",
-          `${
-            totalDays > 0
-              ? ((totalPresentDays / totalDays) * 100).toFixed(1)
-              : 0
-          }%`,
-        ],
-        [
-          "Late Arrival Rate",
-          `${
-            totalDays > 0 ? ((totalLateDays / totalDays) * 100).toFixed(1) : 0
-          }%`,
-        ],
-        [
-          "Absenteeism Rate",
-          `${
-            totalDays > 0 ? ((totalAbsentDays / totalDays) * 100).toFixed(1) : 0
-          }%`,
-        ],
-        [
-          "Average Deduction per Employee",
-          `${currencyShort} ${
-            totalEmployees > 0
-              ? (
-                  (totalDeductions / totalEmployees) *
-                  currencyValue
-                ).toLocaleString()
-              : 0
-          }`,
-        ],
+      // Table headers
+      const headers = [
+        "Employee",
+        "Position",
+        "Status",
+        "Days Worked",
+        "Last Updated"
       ];
-
-      autoTable(doc, {
-        startY: yPosition,
-        head: [["Performance Indicator", "Value"]],
-        body: performanceData,
-        theme: "grid",
-        headStyles: { fillColor: [255, 152, 0], textColor: 255 },
-        styles: { fontSize: 9 },
-        margin: { left: margin, right: margin },
+      
+      const columnWidths = [60, 40, 30, 30, 30];
+      let xPosition = margin;
+      
+      // Draw table headers
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      headers.forEach((header, index) => {
+        doc.text(header, xPosition, yPosition);
+        xPosition += columnWidths[index];
       });
-
-      // Footer
-      yPosition = doc.internal.pageSize.height - 30;
-      doc.setFontSize(8);
+      
+      // Draw table rows
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(128, 128, 128);
-      addText(
-        `Report generated by DSE Payroll System | ${new Date().toLocaleString()}`,
-        pageWidth / 2,
-        yPosition,
-        { align: "center" }
-      );
-      addText(
-        `Company: ${
-          (sessionData?.user as any)?.companies?.[0]?.name ||
-          "Construction Company"
-        }`,
-        pageWidth / 2,
-        yPosition + 8,
-        { align: "center" }
-      );
+      yPosition += 7;
+      
+      employees.forEach(employee => {
+        // Check if we need a new page
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 30;
+        }
+        
+        xPosition = margin;
+        const rowData = [
+          employee.username || 'N/A',
+          employee.trade_position?.trade_name || 'N/A',
+          employee.attendance_status?.charAt(0).toUpperCase() + employee.attendance_status?.slice(1) || 'N/A',
+          employee.days_worked?.toString() || '0',
+          employee.updated_at ? new Date(employee.updated_at).toLocaleDateString() : 'N/A'
+        ];
+        
+        rowData.forEach((cell, index) => {
+          doc.text(cell, xPosition, yPosition);
+          xPosition += columnWidths[index];
+        });
+        
+        yPosition += 7;
+      });
 
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      doc.save(`comprehensive-payroll-report_${timestamp}.pdf`);
+      // Add footer
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "italic");
+      doc.text(
+        `Generated by ${sessionData?.user?.name || 'System'}`,
+        margin,
+        290
+      );
+      doc.text("Confidential", pageWidth - margin - 30, 290);
 
-      setIsGeneratingReport(false);
+      // Save the PDF
+      doc.save(`attendance-report-${new Date().toISOString().split('T')[0]}.pdf`);
+
       toast({
-        title: "Comprehensive Report Generated",
-        description:
-          "Detailed payroll report with real-time data has been generated and downloaded successfully.",
+        title: "Report Generated",
+        description: "The attendance report has been downloaded successfully.",
       });
     } catch (error) {
       console.error("Error generating report:", error);
       toast({
         title: "Error",
-        description:
-          "Failed to generate comprehensive payroll report. Please try again.",
+        description: "Failed to generate the attendance report. Please try again.",
         variant: "destructive",
       });
+    } finally {
       setIsGeneratingReport(false);
     }
   };
@@ -1059,7 +741,7 @@ export default function AttendancePayroll() {
                   ) : (
                     <FileText className="h-5 w-5" />
                   )}
-                  {isGeneratingReport ? "Generating..." : "View Payroll Report"}
+                  {isGeneratingReport ? "Generating..." : "View Attendance Report"}
                 </Button>
               )}
             </div>
@@ -1252,36 +934,7 @@ export default function AttendancePayroll() {
               {activeTab === "attendance" && (
                 <>
                   <div className="px-4 pb-4">
-                    <div className="flex gap-4 mb-4">
-                      <div className="bg-white border rounded-lg p-4 flex-1">
-                        <div className="text-sm text-gray-500 mb-1">
-                          Total Budget Baseline
-                        </div>
-                        <div className="text-xl font-bold">
-                          {
-                            <ConvertedAmount
-                              amount={0}
-                              currency={sessionData.user.currency}
-                              sessionData={sessionData}
-                            />
-                          }
-                        </div>
-                      </div>
-                      <div className="bg-white border rounded-lg p-4 flex-1">
-                        <div className="text-sm text-gray-500 mb-1">
-                          Total Actual Payroll
-                        </div>
-                        <div className="text-xl font-bold">
-                          {
-                            <ConvertedAmount
-                              amount={0}
-                              currency={sessionData.user.currency}
-                              sessionData={sessionData}
-                            />
-                          }
-                        </div>
-                      </div>
-                    </div>
+                    
                   </div>
 
                   <div className="overflow-x-auto">
@@ -1598,8 +1251,7 @@ export default function AttendancePayroll() {
                                                       .unwrap()
                                                       .then(() => {
                                                         toast({
-                                                          title:
-                                                            "Attendance Updated",
+                                                          title: "Attendance Updated",
                                                           description: `Marked as Late for ${day.day} ${currentMonth}`,
                                                         });
                                                         refetch();
@@ -1644,8 +1296,7 @@ export default function AttendancePayroll() {
                                                       .unwrap()
                                                       .then(() => {
                                                         toast({
-                                                          title:
-                                                            "Attendance Updated",
+                                                          title: "Attendance Updated",
                                                           description: `Marked as Absent for ${day.day} ${currentMonth}`,
                                                         });
                                                         refetch();
@@ -1690,8 +1341,7 @@ export default function AttendancePayroll() {
                                                       .unwrap()
                                                       .then(() => {
                                                         toast({
-                                                          title:
-                                                            "Attendance Updated",
+                                                          title: "Attendance Updated",
                                                           description: `Marked as Present for ${day.day} ${currentMonth}`,
                                                         });
                                                         refetch();
