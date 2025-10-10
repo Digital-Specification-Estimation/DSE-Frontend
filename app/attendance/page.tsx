@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Search, RefreshCw, FileText, FileCheck, Edit } from "lucide-react";
+import { Search, RefreshCw, FileText, FileCheck, Edit, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 import {
   Dialog,
@@ -974,6 +974,56 @@ export default function AttendancePayroll() {
     }
   };
 
+  // Pagination for attendance
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Pagination for leave tracking
+  const [leaveCurrentPage, setLeaveCurrentPage] = useState(1);
+  const [leaveItemsPerPage, setLeaveItemsPerPage] = useState(10);
+
+  // Calculate pagination for attendance
+  const totalItems = filteredEmployees.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const currentItems = filteredEmployees.slice(startIndex, endIndex);
+
+  // Calculate pagination for leave tracking
+  const totalLeaveItems = filteredEmployees.length;
+  const totalLeavePages = Math.ceil(totalLeaveItems / leaveItemsPerPage);
+  const leaveStartIndex = (leaveCurrentPage - 1) * leaveItemsPerPage;
+  const leaveEndIndex = Math.min(leaveStartIndex + leaveItemsPerPage, totalLeaveItems);
+  const currentLeaveItems = filteredEmployees.slice(leaveStartIndex, leaveEndIndex);
+
+  // Handle page change for attendance
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  // Handle items per page change for attendance
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1);
+  };
+
+  // Handle page change for leave tracking
+  const goToLeavePage = (page: number) => {
+    setLeaveCurrentPage(Math.max(1, Math.min(page, totalLeavePages)));
+  };
+
+  // Handle items per page change for leave tracking
+  const handleLeaveItemsPerPageChange = (value: string) => {
+    setLeaveItemsPerPage(Number(value));
+    setLeaveCurrentPage(1);
+  };
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    setLeaveCurrentPage(1);
+  }, [filters, searchTerm, activeTab]);
+
   useEffect(() => {
     return () => {
       setOpenAttendanceDropdown(null);
@@ -1269,7 +1319,7 @@ export default function AttendancePayroll() {
                         </tr>
                       </thead>
                       <tbody className="text-[14px]">
-                        {filteredEmployees.map((employee: any) => (
+                        {currentItems.map((employee: any) => (
                           <React.Fragment key={employee.id}>
                             <tr className="border-b hover:bg-gray-50">
                               <td className="px-4 py-3 border-r">
@@ -1680,6 +1730,114 @@ export default function AttendancePayroll() {
                         ))}
                       </tbody>
                     </table>
+                    {totalPages > 0 && (
+                      <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white border rounded-b-md">
+                        <div className="flex items-center space-x-2">
+                          <p className="text-sm text-gray-700">
+                            Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                            <span className="font-medium">{endIndex}</span> of{' '}
+                            <span className="font-medium">{totalItems}</span> employees
+                          </p>
+                          <Select
+                            value={itemsPerPage.toString()}
+                            onValueChange={handleItemsPerPageChange}
+                          >
+                            <SelectTrigger className="h-8 w-[70px]">
+                              <SelectValue placeholder={itemsPerPage} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {[5, 10, 20, 50, 100].map((size) => (
+                                <SelectItem key={size} value={size.toString()}>
+                                  {size}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className="text-sm text-gray-700">per page</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Button
+                            variant="outline"
+                            className="h-8 w-8 p-0"
+                            onClick={() => goToPage(1)}
+                            disabled={currentPage === 1}
+                          >
+                            <span className="sr-only">Go to first page</span>
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="h-8 w-8 p-0"
+                            onClick={() => goToPage(currentPage - 1)}
+                            disabled={currentPage === 1}
+                          >
+                            <span className="sr-only">Go to previous page</span>
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          
+                          {/* Page Numbers */}
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+                            
+                            if (pageNum > 0 && pageNum <= totalPages) {
+                              return (
+                                <Button
+                                  key={pageNum}
+                                  variant={currentPage === pageNum ? "default" : "outline"}
+                                  className={`h-8 w-8 p-0 ${currentPage === pageNum ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
+                                  onClick={() => goToPage(pageNum)}
+                                >
+                                  {pageNum}
+                                </Button>
+                              );
+                            }
+                            return null;
+                          })}
+                          
+                          {totalPages > 5 && currentPage < totalPages - 2 && (
+                            <span className="px-2 text-gray-500">...</span>
+                          )}
+                          
+                          {totalPages > 5 && currentPage < totalPages - 2 && (
+                            <Button
+                              variant="outline"
+                              className="h-8 w-8 p-0"
+                              onClick={() => goToPage(totalPages)}
+                            >
+                              {totalPages}
+                            </Button>
+                          )}
+                          
+                          <Button
+                            variant="outline"
+                            className="h-8 w-8 p-0"
+                            onClick={() => goToPage(currentPage + 1)}
+                            disabled={currentPage === totalPages || totalPages === 0}
+                          >
+                            <span className="sr-only">Go to next page</span>
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="h-8 w-8 p-0"
+                            onClick={() => goToPage(totalPages)}
+                            disabled={currentPage === totalPages || totalPages === 0}
+                          >
+                            <span className="sr-only">Go to last page</span>
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -1705,7 +1863,7 @@ export default function AttendancePayroll() {
                       </tr>
                     </thead>
                     <tbody className="text-[14px]">
-                      {filteredEmployees.map((employee: any) => (
+                      {currentLeaveItems.map((employee: any) => (
                         <tr
                           key={employee.id}
                           className="border-b hover:bg-gray-50"
@@ -1743,6 +1901,114 @@ export default function AttendancePayroll() {
                       ))}
                     </tbody>
                   </table>
+                  {totalLeavePages > 0 && (
+                    <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white border rounded-b-md">
+                      <div className="flex items-center space-x-2">
+                        <p className="text-sm text-gray-700">
+                          Showing <span className="font-medium">{leaveStartIndex + 1}</span> to{' '}
+                          <span className="font-medium">{leaveEndIndex}</span> of{' '}
+                          <span className="font-medium">{totalLeaveItems}</span> employees
+                        </p>
+                        <Select
+                          value={leaveItemsPerPage.toString()}
+                          onValueChange={handleLeaveItemsPerPageChange}
+                        >
+                          <SelectTrigger className="h-8 w-[70px]">
+                            <SelectValue placeholder={leaveItemsPerPage} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[5, 10, 20, 50, 100].map((size) => (
+                              <SelectItem key={size} value={size.toString()}>
+                                {size}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-sm text-gray-700">per page</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Button
+                          variant="outline"
+                          className="h-8 w-8 p-0"
+                          onClick={() => goToLeavePage(1)}
+                          disabled={leaveCurrentPage === 1}
+                        >
+                          <span className="sr-only">Go to first page</span>
+                          <ChevronsLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="h-8 w-8 p-0"
+                          onClick={() => goToLeavePage(leaveCurrentPage - 1)}
+                          disabled={leaveCurrentPage === 1}
+                        >
+                          <span className="sr-only">Go to previous page</span>
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        
+                        {/* Page Numbers */}
+                        {Array.from({ length: Math.min(5, totalLeavePages) }, (_, i) => {
+                          let pageNum;
+                          if (totalLeavePages <= 5) {
+                            pageNum = i + 1;
+                          } else if (leaveCurrentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (leaveCurrentPage >= totalLeavePages - 2) {
+                            pageNum = totalLeavePages - 4 + i;
+                          } else {
+                            pageNum = leaveCurrentPage - 2 + i;
+                          }
+                          
+                          if (pageNum > 0 && pageNum <= totalLeavePages) {
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={leaveCurrentPage === pageNum ? "default" : "outline"}
+                                className={`h-8 w-8 p-0 ${leaveCurrentPage === pageNum ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
+                                onClick={() => goToLeavePage(pageNum)}
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          }
+                          return null;
+                        })}
+                        
+                        {totalLeavePages > 5 && leaveCurrentPage < totalLeavePages - 2 && (
+                          <span className="px-2 text-gray-500">...</span>
+                        )}
+                        
+                        {totalLeavePages > 5 && leaveCurrentPage < totalLeavePages - 2 && (
+                          <Button
+                            variant="outline"
+                            className="h-8 w-8 p-0"
+                            onClick={() => goToLeavePage(totalLeavePages)}
+                          >
+                            {totalLeavePages}
+                          </Button>
+                        )}
+                        
+                        <Button
+                          variant="outline"
+                          className="h-8 w-8 p-0"
+                          onClick={() => goToLeavePage(leaveCurrentPage + 1)}
+                          disabled={leaveCurrentPage === totalLeavePages || totalLeavePages === 0}
+                        >
+                          <span className="sr-only">Go to next page</span>
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="h-8 w-8 p-0"
+                          onClick={() => goToLeavePage(totalLeavePages)}
+                          disabled={leaveCurrentPage === totalLeavePages || totalLeavePages === 0}
+                        >
+                          <span className="sr-only">Go to last page</span>
+                          <ChevronsRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>
