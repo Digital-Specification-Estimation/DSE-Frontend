@@ -26,6 +26,7 @@ import {
   DollarSign,
   Receipt,
   Loader2,
+  CalendarDays,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -48,6 +49,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
@@ -85,6 +92,7 @@ export default function AttendanceHistory() {
   });
   const [selectedReason, setSelectedReason] = useState<any>(null);
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   // Deduction states
   const [isDeductionModalOpen, setIsDeductionModalOpen] = useState(false);
@@ -132,11 +140,37 @@ export default function AttendanceHistory() {
       queryParams || { employeeId: "", startDate: "", endDate: "" }
     );
 
-  // Get actual payroll data for this employee
-  const { data: payrollData, refetch: refetchPayroll } = useCalculateEmployeePayrollQuery({
+  // Get actual payroll data for this employee - try company payroll instead
+  const companyId = (sessionData?.user as any)?.company_id;
+  const { 
+    data: payrollData, 
+    refetch: refetchPayroll,
+    error: payrollError,
+    isLoading: isLoadingPayroll 
+  } = useCalculateEmployeePayrollQuery({
     employeeId,
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
+  });
+
+  // Also try company payroll as backup
+  const { 
+    data: companyPayrollData,
+    error: companyPayrollError 
+  } = useCalculateEmployeePayrollQuery({
+    companyId,
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  });
+
+  // Debug payroll query
+  console.log("Payroll query debug:", {
+    employeeId,
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+    payrollData,
+    payrollError,
+    isLoadingPayroll
   });
   const [updateAttendance] = useEditAttendanceMutation();
   const userfetched = sessionData?.user;
@@ -288,17 +322,46 @@ export default function AttendanceHistory() {
         console.warn("Employee not found in payroll data, using fallback calculation");
         // Fallback to employee rates with enhanced parsing
         const parseRate = (rate: any): number => {
+          console.log("Parsing rate:", { rate, type: typeof rate, constructor: rate?.constructor?.name });
+          
           if (rate === null || rate === undefined) return 0;
           if (typeof rate === 'number') return rate;
           if (typeof rate === 'string') return parseFloat(rate) || 0;
           if (typeof rate === 'object') {
+            // Handle Prisma Decimal objects
             if (rate.toNumber && typeof rate.toNumber === 'function') {
-              return rate.toNumber();
+              const result = rate.toNumber();
+              console.log("Decimal.toNumber():", result);
+              return result;
             }
+            // Handle objects with d property (Prisma Decimal internal structure)
+            if (rate.d && Array.isArray(rate.d)) {
+              const result = parseFloat(rate.d.join('')) || 0;
+              console.log("Decimal.d array:", rate.d, "parsed:", result);
+              return result;
+            }
+            // Handle objects with value property
             if (rate.value !== undefined) {
-              return parseFloat(String(rate.value)) || 0;
+              const result = parseFloat(String(rate.value)) || 0;
+              console.log("Object.value:", rate.value, "parsed:", result);
+              return result;
             }
-            return parseFloat(String(rate)) || 0;
+            // Try JSON.stringify then parse
+            try {
+              const jsonStr = JSON.stringify(rate);
+              const numMatch = jsonStr.match(/[\d.]+/);
+              if (numMatch) {
+                const result = parseFloat(numMatch[0]);
+                console.log("JSON regex match:", numMatch[0], "parsed:", result);
+                return result;
+              }
+            } catch (e) {
+              console.log("JSON parse failed:", e);
+            }
+            // Try to convert object to string then parse
+            const result = parseFloat(String(rate)) || 0;
+            console.log("String conversion:", String(rate), "parsed:", result);
+            return result;
           }
           return 0;
         };
@@ -319,17 +382,46 @@ export default function AttendanceHistory() {
       console.warn("No payroll data available, using employee rates");
       // Fallback to employee rates
       const parseRate = (rate: any): number => {
+        console.log("Parsing rate (fallback):", { rate, type: typeof rate, constructor: rate?.constructor?.name });
+        
         if (rate === null || rate === undefined) return 0;
         if (typeof rate === 'number') return rate;
         if (typeof rate === 'string') return parseFloat(rate) || 0;
         if (typeof rate === 'object') {
+          // Handle Prisma Decimal objects
           if (rate.toNumber && typeof rate.toNumber === 'function') {
-            return rate.toNumber();
+            const result = rate.toNumber();
+            console.log("Decimal.toNumber() (fallback):", result);
+            return result;
           }
+          // Handle objects with d property (Prisma Decimal internal structure)
+          if (rate.d && Array.isArray(rate.d)) {
+            const result = parseFloat(rate.d.join('')) || 0;
+            console.log("Decimal.d array (fallback):", rate.d, "parsed:", result);
+            return result;
+          }
+          // Handle objects with value property
           if (rate.value !== undefined) {
-            return parseFloat(String(rate.value)) || 0;
+            const result = parseFloat(String(rate.value)) || 0;
+            console.log("Object.value (fallback):", rate.value, "parsed:", result);
+            return result;
           }
-          return parseFloat(String(rate)) || 0;
+          // Try JSON.stringify then parse
+          try {
+            const jsonStr = JSON.stringify(rate);
+            const numMatch = jsonStr.match(/[\d.]+/);
+            if (numMatch) {
+              const result = parseFloat(numMatch[0]);
+              console.log("JSON regex match (fallback):", numMatch[0], "parsed:", result);
+              return result;
+            }
+          } catch (e) {
+            console.log("JSON parse failed (fallback):", e);
+          }
+          // Try to convert object to string then parse
+          const result = parseFloat(String(rate)) || 0;
+          console.log("String conversion (fallback):", String(rate), "parsed:", result);
+          return result;
         }
         return 0;
       };
@@ -337,12 +429,16 @@ export default function AttendanceHistory() {
       dailyRate = parseRate(employee.daily_rate);
       const monthlyRate = parseRate(employee.monthly_rate);
       
+      console.log("After parsing rates:", { dailyRate, monthlyRate, salaryCalculation, workingDays });
+      
       if (salaryCalculation === "monthly rate" && monthlyRate > 0) {
         baseSalary = monthlyRate;
+        console.log("Using monthly rate:", baseSalary);
       } else if (dailyRate > 0) {
         baseSalary = dailyRate * workingDays;
+        console.log("Using daily rate calculation:", dailyRate, "*", workingDays, "=", baseSalary);
       } else {
-        console.error(`Cannot calculate salary for ${employee.username}: no valid rates found`);
+        console.error(`Cannot calculate salary for ${employee.username}: dailyRate=${dailyRate}, monthlyRate=${monthlyRate}`);
         baseSalary = 0;
       }
     }
@@ -823,19 +919,27 @@ export default function AttendanceHistory() {
 
   // Handle update attendance
   const handleUpdateAttendance = async () => {
-    if (!selectedAttendance || !selectedStatus) return;
+    if (!selectedAttendance || !selectedStatus || !selectedDate) return;
+
+    // Validate date is within project range
+    if (!isDateWithinProjectRange(selectedDate)) {
+      toast({
+        title: "Invalid Date",
+        description: "Selected date must be within the employee's contract period.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       // Format the date as ISO string
-      const formatDateForApi = (dateString: string | Date) => {
-        if (!dateString) return "";
-        const date = new Date(dateString);
+      const formatDateForApi = (date: Date) => {
         return date.toISOString();
       };
 
       const requestBody = {
         employeeId: employeeId, // Match the backend's expected field name
-        date: formatDateForApi(selectedAttendance.date),
+        date: formatDateForApi(selectedDate),
         status: selectedStatus,
       };
 
@@ -864,12 +968,48 @@ export default function AttendanceHistory() {
   const openEditModal = (attendance: any) => {
     setSelectedAttendance(attendance);
     setSelectedStatus(attendance.status);
+    // Initialize selected date with the attendance date
+    const attendanceDate = typeof attendance.date === "string" 
+      ? parseISO(attendance.date) 
+      : attendance.date;
+    setSelectedDate(attendanceDate);
     setIsEditModalOpen(true);
   };
 
   const handleViewReason = (attendance: any) => {
     setSelectedReason(attendance);
     setIsReasonModalOpen(true);
+  };
+
+  // Date validation function
+  const isDateWithinProjectRange = (date: Date): boolean => {
+    if (!employee) return false;
+    
+    const contractStartDate = employee.contract_start_date
+      ? parseISO(employee.contract_start_date)
+      : null;
+    const contractEndDate = employee.contract_finish_date
+      ? parseISO(employee.contract_finish_date)
+      : null;
+
+    if (contractStartDate && date < contractStartDate) return false;
+    if (contractEndDate && date > contractEndDate) return false;
+    
+    return true;
+  };
+
+  // Get project date range for calendar
+  const getProjectDateRange = () => {
+    if (!employee) return { from: undefined, to: undefined };
+    
+    const from = employee.contract_start_date
+      ? parseISO(employee.contract_start_date)
+      : undefined;
+    const to = employee.contract_finish_date
+      ? parseISO(employee.contract_finish_date)
+      : undefined;
+      
+    return { from, to };
   };
 
   // Loading state
