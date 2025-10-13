@@ -142,9 +142,9 @@ export default function AttendancePayroll() {
     isError: isSessionError,
     refetch: sessionRefetch,
   } = useSessionQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-    refetchOnFocus: true,
-    refetchOnReconnect: true,
+    refetchOnMountOrArgChange: false,
+    refetchOnFocus: false,
+    refetchOnReconnect: false,
     skip: false,
   });
 
