@@ -11,6 +11,8 @@ import {
   Users,
   AlertTriangle,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import {
@@ -311,12 +313,11 @@ export default function AttendancePayroll() {
           a.status?.toLowerCase() === "absent" &&
           a.reason?.toLowerCase() === "sick"
       ).length;
-
       const absentWithVacationReason = attendance.filter(
         (a: any) =>
           a.status?.toLowerCase() === "absent" &&
           a.reason?.toLowerCase() === "vacation"
-      );
+      ).length;
 
       const workingDays = presentDays + lateDays;
       const paidLeaveDays = absentWithSickReason + absentWithVacationReason;
@@ -972,7 +973,7 @@ export default function AttendancePayroll() {
       return true;
     });
   }, [enhancedEmployees, searchTerm, filters, currencyShort]);
-
+console.log("filtered employees", filteredEmployees)
   const prevFiltersRef = React.useRef(filters);
   const prevFilteredCountRef = React.useRef(filteredEmployees.length);
 
@@ -1057,7 +1058,7 @@ export default function AttendancePayroll() {
   const leaveStartIndex = (leaveCurrentPage - 1) * leaveItemsPerPage;
   const leaveEndIndex = Math.min(leaveStartIndex + leaveItemsPerPage, totalLeaveItems);
   const currentLeaveItems = filteredEmployees.slice(leaveStartIndex, leaveEndIndex);
-
+console.log("currentLeaveItems", currentLeaveItems)
   // Handle page change for attendance
   const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
@@ -1957,7 +1958,7 @@ export default function AttendancePayroll() {
                           disabled={leaveCurrentPage === 1}
                         >
                           <span className="sr-only">Go to first page</span>
-                          <ChevronsLeft className="h-4 w-4" />
+                          <ChevronLeft className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
@@ -2027,7 +2028,7 @@ export default function AttendancePayroll() {
                           disabled={leaveCurrentPage === totalLeavePages || totalLeavePages === 0}
                         >
                           <span className="sr-only">Go to last page</span>
-                          <ChevronsRight className="h-4 w-4" />
+                          <ChevronRight className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>

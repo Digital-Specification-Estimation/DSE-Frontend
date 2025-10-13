@@ -373,7 +373,7 @@ export default function PayrollPage() {
           return true;
         });
       }, [enhancedEmployees, searchTerm, filters]);
-
+console.log("employees",filteredEmployees)
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
