@@ -32,7 +32,7 @@ export default function SignIn() {
     password: "",
     rememberMe: false,
     role: "admin", // Default role
-    role: "admin", // Default role
+    // role: "admin", // Default role
   });
   const [error, setError] = useState("");
 
