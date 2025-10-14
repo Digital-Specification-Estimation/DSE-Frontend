@@ -3,20 +3,21 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const boqApi = createApi({
   reducerPath: "boqApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:4000/boq",
+    baseUrl: "http://localhost:4000/cost-control",
     credentials: "include",
   }),
   tagTypes: ["BOQ"],
   endpoints: (builder) => ({
     createBOQ: builder.mutation({
       query: (data) => ({
-        url: "create",
+        url: "boq-items",
         method: "POST",
         body: data,
       }),
+      invalidatesTags: ["BOQ"],
     }),
     getBOQByProject: builder.query({
-      query: ({ projectId, companyId }) => `project/${projectId}?companyId=${companyId}`,
+      query: ({ projectId }) => `boq-items/project/${projectId}`,
       providesTags: ["BOQ"],
     }),
     getBOQSummary: builder.query({
@@ -29,7 +30,7 @@ export const boqApi = createApi({
     }),
     updateBOQ: builder.mutation({
       query: ({ id, ...data }) => ({
-        url: `${id}`,
+        url: `boq-items/${id}`,
         method: "PATCH",
         body: data,
       }),
@@ -37,7 +38,7 @@ export const boqApi = createApi({
     }),
     updateBOQProgress: builder.mutation({
       query: ({ id, completed_quantity }) => ({
-        url: `${id}/progress`,
+        url: `boq-items/${id}/progress`,
         method: "PATCH",
         body: { completed_quantity },
       }),
@@ -45,17 +46,21 @@ export const boqApi = createApi({
     }),
     deleteBOQ: builder.mutation({
       query: (id) => ({
-        url: `${id}`,
+        url: `boq-items/${id}`,
         method: "DELETE",
       }),
       invalidatesTags: ["BOQ"],
     }),
     bulkCreateBOQ: builder.mutation({
-      query: (data) => ({
-        url: "bulk-create",
-        method: "POST",
-        body: data,
-      }),
+      query: ({ projectId, file }) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return {
+          url: `boq-items/bulk/${projectId}`,
+          method: "POST",
+          body: formData,
+        };
+      },
       invalidatesTags: ["BOQ"],
     }),
   }),

@@ -27,9 +27,9 @@ export const expenseApi = createApi({
 
     // Get all expenses with optional filters
     getExpenses: builder.query<ExpenseEntity[], { projectId?: string; companyId?: string } | void>({
-      query: (filters = {}) => ({
+      query: (filters) => ({
         url: "/",
-        params: filters,
+        params: filters || {},
       }),
       providesTags: (result) =>
         result
@@ -73,13 +73,17 @@ export const expenseApi = createApi({
   }),
 });
 
-// Types based on the provided DTOs
+// Types based on the backend DTO
 interface CreateExpenseDto {
-  projectId: string;
-  companyId: string;
-  amount: number | string;
-  category: string;
   description: string;
+  category: string;
+  quantity: number;
+  unit: string;
+  unit_price: number;
+  amount: number;
+  project_id: string;
+  company_id: string;
+  date?: string;
 }
 
 interface UpdateExpenseDto {
@@ -89,15 +93,18 @@ interface UpdateExpenseDto {
 
 interface ExpenseEntity {
   id: string;
-  amount: number | string;
   description: string;
-  projectId: string;
-  companyId: string;
   category: string;
+  quantity: number;
+  unit: string;
+  unit_price: number;
+  amount: number;
+  project_id: string;
+  company_id: string;
+  date: string;
+  created_at: string;
+  updated_at: string;
   project?: any; // You might want to replace 'any' with a proper Project type
-  company?: any;  // You might want to replace 'any' with a proper Company type
-  createdAt: string;
-  updatedAt: string;
 }
 
 export const {

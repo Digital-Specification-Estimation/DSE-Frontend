@@ -151,10 +151,10 @@ export default function EnhancedProjectForm({
         project_name: editingProject.project_name || "",
         location_name: editingProject.location_name || "",
         budget: editingProject.budget || 0,
-        start_date: editingProject.start_date
+        start_date: editingProject.start_date && !isNaN(new Date(editingProject.start_date).getTime())
           ? new Date(editingProject.start_date).toISOString().split("T")[0]
           : "",
-        end_date: editingProject.end_date
+        end_date: editingProject.end_date && !isNaN(new Date(editingProject.end_date).getTime())
           ? new Date(editingProject.end_date).toISOString().split("T")[0]
           : "",
         selectedTrades:

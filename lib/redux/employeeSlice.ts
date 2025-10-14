@@ -65,6 +65,7 @@ export const employeeApi = createApi({
     }),
     getMonthlyStats: builder.query<any, void>({
       query: () => "monthly-stats",
+      // keepUnusedDataFor: 3600, // 1 hour in seconds
     }),
     updateEmployeeProject: builder.mutation<any, { employeeId: string; projectId: string | null }>({
       query: ({ employeeId, projectId }) => ({

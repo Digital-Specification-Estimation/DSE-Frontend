@@ -1082,23 +1082,48 @@ export default function BudgetPlanning() {
 
   const total_actual_cost = useMemo(() => {
     // Actual costs = payroll + manual expenses (project-specific when filtered)
-    const payrollCost = payrollData?.summary?.totalNetPay || 0;
+    let payrollCost = 0;
+    
+    // Handle different possible payroll data structures
+    if (payrollData) {
+      if (payrollData.summary?.totalNetPay) {
+        payrollCost = payrollData.summary.totalNetPay;
+      } else if (payrollData.totalNetPay) {
+        payrollCost = payrollData.totalNetPay;
+      } else if (typeof payrollData === 'number') {
+        payrollCost = payrollData;
+      } else if (payrollData.total) {
+        payrollCost = payrollData.total;
+      }
+    }
+    
     const expensesCost = expensesData.reduce((sum: number, expense: any) => {
       return sum + Number(expense.amount || 0);
     }, 0);
 
-    // Debug logging to see what's happening (remove in production)
-    if (payrollData) {
-      console.log("Budget Planning - Payroll Data:", payrollData);
-      console.log("Budget Planning - Payroll Cost:", payrollCost);
-      console.log("Budget Planning - Expenses Cost:", expensesCost);
-      console.log(
-        "Budget Planning - Total Actual Cost:",
-        payrollCost + expensesCost
-      );
-    }
+    // Debug logging to see what's happening
+    console.log("Budget Planning - Payroll Data Structure:", payrollData);
+    console.log("Budget Planning - Extracted Payroll Cost:", payrollCost);
+    console.log("Budget Planning - Expenses Cost:", expensesCost);
+    console.log("Budget Planning - Total Actual Cost:", payrollCost + expensesCost);
+    
     if (payrollError) {
-      console.error("Budget Planning - Payroll Error:", payrollError);
+      console.error("Budget Planning - Payroll Error Details:", {
+        error: payrollError,
+        status: 'status' in payrollError ? payrollError.status : 'unknown',
+        data: 'data' in payrollError ? payrollError.data : null,
+        message: 'message' in payrollError ? payrollError.message : 'No message available'
+      });
+      
+      // Also check if it's a network error or backend error
+      if ('status' in payrollError) {
+        console.error("HTTP Error Status:", payrollError.status);
+        if (payrollError.status === 404) {
+          console.error("Payroll endpoint not found - check if backend is running");
+        } else if (payrollError.status === 500) {
+          console.error("Server error - check backend logs");
+        }
+      }
     }
 
     return payrollCost + expensesCost;

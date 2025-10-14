@@ -13,7 +13,9 @@ export interface Deduction {
 export interface CreateDeductionDto {
   name: string;
   amount: number;
-  description?: string;
+  type: string;
+  reason?: string;
+  date?: string;
   employee_id: string;
 }
 
@@ -39,10 +41,12 @@ export const deductionApi = createApi({
 
     // Get all deductions, optionally filtered by employeeId
     getDeductions: builder.query<Deduction[], { employeeId?: string } | void>({
-      query: (params) => ({
-        url: "/",
-        params: params || {},
-      }),
+      query: (params) => {
+        if (params?.employeeId) {
+          return `/employee/${params.employeeId}`;
+        }
+        return "/";
+      },
       providesTags: (result) =>
         result
           ? [

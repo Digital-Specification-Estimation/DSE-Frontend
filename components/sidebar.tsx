@@ -159,9 +159,15 @@ export function Sidebar({ user }: SidebarProps) {
       required: "manage_employees",
     },
     {
-      name: "Attendance & Payroll",
-      href: "/attendance-payroll",
+      name: "Attendance",
+      href: "/attendance",
       icon: NotepadText,
+      required: "manage_payroll",
+    },
+    {
+      name: "Payroll",
+      href: "/payroll",
+      icon: Wallet,
       required: "manage_payroll",
     },
     {
@@ -267,7 +273,7 @@ export function Sidebar({ user }: SidebarProps) {
       </nav>
       {/* Footer */}
       <div className="p-4 mt-auto text-center text-xs text-gray-500">
-        ©Copyright 2025
+        &copy;Copyright 2025
       </div>
     </div>
   );

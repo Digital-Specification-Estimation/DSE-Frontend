@@ -19,7 +19,7 @@ export const tradePositionApi = createApi({
     getTrade: builder.query({
       query: (id) => `get/${id}`,
     }),
-    // getTradeByLocationName: builder.queryhttps://dse-backend-uv5d.onrender.com<any, string>({
+    // getTradeByLocationName: builder.queryhttp://localhost:4000<any, string>({
     //   query: (locationName) => `trades-location-name/${locationName}`,
     // }),
     getTrades: builder.query<any, void>({

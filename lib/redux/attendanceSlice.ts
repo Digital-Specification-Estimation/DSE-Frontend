@@ -68,7 +68,7 @@ export const attendanceApi = createApi({
     }),
     getAttendancesWithReasons: builder.query({
       query: ({ employeeId, startDate, endDate }) => {
-        let url = `with-reason/${employeeId}`;
+        let url = `history/${employeeId}`;
         const params = new URLSearchParams();
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
@@ -80,7 +80,7 @@ export const attendanceApi = createApi({
       query: (companyId) => `daily-percentage/${companyId}`,
     }),
     getDailyAttendanceMonthly: builder.query({
-      query: (companyId) => `daily-monthly/${companyId}`,
+      query: (companyId) => `daily-percentage-monthly`,
     }),
     // New payroll calculation endpoints
     calculateEmployeePayroll: builder.query({

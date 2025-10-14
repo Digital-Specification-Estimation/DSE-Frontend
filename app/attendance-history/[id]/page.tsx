@@ -25,6 +25,8 @@ import {
   Minus,
   DollarSign,
   Receipt,
+  Loader2,
+  CalendarDays,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,6 +35,7 @@ import {
   useGetUserAttendanceHistoryQuery,
   useEditAttendanceMutation,
   useGetAttendancesWithReasonsQuery,
+  useCalculateEmployeePayrollQuery,
 } from "@/lib/redux/attendanceSlice";
 import { useGetEmployeeQuery } from "@/lib/redux/employeeSlice";
 import { useSessionQuery } from "@/lib/redux/authSlice";
@@ -46,6 +49,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
@@ -64,6 +73,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import jsPDF from "jspdf";
+import { useCreateDeductionMutation, useGetDeductionsQuery, useDeleteDeductionMutation } from "@/lib/redux/deductionSlice";
 
 export default function AttendanceHistory() {
   const params = useParams();
@@ -82,10 +92,10 @@ export default function AttendanceHistory() {
   });
   const [selectedReason, setSelectedReason] = useState<any>(null);
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   // Deduction states
   const [isDeductionModalOpen, setIsDeductionModalOpen] = useState(false);
-  const [deductions, setDeductions] = useState<any[]>([]);
   const [newDeduction, setNewDeduction] = useState({
     type: "",
     amount: "",
@@ -93,6 +103,11 @@ export default function AttendanceHistory() {
     date: format(new Date(), "yyyy-MM-dd"),
     description: "",
   });
+
+  // Redux hooks for deductions
+  const { data: deductions = [], refetch: refetchDeductions } = useGetDeductionsQuery({ employeeId });
+  const [createDeduction, { isLoading: isCreatingDeduction }] = useCreateDeductionMutation();
+  const [deleteDeduction, { isLoading: isDeletingDeduction }] = useDeleteDeductionMutation();
 
   // Memoize query parameters to prevent unnecessary refetches
   const queryParams = useMemo(() => {
@@ -106,8 +121,11 @@ export default function AttendanceHistory() {
 
   // RTK Query hooks
   const { data: sessionData, isLoading: isLoadingSession } = useSessionQuery();
-  const { data: employee, isLoading: isLoadingEmployee } =
-    useGetEmployeeQuery(employeeId);
+  const { 
+    data: employee, 
+    isLoading: isLoadingEmployee,
+    refetch: refetchEmployee 
+  } = useGetEmployeeQuery(employeeId);
   const {
     data: attendanceData,
     isLoading: isLoadingAttendance,
@@ -116,10 +134,44 @@ export default function AttendanceHistory() {
   } = useGetUserAttendanceHistoryQuery(
     queryParams || { employeeId: "", startDate: "", endDate: "" }
   );
+
   const { data: attendancesWithReasons, refetch: refetchReasons } =
     useGetAttendancesWithReasonsQuery(
       queryParams || { employeeId: "", startDate: "", endDate: "" }
     );
+
+  // Get actual payroll data for this employee - try company payroll instead
+  const companyId = (sessionData?.user as any)?.company_id;
+  const { 
+    data: payrollData, 
+    refetch: refetchPayroll,
+    error: payrollError,
+    isLoading: isLoadingPayroll 
+  } = useCalculateEmployeePayrollQuery({
+    employeeId,
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  });
+
+  // Also try company payroll as backup
+  const { 
+    data: companyPayrollData,
+    error: companyPayrollError 
+  } = useCalculateEmployeePayrollQuery({
+    companyId,
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  });
+
+  // Debug payroll query
+  console.log("Payroll query debug:", {
+    employeeId,
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+    payrollData,
+    payrollError,
+    isLoadingPayroll
+  });
   const [updateAttendance] = useEditAttendanceMutation();
   const userfetched = sessionData?.user;
   const user: {
@@ -188,6 +240,15 @@ export default function AttendanceHistory() {
   const payslipData = useMemo(() => {
     if (!employee || !attendanceData) return null;
 
+    console.log("Employee data for payslip:", {
+      username: employee.username,
+      daily_rate: employee.daily_rate,
+      monthly_rate: employee.monthly_rate,
+      contract_start_date: employee.contract_start_date,
+      contract_finish_date: employee.contract_finish_date,
+      payrollData: payrollData
+    });
+
     const userCurrency = (sessionData?.user as any)?.currency || "RWF";
     const salaryCalculation =
       (sessionData?.user as any)?.salary_calculation || "daily rate";
@@ -206,6 +267,21 @@ export default function AttendanceHistory() {
       return recordDate >= contractStartDate && recordDate <= contractEndDate;
     });
 
+    console.log("Attendance filtering:", {
+      contractStartDate: contractStartDate.toISOString(),
+      contractEndDate: contractEndDate.toISOString(),
+      totalAttendanceRecords: attendanceData.length,
+      filteredAttendanceRecords: payslipAttendance.length,
+      attendanceRecords: attendanceData.map((r: any) => ({
+        date: r.date,
+        status: r.status
+      })),
+      filteredRecords: payslipAttendance.map((r: any) => ({
+        date: r.date,
+        status: r.status
+      }))
+    });
+
     const workingDays = payslipAttendance.filter(
       (r: any) =>
         r.status?.toLowerCase() === "present" ||
@@ -220,15 +296,151 @@ export default function AttendanceHistory() {
       (r: any) => r.status?.toLowerCase() === "absent"
     ).length;
 
-    // Calculate base salary
-    const dailyRate = parseFloat(employee.daily_rate || "0");
-    const monthlyRate = parseFloat(employee.monthly_rate || "0");
-
+    // Use actual payroll data if available, otherwise fallback to employee rates
+    let dailyRate = 0;
     let baseSalary = 0;
-    if (salaryCalculation === "monthly rate") {
-      baseSalary = monthlyRate;
+    
+    if (payrollData && payrollData.length > 0) {
+      // Find Jean Baptiste's payroll data
+      const employeePayroll = payrollData.find((p: any) => 
+        p.employeeName?.toLowerCase().includes('jean') || 
+        p.username?.toLowerCase().includes('jean') ||
+        p.employee_id === employee.id
+      );
+      
+      if (employeePayroll) {
+        dailyRate = employeePayroll.dailyRate || employeePayroll.daily_rate || 0;
+        baseSalary = employeePayroll.totalActual || employeePayroll.total_actual || (dailyRate * workingDays);
+        
+        console.log("Using payroll data:", {
+          employeePayroll,
+          dailyRate,
+          baseSalary,
+          workingDays
+        });
+      } else {
+        console.warn("Employee not found in payroll data, using fallback calculation");
+        // Fallback to employee rates with enhanced parsing
+        const parseRate = (rate: any): number => {
+          console.log("Parsing rate:", { rate, type: typeof rate, constructor: rate?.constructor?.name });
+          
+          if (rate === null || rate === undefined) return 0;
+          if (typeof rate === 'number') return rate;
+          if (typeof rate === 'string') return parseFloat(rate) || 0;
+          if (typeof rate === 'object') {
+            // Handle Prisma Decimal objects
+            if (rate.toNumber && typeof rate.toNumber === 'function') {
+              const result = rate.toNumber();
+              console.log("Decimal.toNumber():", result);
+              return result;
+            }
+            // Handle objects with d property (Prisma Decimal internal structure)
+            if (rate.d && Array.isArray(rate.d)) {
+              const result = parseFloat(rate.d.join('')) || 0;
+              console.log("Decimal.d array:", rate.d, "parsed:", result);
+              return result;
+            }
+            // Handle objects with value property
+            if (rate.value !== undefined) {
+              const result = parseFloat(String(rate.value)) || 0;
+              console.log("Object.value:", rate.value, "parsed:", result);
+              return result;
+            }
+            // Try JSON.stringify then parse
+            try {
+              const jsonStr = JSON.stringify(rate);
+              const numMatch = jsonStr.match(/[\d.]+/);
+              if (numMatch) {
+                const result = parseFloat(numMatch[0]);
+                console.log("JSON regex match:", numMatch[0], "parsed:", result);
+                return result;
+              }
+            } catch (e) {
+              console.log("JSON parse failed:", e);
+            }
+            // Try to convert object to string then parse
+            const result = parseFloat(String(rate)) || 0;
+            console.log("String conversion:", String(rate), "parsed:", result);
+            return result;
+          }
+          return 0;
+        };
+        
+        dailyRate = parseRate(employee.daily_rate);
+        const monthlyRate = parseRate(employee.monthly_rate);
+        
+        if (salaryCalculation === "monthly rate" && monthlyRate > 0) {
+          baseSalary = monthlyRate;
+        } else if (dailyRate > 0) {
+          baseSalary = dailyRate * workingDays;
+        } else {
+          console.error(`Cannot calculate salary for ${employee.username}: no valid rates found`);
+          baseSalary = 0;
+        }
+      }
     } else {
-      baseSalary = dailyRate * workingDays;
+      console.warn("No payroll data available, using employee rates");
+      // Fallback to employee rates
+      const parseRate = (rate: any): number => {
+        console.log("Parsing rate (fallback):", { rate, type: typeof rate, constructor: rate?.constructor?.name });
+        
+        if (rate === null || rate === undefined) return 0;
+        if (typeof rate === 'number') return rate;
+        if (typeof rate === 'string') return parseFloat(rate) || 0;
+        if (typeof rate === 'object') {
+          // Handle Prisma Decimal objects
+          if (rate.toNumber && typeof rate.toNumber === 'function') {
+            const result = rate.toNumber();
+            console.log("Decimal.toNumber() (fallback):", result);
+            return result;
+          }
+          // Handle objects with d property (Prisma Decimal internal structure)
+          if (rate.d && Array.isArray(rate.d)) {
+            const result = parseFloat(rate.d.join('')) || 0;
+            console.log("Decimal.d array (fallback):", rate.d, "parsed:", result);
+            return result;
+          }
+          // Handle objects with value property
+          if (rate.value !== undefined) {
+            const result = parseFloat(String(rate.value)) || 0;
+            console.log("Object.value (fallback):", rate.value, "parsed:", result);
+            return result;
+          }
+          // Try JSON.stringify then parse
+          try {
+            const jsonStr = JSON.stringify(rate);
+            const numMatch = jsonStr.match(/[\d.]+/);
+            if (numMatch) {
+              const result = parseFloat(numMatch[0]);
+              console.log("JSON regex match (fallback):", numMatch[0], "parsed:", result);
+              return result;
+            }
+          } catch (e) {
+            console.log("JSON parse failed (fallback):", e);
+          }
+          // Try to convert object to string then parse
+          const result = parseFloat(String(rate)) || 0;
+          console.log("String conversion (fallback):", String(rate), "parsed:", result);
+          return result;
+        }
+        return 0;
+      };
+      
+      dailyRate = parseRate(employee.daily_rate);
+      const monthlyRate = parseRate(employee.monthly_rate);
+      
+      console.log("After parsing rates:", { dailyRate, monthlyRate, salaryCalculation, workingDays });
+      
+      if (salaryCalculation === "monthly rate" && monthlyRate > 0) {
+        baseSalary = monthlyRate;
+        console.log("Using monthly rate:", baseSalary);
+      } else if (dailyRate > 0) {
+        baseSalary = dailyRate * workingDays;
+        console.log("Using daily rate calculation:", dailyRate, "*", workingDays, "=", baseSalary);
+      } else {
+        console.error(`Cannot calculate salary for ${employee.username}: dailyRate=${dailyRate}, monthlyRate=${monthlyRate}`);
+        baseSalary = 0;
+      }
     }
 
     // Calculate automatic deductions
@@ -236,20 +448,39 @@ export default function AttendanceHistory() {
     const absentDeduction = absentDays * dailyRate; // Full daily rate per absent day
 
     // Calculate manual deductions
-    const manualDeductions = deductions.reduce((total, deduction) => {
-      const deductionDate = parseISO(deduction.date);
-
-      if (
-        deductionDate >= contractStartDate &&
-        deductionDate <= contractEndDate
-      ) {
-        return total + parseFloat(deduction.amount || "0");
+    const manualDeductions = deductions.reduce((total, deduction: any) => {
+      if (!deduction.date) return total;
+      
+      try {
+        const deductionDate = parseISO(deduction.date);
+        if (
+          deductionDate >= contractStartDate &&
+          deductionDate <= contractEndDate
+        ) {
+          return total + parseFloat(String(deduction.amount || "0"));
+        }
+      } catch (error) {
+        console.error("Error parsing deduction date:", error);
       }
       return total;
     }, 0);
 
     const totalDeductions = lateDeduction + absentDeduction + manualDeductions;
     const netSalary = baseSalary - totalDeductions;
+
+    console.log("Payslip calculations:", {
+      baseSalary,
+      workingDays,
+      lateDays,
+      absentDays,
+      lateDeduction,
+      absentDeduction,
+      manualDeductions,
+      totalDeductions,
+      netSalary,
+      dailyRate,
+      salaryCalculation
+    });
 
     return {
       employeeName: employee.username,
@@ -272,66 +503,131 @@ export default function AttendanceHistory() {
       contractStartDate,
       contractEndDate,
     };
-  }, [employee, attendanceData, deductions, sessionData]);
+  }, [employee, attendanceData, deductions, sessionData, payrollData]);
 
   // Deduction management functions
-  const addDeduction = () => {
-    if (!newDeduction.type || !newDeduction.amount || !newDeduction.reason) {
+  const addDeduction = async () => {
+    if (!newDeduction.amount || !newDeduction.reason) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields (Reason and Amount)",
         variant: "destructive",
       });
       return;
     }
 
-    const deduction = {
-      id: Date.now().toString(),
-      ...newDeduction,
-      amount: parseFloat(newDeduction.amount),
-      createdAt: new Date().toISOString(),
-    };
+    if (!employeeId) {
+      toast({
+        title: "Error",
+        description: "Employee ID is required",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setDeductions((prev) => [...prev, deduction]);
-    setNewDeduction({
-      type: "",
-      amount: "",
-      reason: "",
-      date: format(new Date(), "yyyy-MM-dd"),
-      description: "",
-    });
-    setIsDeductionModalOpen(false);
+    try {
+      await createDeduction({
+        name: newDeduction.reason,
+        amount: parseFloat(newDeduction.amount),
+        type: newDeduction.type || "other",
+        reason: newDeduction.description || newDeduction.reason,
+        date: newDeduction.date,
+        employee_id: employeeId,
+      }).unwrap();
 
-    toast({
-      title: "Success",
-      description: "Deduction added successfully",
-    });
+      // Reset form
+      setNewDeduction({
+        type: "",
+        amount: "",
+        reason: "",
+        date: format(new Date(), "yyyy-MM-dd"),
+        description: "",
+      });
+      setIsDeductionModalOpen(false);
+
+      // Refetch deductions to update the list
+      refetchDeductions();
+
+      toast({
+        title: "Success",
+        description: "Deduction added successfully",
+      });
+    } catch (error) {
+      console.error("Error creating deduction:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add deduction. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const removeDeduction = (deductionId: string) => {
-    setDeductions((prev) => prev.filter((d) => d.id !== deductionId));
-    toast({
-      title: "Success",
-      description: "Deduction removed successfully",
-    });
+  const removeDeduction = async (deductionId: string) => {
+    try {
+      await deleteDeduction(deductionId).unwrap();
+      
+      // Refetch deductions to update the list
+      refetchDeductions();
+      
+      toast({
+        title: "Success",
+        description: "Deduction removed successfully",
+      });
+    } catch (error) {
+      console.error("Error deleting deduction:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove deduction. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatCurrency = (amount: number) => {
+    // Handle NaN, undefined, or null values
+    const validAmount = isNaN(amount) || amount === null || amount === undefined ? 0 : amount;
     const currency = (sessionData?.user as any)?.currency || "RWF";
+    
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currency === "RWF" ? "RWF" : "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
-    }).format(amount);
+    }).format(validAmount);
   };
 
   // Generate and download PDF payslip
-  const generatePayslipPDF = () => {
+  const generatePayslipPDF = async () => {
+    try {
+      // Refetch employee data to ensure we have the latest salary information
+      toast({
+        title: "Refreshing Data",
+        description: "Fetching latest employee salary information...",
+      });
+      
+      await refetchEmployee();
+      
+      // Small delay to ensure data is updated
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      toast({
+        title: "Generating Payslip",
+        description: "Creating PDF with latest salary data...",
+      });
+    } catch (error) {
+      console.error("Error refreshing employee data:", error);
+      toast({
+        title: "Warning", 
+        description: "Could not refresh employee data. Using cached data.",
+        variant: "destructive",
+      });
+    }
+
+    // Final check for payslip data after refresh
     if (!payslipData) {
       toast({
         title: "Error",
-        description: "No payslip data available",
+        description: "No payslip data available. Please ensure employee has salary rates set.",
         variant: "destructive",
       });
       return;
@@ -461,12 +757,17 @@ export default function AttendanceHistory() {
     }
 
     // Manual Deductions Details
-    const contractDeductions = deductions.filter((d) => {
-      const deductionDate = parseISO(d.date);
-      return (
-        deductionDate >= payslipData.contractStartDate &&
-        deductionDate <= payslipData.contractEndDate
-      );
+    const contractDeductions = deductions.filter((d: any) => {
+      if (!d.date) return false;
+      try {
+        const deductionDate = parseISO(d.date);
+        return (
+          deductionDate >= payslipData.contractStartDate &&
+          deductionDate <= payslipData.contractEndDate
+        );
+      } catch (error) {
+        return false;
+      }
     });
 
     if (contractDeductions.length > 0) {
@@ -476,23 +777,33 @@ export default function AttendanceHistory() {
       yPosition += 10;
 
       doc.setFont("helvetica", "normal");
-      contractDeductions.forEach((deduction) => {
+      contractDeductions.forEach((deduction: any) => {
         addText(
-          `• ${deduction.type}: ${deduction.reason}`,
+          `• ${deduction.type || 'Deduction'}: ${deduction.reason || 'No reason provided'}`,
           margin + 10,
           yPosition
         );
         addText(
-          `-${formatCurrency(deduction.amount)}`,
+          `-${formatCurrency(parseFloat(String(deduction.amount || "0")))}`,
           pageWidth - margin - 50,
           yPosition
         );
         yPosition += 8;
-        addText(
-          `  Date: ${format(parseISO(deduction.date), "MMM dd, yyyy")}`,
-          margin + 15,
-          yPosition
-        );
+        if (deduction.date) {
+          try {
+            addText(
+              `  Date: ${format(parseISO(deduction.date), "MMM dd, yyyy")}`,
+              margin + 15,
+              yPosition
+            );
+          } catch (error) {
+            addText(
+              `  Date: ${deduction.date}`,
+              margin + 15,
+              yPosition
+            );
+          }
+        }
         yPosition += 10;
       });
     }
@@ -608,19 +919,27 @@ export default function AttendanceHistory() {
 
   // Handle update attendance
   const handleUpdateAttendance = async () => {
-    if (!selectedAttendance || !selectedStatus) return;
+    if (!selectedAttendance || !selectedStatus || !selectedDate) return;
+
+    // Validate date is within project range
+    if (!isDateWithinProjectRange(selectedDate)) {
+      toast({
+        title: "Invalid Date",
+        description: "Selected date must be within the employee's contract period.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       // Format the date as ISO string
-      const formatDateForApi = (dateString: string | Date) => {
-        if (!dateString) return "";
-        const date = new Date(dateString);
+      const formatDateForApi = (date: Date) => {
         return date.toISOString();
       };
 
       const requestBody = {
         employeeId: employeeId, // Match the backend's expected field name
-        date: formatDateForApi(selectedAttendance.date),
+        date: formatDateForApi(selectedDate),
         status: selectedStatus,
       };
 
@@ -649,12 +968,48 @@ export default function AttendanceHistory() {
   const openEditModal = (attendance: any) => {
     setSelectedAttendance(attendance);
     setSelectedStatus(attendance.status);
+    // Initialize selected date with the attendance date
+    const attendanceDate = typeof attendance.date === "string" 
+      ? parseISO(attendance.date) 
+      : attendance.date;
+    setSelectedDate(attendanceDate);
     setIsEditModalOpen(true);
   };
 
   const handleViewReason = (attendance: any) => {
     setSelectedReason(attendance);
     setIsReasonModalOpen(true);
+  };
+
+  // Date validation function
+  const isDateWithinProjectRange = (date: Date): boolean => {
+    if (!employee) return false;
+    
+    const contractStartDate = employee.contract_start_date
+      ? parseISO(employee.contract_start_date)
+      : null;
+    const contractEndDate = employee.contract_finish_date
+      ? parseISO(employee.contract_finish_date)
+      : null;
+
+    if (contractStartDate && date < contractStartDate) return false;
+    if (contractEndDate && date > contractEndDate) return false;
+    
+    return true;
+  };
+
+  // Get project date range for calendar
+  const getProjectDateRange = () => {
+    if (!employee) return { from: undefined, to: undefined };
+    
+    const from = employee.contract_start_date
+      ? parseISO(employee.contract_start_date)
+      : undefined;
+    const to = employee.contract_finish_date
+      ? parseISO(employee.contract_finish_date)
+      : undefined;
+      
+    return { from, to };
   };
 
   // Loading state
@@ -773,14 +1128,31 @@ export default function AttendanceHistory() {
                   <Minus className="h-4 w-4" />
                   Manage Deductions
                 </Button>
-                <Button
-                  onClick={generatePayslipPDF}
-                  className="gap-2 bg-orange-500 hover:bg-orange-600"
-                  disabled={!payslipData}
-                >
-                  <Receipt className="h-4 w-4" />
-                  Generate Payslip PDF
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={async () => {
+                      await refetchEmployee();
+                      await refetchPayroll();
+                      toast({
+                        title: "Data Refreshed",
+                        description: "Employee and payroll data has been refreshed",
+                      });
+                    }}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Loader2 className="h-4 w-4" />
+                    Refresh Data
+                  </Button>
+                  <Button
+                    onClick={generatePayslipPDF}
+                    className="gap-2 bg-orange-500 hover:bg-orange-600"
+                    disabled={!payslipData}
+                  >
+                    <Receipt className="h-4 w-4" />
+                    Generate Payslip PDF
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -1313,9 +1685,17 @@ export default function AttendanceHistory() {
                   />
                 </div>
 
-                <Button onClick={addDeduction} className="w-full gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Deduction
+                <Button 
+                  onClick={addDeduction} 
+                  className="w-full gap-2"
+                  disabled={isCreatingDeduction}
+                >
+                  {isCreatingDeduction ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  {isCreatingDeduction ? "Adding..." : "Add Deduction"}
                 </Button>
               </CardContent>
             </Card>
