@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -37,10 +37,19 @@ export default function AttendanceCalendar({
   const [viewMode, setViewMode] = useState<"1week" | "2weeks" | "month">(
     "1week"
   );
-  const [calendarDays, setCalendarDays] = useState(getCurrentWeekDays());
+  // const [calendarDays, setCalendarDays] = useState(getCurrentWeekDays());
 
-  const { month, year } = parseMonthAndYear(currentMonth);
-
+  const { month, year } = useMemo(() => parseMonthAndYear(currentMonth), [currentMonth]);
+  const getCalendarDays = useCallback(() => {
+    if (viewMode === "1week") {
+      return getCurrentWeekDays();
+    }
+    // Add other view mode logic here when implemented
+    return getCurrentWeekDays();
+  }, [viewMode]);
+  
+  const calendarDays = useMemo(() => getCalendarDays(), [getCalendarDays]);
+  
   const { data: attendanceData, isLoading } = useGetAttendanceQuery({
     month: currentMonth,
     employeeId,
@@ -49,16 +58,16 @@ export default function AttendanceCalendar({
   const [updateDailyAttendance, { isLoading: isUpdating }] =
     useUpdateDailyAttendanceMutation();
 
-  useEffect(() => {
-    // Update the calendar days based on the view mode
-    if (viewMode === "1week") {
-      setCalendarDays(getCurrentWeekDays());
-    } else {
-      // For 2 weeks or month views, we would have different logic
-      // For now, just showing current week for all modes
-      setCalendarDays(getCurrentWeekDays());
-    }
-  }, [viewMode]);
+  // useEffect(() => {
+  //   // Update the calendar days based on the view mode
+  //   if (viewMode === "1week") {
+  //     setCalendarDays(getCurrentWeekDays());
+  //   } else {
+  //     // For 2 weeks or month views, we would have different logic
+  //     // For now, just showing current week for all modes
+  //     setCalendarDays(getCurrentWeekDays());
+  //   }
+  // }, [viewMode]);
 
   const handleAttendanceChange = async (
     date: string,
