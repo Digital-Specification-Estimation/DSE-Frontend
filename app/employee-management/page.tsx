@@ -21,6 +21,8 @@ import {
   AlertTriangle,
   Clock,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
@@ -214,6 +216,8 @@ export default function EmployeeManagement() {
     search: "",
   });
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Enhanced employees fetch with better caching strategy and error handling
   const {
@@ -807,6 +811,12 @@ export default function EmployeeManagement() {
       })
     : filteredEmployees;
 
+  const totalItems = sortedEmployees.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedEmployees = sortedEmployees.slice(startIndex, endIndex);
+
   // Handle edit employee
   const handleEditEmployee = (employee: any) => {
     setSelectedEmployee(employee);
@@ -1040,6 +1050,15 @@ export default function EmployeeManagement() {
     refetchTrades();
   };
   console.log("permissions", permissions);
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar user={user} />
@@ -1227,7 +1246,7 @@ export default function EmployeeManagement() {
                     </tr>
                   </thead>
                   <tbody className="text-[14px]">
-                    {sortedEmployees.map((employee: any) => (
+                    {paginatedEmployees.map((employee: any) => (
                       <tr
                         key={employee.id}
                         className={`border-b hover:bg-gray-50 ${
@@ -1336,6 +1355,90 @@ export default function EmployeeManagement() {
               <span className="text-sm">Refreshing data...</span>
             </div>
           )}
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-4 px-4 py-3 border-t">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-muted-foreground">
+                {startIndex + 1}-{endIndex} of {totalItems} employees
+              </span>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={handleItemsPerPageChange}
+              >
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue placeholder={itemsPerPage} />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  {[5, 10, 20, 50, 100].map((size) => (
+                    <SelectItem key={size} value={size.toString()}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">per page</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="sr-only">Previous</span>
+              </Button>
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  // Calculate page numbers to show (current page in the middle when possible)
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handlePageChange(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                {totalPages > 5 && currentPage < totalPages - 2 && (
+                  <span className="px-2">...</span>
+                )}
+                {totalPages > 5 && currentPage < totalPages - 1 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => handlePageChange(totalPages)}
+                  >
+                    {totalPages}
+                  </Button>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+                <span className="sr-only">Next</span>
+              </Button>
+            </div>
+          </div>
         </main>
       </div>
       {csvUploadModal && (

@@ -156,7 +156,7 @@ export function Sidebar({ user }: SidebarProps) {
       name: "Employee Management",
       href: "/employee-management",
       icon: Users2,
-      required: "manage_emplorhryees",
+      required: "manage_employees",
     },
     {
       name: "Attendance",
