@@ -185,53 +185,86 @@ const ProfitLossStatement = ({
   const { data: revenueEntries = [] } =
     useGetRevenuesByProjectQuery(selectedProjectId);
 
-  // State for date ranges (periods) - user selectable
+  // State for number of periods - user selectable
+  const [numberOfPeriods, setNumberOfPeriods] = useState(3);
+
+  // State for date ranges (periods) - dynamically generated based on numberOfPeriods
   const [periods, setPeriods] = useState(() => {
-    const now = new Date();
-    const period1Start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const period1End = new Date(now.getFullYear(), now.getMonth(), 0);
-    const period2Start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const period2End = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const period3Start = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const period3End = new Date(now.getFullYear(), now.getMonth() + 2, 0);
-
-    return {
-      period1: {
-        startDate: period1Start.toISOString().split("T")[0],
-        endDate: period1End.toISOString().split("T")[0],
-        label: `Period 1 (${period1Start.toLocaleDateString("en-US", {
-          day: "numeric",
-          month: "short",
-        })} - ${period1End.toLocaleDateString("en-US", {
-          day: "numeric",
-          month: "short",
-        })})`,
-      },
-      period2: {
-        startDate: period2Start.toISOString().split("T")[0],
-        endDate: period2End.toISOString().split("T")[0],
-        label: `Period 2`,
-      },
-      period3: {
-        startDate: period3Start.toISOString().split("T")[0],
-        endDate: period3End.toISOString().split("T")[0],
-        label: `Period 3`,
-      },
+    const generateInitialPeriods = (count: number) => {
+      const now = new Date();
+      const periodsObj: any = {};
+      
+      for (let i = 1; i <= count; i++) {
+        const periodStart = new Date(now.getFullYear(), now.getMonth() - 1 + (i - 1), 1);
+        const periodEnd = new Date(now.getFullYear(), now.getMonth() + (i - 1), 0);
+        
+        periodsObj[`period${i}`] = {
+          startDate: periodStart.toISOString().split("T")[0],
+          endDate: periodEnd.toISOString().split("T")[0],
+          label: `Period ${i}`,
+        };
+      }
+      
+      return periodsObj;
     };
+
+    return generateInitialPeriods(3); // Default to 3 periods
   });
 
-  // State for editable "Other" fields
-  const [otherLabour, setOtherLabour] = useState({
-    period1: 0,
-    period2: 0,
-    period3: 0,
+  // State for editable "Other" fields - dynamically generated
+  const [otherLabour, setOtherLabour] = useState(() => {
+    const initialOtherLabour: any = {};
+    for (let i = 1; i <= numberOfPeriods; i++) {
+      initialOtherLabour[`period${i}`] = 0;
+    }
+    return initialOtherLabour;
   });
 
-  const [otherExpenses, setOtherExpenses] = useState({
-    period1: 0,
-    period2: 0,
-    period3: 0,
+  const [otherExpenses, setOtherExpenses] = useState(() => {
+    const initialOtherExpenses: any = {};
+    for (let i = 1; i <= numberOfPeriods; i++) {
+      initialOtherExpenses[`period${i}`] = 0;
+    }
+    return initialOtherExpenses;
   });
+
+  // Function to handle period count changes
+  const handlePeriodCountChange = (newCount: number) => {
+    setNumberOfPeriods(newCount);
+    
+    // Generate new periods
+    const generatePeriods = (count: number) => {
+      const now = new Date();
+      const periodsObj: any = {};
+      
+      for (let i = 1; i <= count; i++) {
+        const periodStart = new Date(now.getFullYear(), now.getMonth() - 1 + (i - 1), 1);
+        const periodEnd = new Date(now.getFullYear(), now.getMonth() + (i - 1), 0);
+        
+        periodsObj[`period${i}`] = {
+          startDate: periodStart.toISOString().split("T")[0],
+          endDate: periodEnd.toISOString().split("T")[0],
+          label: `Period ${i}`,
+        };
+      }
+      
+      return periodsObj;
+    };
+
+    setPeriods(generatePeriods(newCount));
+
+    // Update other states to match new period count
+    const newOtherLabour: any = {};
+    const newOtherExpenses: any = {};
+    
+    for (let i = 1; i <= newCount; i++) {
+      newOtherLabour[`period${i}`] = otherLabour[`period${i}`] || 0;
+      newOtherExpenses[`period${i}`] = otherExpenses[`period${i}`] || 0;
+    }
+    
+    setOtherLabour(newOtherLabour);
+    setOtherExpenses(newOtherExpenses);
+  };
 
   // State to track when data is being recalculated
   const [isRecalculating, setIsRecalculating] = useState(false);
@@ -240,11 +273,16 @@ const ProfitLossStatement = ({
   useEffect(() => {
     if (selectedProjectId) {
       setIsRecalculating(true);
-      console.log("Period dates changed, triggering data recalculation...", {
-        period1: `${periods.period1.startDate} to ${periods.period1.endDate}`,
-        period2: `${periods.period2.startDate} to ${periods.period2.endDate}`,
-        period3: `${periods.period3.startDate} to ${periods.period3.endDate}`,
-      });
+      
+      // Log all current periods dynamically
+      const periodLog: any = {};
+      for (let i = 1; i <= numberOfPeriods; i++) {
+        const periodKey = `period${i}`;
+        if (periods[periodKey]) {
+          periodLog[periodKey] = `${periods[periodKey].startDate} to ${periods[periodKey].endDate}`;
+        }
+      }
+      console.log("Period dates changed, triggering data recalculation...", periodLog);
 
       // Show toast notification
       toast({
@@ -264,15 +302,7 @@ const ProfitLossStatement = ({
 
       return () => clearTimeout(timer);
     }
-  }, [
-    periods.period1.startDate,
-    periods.period1.endDate,
-    periods.period2.startDate,
-    periods.period2.endDate,
-    periods.period3.startDate,
-    periods.period3.endDate,
-    selectedProjectId,
-  ]);
+  }, [periods, selectedProjectId, numberOfPeriods]);
 
   // Get project employees - try multiple possible field names
   const projectEmployees = useMemo(() => {
@@ -310,7 +340,7 @@ const ProfitLossStatement = ({
 
   // Calculate actual payroll for each trade in a specific period using REAL attendance data with real-time updates
   const calculateTradePayroll = useMemo(() => {
-    return (tradeId: string, periodKey: "period1" | "period2" | "period3") => {
+    return (tradeId: string, periodKey: string) => {
       const period = periods[periodKey];
 
       // Validate dates before creating Date objects
@@ -441,7 +471,7 @@ const ProfitLossStatement = ({
 
   // Calculate expense totals by category from database for a specific period with real-time updates
   const calculateExpenseByCategory = useMemo(() => {
-    return (category: string, periodKey: "period1" | "period2" | "period3") => {
+    return (category: string, periodKey: string) => {
       const period = periods[periodKey];
 
       // Validate dates before creating Date objects
@@ -529,7 +559,7 @@ const ProfitLossStatement = ({
 
   // Calculate period-specific revenue from revenue entries with real-time updates
   const calculatePeriodRevenue = useMemo(() => {
-    return (periodKey: "period1" | "period2" | "period3") => {
+    return (periodKey: string) => {
       const period = periods[periodKey];
 
       // Validate dates before creating Date objects
@@ -594,38 +624,37 @@ const ProfitLossStatement = ({
 
   // Calculate total project revenue from selected periods only
   const calculateTotalProjectRevenue = useMemo(() => {
-    // Sum revenue from all selected periods
-    const totalRevenue =
-      calculatePeriodRevenue("period1") +
-      calculatePeriodRevenue("period2") +
-      calculatePeriodRevenue("period3");
+    // Sum revenue from all selected periods dynamically
+    let totalRevenue = 0;
+    const periodLog: any = {};
+    
+    for (let i = 1; i <= numberOfPeriods; i++) {
+      const periodKey = `period${i}`;
+      const periodRevenue = calculatePeriodRevenue(periodKey);
+      totalRevenue += periodRevenue;
+      periodLog[periodKey] = periodRevenue;
+    }
 
     console.log("Total revenue calculation from selected periods:", {
-      period1: calculatePeriodRevenue("period1"),
-      period2: calculatePeriodRevenue("period2"),
-      period3: calculatePeriodRevenue("period3"),
+      ...periodLog,
       total: totalRevenue,
     });
 
     return totalRevenue;
-  }, [calculatePeriodRevenue]);
+  }, [calculatePeriodRevenue, numberOfPeriods]);
 
   // Calculate labour totals for each period using real trade data
-  const calculateTotalLabour = (
-    periodKey: "period1" | "period2" | "period3"
-  ) => {
+  const calculateTotalLabour = (periodKey: string) => {
     const tradePayroll = projectTrades.reduce((total: number, trade: any) => {
       return total + calculateTradePayroll(trade.id, periodKey);
     }, 0);
 
     // Add the editable "Other" labour amount
-    return tradePayroll + otherLabour[periodKey];
+    return tradePayroll + (otherLabour[periodKey] || 0);
   };
 
   // Calculate total expenses for each period
-  const calculatePeriodExpenses = (
-    periodKey: "period1" | "period2" | "period3"
-  ) => {
+  const calculatePeriodExpenses = (periodKey: string) => {
     let totalExpenses = calculateTotalLabour(periodKey); // Labour costs from trades + other labour
 
     // Add database expense categories (Materials, Equipment, Overhead, etc.)
@@ -634,44 +663,44 @@ const ProfitLossStatement = ({
     });
 
     // Add editable other expenses
-    totalExpenses += otherExpenses[periodKey];
+    totalExpenses += (otherExpenses[periodKey] || 0);
 
     return totalExpenses;
   };
 
-  const calculatePeriodProfit = (
-    periodKey: "period1" | "period2" | "period3"
-  ) => {
+  const calculatePeriodProfit = (periodKey: string) => {
     return (
       calculatePeriodRevenue(periodKey) - calculatePeriodExpenses(periodKey)
     );
   };
 
-  const calculateProfitMargin = (
-    periodKey: "period1" | "period2" | "period3"
-  ) => {
+  const calculateProfitMargin = (periodKey: string) => {
     const profit = calculatePeriodProfit(periodKey);
     const revenue = calculatePeriodRevenue(periodKey);
-    return revenue > 0 ? (profit / revenue) * 100 : 0;
+    return revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : "0.0";
   };
 
   // Total calculations with memoization for performance
   const totalRevenue = calculateTotalProjectRevenue;
 
+// ... (rest of the code remains the same)
   const totalExpenses = useMemo(() => {
-    return (
-      calculatePeriodExpenses("period1") +
-      calculatePeriodExpenses("period2") +
-      calculatePeriodExpenses("period3")
-    );
+    let total = 0;
+    for (let i = 1; i <= numberOfPeriods; i++) {
+      const periodKey = `period${i}`;
+      total += calculatePeriodExpenses(periodKey);
+    }
+    return total;
   }, [
+    numberOfPeriods,
     periods,
     projectExpenses,
     otherExpenses,
     otherLabour,
     projectTrades,
-    projectEmployees,
-    deductions,
+    calculateTradePayroll,
+    expenseCategories,
+    calculateExpenseByCategory,
   ]);
 
   const totalProfit = useMemo(() => {
@@ -1129,10 +1158,36 @@ const ProfitLossStatement = ({
       {/* Profit & Loss Statement Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Profit & Loss Statement</CardTitle>
-          <p className="text-sm text-gray-600">
-            DECENT ENGINEERING CONSTRUCTION Ltd - September 2025
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Profit & Loss Statement</CardTitle>
+              <p className="text-sm text-gray-600">
+                DECENT ENGINEERING CONSTRUCTION Ltd - September 2025
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="period-count" className="text-sm font-medium">
+                Number of Periods:
+              </Label>
+              <Select
+                value={numberOfPeriods.toString()}
+                onValueChange={(value) => handlePeriodCountChange(parseInt(value))}
+              >
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="6">6</SelectItem>
+                  <SelectItem value="12">12</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {isRecalculating && (
@@ -1158,273 +1213,98 @@ const ProfitLossStatement = ({
                   <th className="border border-gray-300 px-4 py-2 text-left font-bold">
                     Description
                   </th>
-                  <th className="border border-gray-300 px-2 py-2 text-center font-bold">
-                    <div className="flex flex-col items-center space-y-2">
-                      <span className="text-xs font-semibold">Period 1</span>
-                      <div className="flex flex-col space-y-1">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-28 h-7 text-xs justify-start text-left font-normal"
-                            >
-                              <CalendarIcon className="mr-1 h-3 w-3" />
-                              {periods.period1.startDate
-                                ? new Date(
-                                    periods.period1.startDate
-                                  ).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                  })
-                                : "Start"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={
-                                periods.period1.startDate
-                                  ? new Date(periods.period1.startDate)
-                                  : undefined
-                              }
-                              onSelect={(date) => {
-                                if (date) {
-                                  setPeriods((prev) => ({
-                                    ...prev,
-                                    period1: {
-                                      ...prev.period1,
-                                      startDate: date
-                                        .toISOString()
-                                        .split("T")[0],
-                                    },
-                                  }));
-                                }
-                              }}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-28 h-7 text-xs justify-start text-left font-normal"
-                            >
-                              <CalendarIcon className="mr-1 h-3 w-3" />
-                              {periods.period1.endDate
-                                ? new Date(
-                                    periods.period1.endDate
-                                  ).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                  })
-                                : "End"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={
-                                periods.period1.endDate
-                                  ? new Date(periods.period1.endDate)
-                                  : undefined
-                              }
-                              onSelect={(date) => {
-                                if (date) {
-                                  setPeriods((prev) => ({
-                                    ...prev,
-                                    period1: {
-                                      ...prev.period1,
-                                      endDate: date.toISOString().split("T")[0],
-                                    },
-                                  }));
-                                }
-                              }}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-                  </th>
-                  <th className="border border-gray-300 px-2 py-2 text-center font-bold">
-                    <div className="flex flex-col items-center space-y-2">
-                      <span className="text-xs font-semibold">Period 2</span>
-                      <div className="flex flex-col space-y-1">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-28 h-7 text-xs justify-start text-left font-normal"
-                            >
-                              <CalendarIcon className="mr-1 h-3 w-3" />
-                              {periods.period2.startDate
-                                ? new Date(
-                                    periods.period2.startDate
-                                  ).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                  })
-                                : "Start"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={
-                                periods.period2.startDate
-                                  ? new Date(periods.period2.startDate)
-                                  : undefined
-                              }
-                              onSelect={(date) => {
-                                if (date) {
-                                  setPeriods((prev) => ({
-                                    ...prev,
-                                    period2: {
-                                      ...prev.period2,
-                                      startDate: date
-                                        .toISOString()
-                                        .split("T")[0],
-                                    },
-                                  }));
-                                }
-                              }}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-28 h-7 text-xs justify-start text-left font-normal"
-                            >
-                              <CalendarIcon className="mr-1 h-3 w-3" />
-                              {periods.period2.endDate
-                                ? new Date(
-                                    periods.period2.endDate
-                                  ).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                  })
-                                : "End"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={
-                                periods.period2.endDate
-                                  ? new Date(periods.period2.endDate)
-                                  : undefined
-                              }
-                              onSelect={(date) => {
-                                if (date) {
-                                  setPeriods((prev) => ({
-                                    ...prev,
-                                    period2: {
-                                      ...prev.period2,
-                                      endDate: date.toISOString().split("T")[0],
-                                    },
-                                  }));
-                                }
-                              }}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-                  </th>
-                  <th className="border border-gray-300 px-2 py-2 text-center font-bold">
-                    <div className="flex flex-col items-center space-y-2">
-                      <span className="text-xs font-semibold">Period 3</span>
-                      <div className="flex flex-col space-y-1">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-28 h-7 text-xs justify-start text-left font-normal"
-                            >
-                              <CalendarIcon className="mr-1 h-3 w-3" />
-                              {periods.period3.startDate
-                                ? new Date(
-                                    periods.period3.startDate
-                                  ).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                  })
-                                : "Start"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={
-                                periods.period3.startDate
-                                  ? new Date(periods.period3.startDate)
-                                  : undefined
-                              }
-                              onSelect={(date) => {
-                                if (date) {
-                                  setPeriods((prev) => ({
-                                    ...prev,
-                                    period3: {
-                                      ...prev.period3,
-                                      startDate: date
-                                        .toISOString()
-                                        .split("T")[0],
-                                    },
-                                  }));
-                                }
-                              }}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-28 h-7 text-xs justify-start text-left font-normal"
-                            >
-                              <CalendarIcon className="mr-1 h-3 w-3" />
-                              {periods.period3.endDate
-                                ? new Date(
-                                    periods.period3.endDate
-                                  ).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                  })
-                                : "End"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={
-                                periods.period3.endDate
-                                  ? new Date(periods.period3.endDate)
-                                  : undefined
-                              }
-                              onSelect={(date) => {
-                                if (date) {
-                                  setPeriods((prev) => ({
-                                    ...prev,
-                                    period3: {
-                                      ...prev.period3,
-                                      endDate: date.toISOString().split("T")[0],
-                                    },
-                                  }));
-                                }
-                              }}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-                  </th>
+                  {/* Dynamic period columns */}
+                  {Array.from({ length: numberOfPeriods }, (_, index) => {
+                    const periodNumber = index + 1;
+                    const periodKey = `period${periodNumber}`;
+                    const period = periods[periodKey];
+                    
+                    return (
+                      <th key={periodKey} className="border border-gray-300 px-2 py-2 text-center font-bold">
+                        <div className="flex flex-col items-center space-y-2">
+                          <span className="text-xs font-semibold">Period {periodNumber}</span>
+                          <div className="flex flex-col space-y-1">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className="w-28 h-7 text-xs justify-start text-left font-normal"
+                                >
+                                  <CalendarIcon className="mr-1 h-3 w-3" />
+                                  {period?.startDate
+                                    ? new Date(period.startDate).toLocaleDateString("en-US", {
+                                        month: "short",
+                                        day: "numeric",
+                                      })
+                                    : "Start"}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={
+                                    period?.startDate
+                                      ? new Date(period.startDate)
+                                      : undefined
+                                  }
+                                  onSelect={(date) => {
+                                    if (date) {
+                                      setPeriods((prev: any) => ({
+                                        ...prev,
+                                        [periodKey]: {
+                                          ...prev[periodKey],
+                                          startDate: date.toISOString().split("T")[0],
+                                        },
+                                      }));
+                                    }
+                                  }}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className="w-28 h-7 text-xs justify-start text-left font-normal"
+                                >
+                                  <CalendarIcon className="mr-1 h-3 w-3" />
+                                  {period?.endDate
+                                    ? new Date(period.endDate).toLocaleDateString("en-US", {
+                                        month: "short",
+                                        day: "numeric",
+                                      })
+                                    : "End"}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={
+                                    period?.endDate
+                                      ? new Date(period.endDate)
+                                      : undefined
+                                  }
+                                  onSelect={(date) => {
+                                    if (date) {
+                                      setPeriods((prev: any) => ({
+                                        ...prev,
+                                        [periodKey]: {
+                                          ...prev[periodKey],
+                                          endDate: date.toISOString().split("T")[0],
+                                        },
+                                      }));
+                                    }
+                                  }}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </div>
+                      </th>
+                    );
+                  })}
                   <th className="border border-gray-300 px-4 py-2 text-center font-bold">
                     TOTAL ({getUserCurrency()})
                   </th>
@@ -1434,9 +1314,9 @@ const ProfitLossStatement = ({
                 {/* REVENUE SECTION */}
                 <tr className="bg-blue-100 font-bold">
                   <td className="border border-gray-300 px-4 py-2">REVENUE</td>
-                  <td className="border border-gray-300 px-4 py-2"></td>
-                  <td className="border border-gray-300 px-4 py-2"></td>
-                  <td className="border border-gray-300 px-4 py-2"></td>
+                  {Array.from({ length: numberOfPeriods }, (_, index) => (
+                    <td key={`revenue-header-${index}`} className="border border-gray-300 px-4 py-2"></td>
+                  ))}
                   <td className="border border-gray-300 px-4 py-2"></td>
                 </tr>
                 <tr>
@@ -1517,9 +1397,9 @@ const ProfitLossStatement = ({
                 {/* EXPENSES SECTION */}
                 <tr className="bg-red-100 font-bold">
                   <td className="border border-gray-300 px-4 py-2">EXPENSES</td>
-                  <td className="border border-gray-300 px-4 py-2"></td>
-                  <td className="border border-gray-300 px-4 py-2"></td>
-                  <td className="border border-gray-300 px-4 py-2"></td>
+                  {Array.from({ length: numberOfPeriods }, (_, index) => (
+                    <td key={`expenses-header-${index}`} className="border border-gray-300 px-4 py-2"></td>
+                  ))}
                   <td className="border border-gray-300 px-4 py-2"></td>
                 </tr>
 
@@ -1531,20 +1411,17 @@ const ProfitLossStatement = ({
                     trade.position_name ||
                     trade.title ||
                     "Unknown Trade";
-                  const period1Payroll = calculateTradePayroll(
-                    trade.id,
-                    "period1"
-                  );
-                  const period2Payroll = calculateTradePayroll(
-                    trade.id,
-                    "period2"
-                  );
-                  const period3Payroll = calculateTradePayroll(
-                    trade.id,
-                    "period3"
-                  );
-                  const totalTradePayroll =
-                    period1Payroll + period2Payroll + period3Payroll;
+                  
+                  // Calculate payroll for each period dynamically
+                  const periodPayrolls: number[] = [];
+                  let totalTradePayroll = 0;
+                  
+                  for (let i = 1; i <= numberOfPeriods; i++) {
+                    const periodKey = `period${i}`;
+                    const payroll = calculateTradePayroll(trade.id, periodKey);
+                    periodPayrolls.push(payroll);
+                    totalTradePayroll += payroll;
+                  }
 
                   return (
                     <tr key={trade.id}>
@@ -1894,15 +1771,14 @@ const ProfitLossStatement = ({
                   <td className="border border-gray-300 px-4 py-2">
                     PROFIT MARGIN %
                   </td>
-                  <td className="border border-gray-300 px-4 py-2 text-right">
-                    {calculateProfitMargin("period1").toFixed(1)}%
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2 text-right">
-                    {calculateProfitMargin("period2").toFixed(1)}%
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2 text-right">
-                    {calculateProfitMargin("period3").toFixed(1)}%
-                  </td>
+                  {Array.from({ length: numberOfPeriods }, (_, index) => {
+                    const periodKey = `period${index + 1}`;
+                    return (
+                      <td key={`profit-margin-${index}`} className="border border-gray-300 px-4 py-2 text-right">
+                        {calculateProfitMargin(periodKey)}%
+                      </td>
+                    );
+                  })}
                   <td className="border border-gray-300 px-4 py-2 text-right">
                     {totalProfitMargin.toFixed(1)}%
                   </td>
@@ -2488,6 +2364,10 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
       showToast.error("Please fill in all required fields (Item Code, Description, Unit).")
       return
     }
+    let exchangeRate = await getExchangeRate(
+        sessionData.user.currency,
+        sessionData.user.companies?.[0]?.base_currency
+      );
 
     try {
       await createBOQ({
@@ -2918,6 +2798,12 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                       (costSummary?.net_profit || 0) >= 0 ? "text-green-600" : "text-red-600"
                     }`}
                   >
+                    <ConvertedAmount
+                      amount={costSummary?.net_profit || 0}
+                      currency={sessionData.user.currency}
+                      showCurrency={true}
+                      sessionData={sessionData}
+                    />
                     <ConvertedAmount
                       amount={costSummary?.net_profit || 0}
                       currency={sessionData.user.currency}
