@@ -344,7 +344,7 @@ export default function PayrollPage() {
   }, [employees]);
   const filteredEmployees = useMemo(() => {
     return enhancedEmployees.filter((employee: any) => {
-      if (!employee) return false;
+        if (!employee) return false;
       if (
         searchTerm &&
         employee.username &&
@@ -377,9 +377,30 @@ export default function PayrollPage() {
           return false;
         if (filters.remainingDays === "many" && days <= 30) return false;
       }
-      return true;
+        return true;
     });
   }, [enhancedEmployees, searchTerm, filters]);
+    
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Calculate pagination
+  const totalItems = filteredEmployees.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = filteredEmployees.slice(startIndex, endIndex);
+
+  // Handle page change
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
 
   useEffect(() => {
     const fetchPayrollData = async () => {
@@ -456,22 +477,18 @@ export default function PayrollPage() {
       record.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       record.period.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
-      statusFilter === "all" ||
-      record.status.toLowerCase() === statusFilter.toLowerCase();
+      filters.status === "all" ||
+      record.status.toLowerCase() === filters.status.toLowerCase();
 
     return matchesSearch && matchesStatus;
   });
-
-  const totalPayroll = payrollData.reduce((sum, record) => sum + record.netPay, 0);
-  const paidCount = payrollData.filter(record => record.status === 'Paid').length;
-  const pendingCount = payrollData.filter(record => record.status === 'Pending').length;
 
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const handleGeneratePayrollReport = async () => {
     try {
       setIsGeneratingReport(true);
-      
+
       toast({
         title: "Generating Payroll Report",
         description: "Please wait while we generate your detailed payroll report...",
@@ -518,7 +535,7 @@ export default function PayrollPage() {
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      
+
       // Add summary data
       yPosition = addText(
         `Total Employees: ${enhancedEmployees.length}`,
@@ -559,10 +576,10 @@ export default function PayrollPage() {
         "Budget Baseline",
         "Total Actual"
       ];
-      
+
       const columnWidths = [50, 30, 30, 40, 40];
       let xPosition = margin;
-      
+
       // Draw table headers
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
@@ -570,18 +587,18 @@ export default function PayrollPage() {
         doc.text(header, xPosition, yPosition);
         xPosition += columnWidths[index];
       });
-      
+
       // Draw table rows
       doc.setFont("helvetica", "normal");
       yPosition += 7;
-      
+
       enhancedEmployees.forEach((employee: any) => {
         // Check if we need a new page
         if (yPosition > 250) {
           doc.addPage();
           yPosition = 30;
         }
-        
+
         xPosition = margin;
         const rowData = [
           employee.username || 'N/A',
@@ -590,12 +607,12 @@ export default function PayrollPage() {
           formatCurrency(employee.budget_baseline || 0),
           formatCurrency(employee.totalActualPayroll || 0)
         ];
-        
+
         rowData.forEach((cell, index) => {
           doc.text(cell, xPosition, yPosition);
           xPosition += columnWidths[index];
         });
-        
+
         yPosition += 7;
       });
 
@@ -779,7 +796,7 @@ export default function PayrollPage() {
             </Popover>
             <Button
               variant="outline"
-              className="gap-2 flex items-center border-2 border-gray-300 rounded-full h-14 bg-transparent"
+              className="w-full md:w-auto"
               onClick={handleGeneratePayrollReport}
               disabled={isGeneratingReport}
             >
@@ -880,7 +897,7 @@ export default function PayrollPage() {
                 </tr>
               </thead>
               <tbody className="text-[14px]">
-                {filteredEmployees.map((employee: any) => (
+                {currentItems.map((employee: any) => (
                   <tr key={employee.id} className="border-b hover:bg-gray-50">
                     <td className="px-4 py-3 border-r">
                       <div className="flex items-center gap-2">
@@ -951,6 +968,110 @@ export default function PayrollPage() {
                 ))}
               </tbody>
             </table>
+            
+            {/* Pagination Controls */}
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-4 space-y-4 sm:space-y-0">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">Rows per page:</span>
+                <Select
+                  value={itemsPerPage.toString()}
+                  onValueChange={handleItemsPerPageChange}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue placeholder={itemsPerPage} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[5, 10, 20, 50].map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center space-x-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(1)}
+                  disabled={currentPage === 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                {/* Page Numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  if (pageNum > 0 && pageNum <= totalPages) {
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        className={`h-8 w-8 p-0 ${currentPage === pageNum ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
+                        onClick={() => goToPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  }
+                  return null;
+                })}
+                
+                {totalPages > 5 && currentPage < totalPages - 2 && (
+                  <span className="px-2 text-gray-500">...</span>
+                )}
+                
+                {totalPages > 5 && currentPage < totalPages - 2 && (
+                  <Button
+                    variant="outline"
+                    className="h-8 w-8 p-0"
+                    onClick={() => goToPage(totalPages)}
+                  >
+                    {totalPages}
+                  </Button>
+                )}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(totalPages)}
+                  disabled={currentPage >= totalPages}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </main>
         </div>

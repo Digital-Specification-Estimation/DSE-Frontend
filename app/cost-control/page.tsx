@@ -77,9 +77,10 @@ import {
   useDeleteRevenueMutation,
 } from "@/lib/redux/revenueSlice"
 import { useCreateExpenseMutation, useGetExpensesByProjectQuery } from "@/lib/redux/expenseSlice" // Corrected import path
-import { convertCurrency } from "@/lib/utils"
+import { convertCurrency, getExchangeRate } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
+import { Label } from "@/components/ui/label"
 // Assuming BOQItem type is defined elsewhere, or define it here if necessary
 type BOQItem = {
   id: string
@@ -1063,10 +1064,10 @@ const ProfitLossStatement = ({
                   </tr>
                   <tr class="margin">
                       <td>PROFIT MARGIN %</td>
-                      <td class="number">${calculateProfitMargin("period1").toFixed(1)}%</td>
-                      <td class="number">${calculateProfitMargin("period2").toFixed(1)}%</td>
-                      <td class="number">${calculateProfitMargin("period3").toFixed(1)}%</td>
-                      <td class="number">${totalProfitMargin.toFixed(1)}%</td>
+                      <td class="number">${calculateProfitMargin("period1")}%</td>
+                      <td class="number">${calculateProfitMargin("period2")}%</td>
+                      <td class="number">${calculateProfitMargin("period3")}%</td>
+                      <td class="number">${totalProfitMargin}%</td>
                   </tr>
               </tbody>
           </table>
@@ -1306,7 +1307,7 @@ const ProfitLossStatement = ({
                     );
                   })}
                   <th className="border border-gray-300 px-4 py-2 text-center font-bold">
-                    TOTAL ({getUserCurrency()})
+                    TOTAL ({sessionData.user.currency})
                   </th>
                 </tr>
               </thead>
@@ -1429,28 +1430,28 @@ const ProfitLossStatement = ({
                         Labour {tradeName}
                       </td>
                       <td className="border border-gray-300 px-4 py-2 text-right">
-                        <ConvertedAmount
-                          amount={period1Payroll}
-                          sessionData={sessionData}
-                          currency={sessionData.user.currency}
-                          showCurrency={true}
-                        />
+                      <ConvertedAmount
+  amount={calculateTradePayroll(trade.id, "period1")}
+  currency={sessionData.user.currency}
+  sessionData={sessionData}
+  showCurrency={true}
+/>
                       </td>
                       <td className="border border-gray-300 px-4 py-2 text-right">
-                        <ConvertedAmount
-                          amount={period2Payroll}
-                          sessionData={sessionData}
-                          currency={sessionData.user.currency}
-                          showCurrency={true}
-                        />
+                      <ConvertedAmount
+  amount={calculateTradePayroll(trade.id, "period2")}
+  currency={sessionData.user.currency}
+  sessionData={sessionData}
+  showCurrency={true}
+/>
                       </td>
                       <td className="border border-gray-300 px-4 py-2 text-right">
-                        <ConvertedAmount
-                          amount={period3Payroll}
-                          sessionData={sessionData}
-                          currency={sessionData.user.currency}
-                          showCurrency={true}
-                        />
+                      <ConvertedAmount
+  amount={calculateTradePayroll(trade.id, "period3")}
+  currency={sessionData.user.currency}
+  sessionData={sessionData}
+  showCurrency={true}
+/>
                       </td>
                       <td className="border border-gray-300 px-4 py-2 text-right">
                         <ConvertedAmount
@@ -2804,12 +2805,6 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                       showCurrency={true}
                       sessionData={sessionData}
                     />
-                    <ConvertedAmount
-                      amount={costSummary?.net_profit || 0}
-                      currency={sessionData.user.currency}
-                      showCurrency={true}
-                      sessionData={sessionData}
-                    />
                   </p>
                 </div>
 
@@ -3719,8 +3714,8 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                     <SelectItem value="UTILITIES">Utilities</SelectItem>
                                     <SelectItem value="RENT">Rent</SelectItem>
                                     <SelectItem value="OFFICE_SUPPLIES">Office Supplies</SelectItem>
-                                    <SelectItem value="TRAINING">Training</SelectItem>
                                     <SelectItem value="MARKETING">Marketing</SelectItem>
+                                    <SelectItem value="TRAINING">Training</SelectItem>
                                     <SelectItem value="OTHER">Other</SelectItem>
                                   </SelectContent>
                                 </Select>
@@ -3728,7 +3723,7 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                               <div className="space-y-2">
                                 <label className="text-sm font-medium leading-none">Total Amount</label>
                                 <div className="p-2 bg-gray-50 rounded border text-sm font-medium">
-                                  RWF{" "}
+                                  {sessionData.user.currency}
                                   {(expenseForm.quantity * expenseForm.unit_price).toLocaleString(undefined, {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2,
