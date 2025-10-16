@@ -216,6 +216,22 @@ export default function SignUp() {
       });
       return;
     }
+
+    // Check if company with the same name already exists
+    const companyExists = companiesFetched.some(
+      (company: any) =>
+        company.company_name.toLowerCase() === companyData.company_name.toLowerCase()
+    );
+
+    if (companyExists) {
+      toast({
+        title: "Company exists",
+        description: "A company with this name already exists. Please choose a different name or select the existing company.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsCreatingNewCompany(true);
     setModalOpen(false);
     toast({
