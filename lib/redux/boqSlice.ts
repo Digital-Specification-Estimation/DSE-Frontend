@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const boqApi = createApi({
   reducerPath: "boqApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:4000/cost-control",
+    baseUrl: "https://dse-backend-uv5d.onrender.com0/cost-control",
     credentials: "include",
   }),
   tagTypes: ["BOQ"],

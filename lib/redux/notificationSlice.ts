@@ -46,7 +46,7 @@ export default notificationsSlice.reducer;
 export const notificationsApi = createApi({
   reducerPath: "notificationsApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:4000/notifications",
+    baseUrl: "https://dse-backend-uv5d.onrender.com0/notifications",
     prepareHeaders: (headers) => {
       const token = localStorage.getItem("token");
       if (token) {
