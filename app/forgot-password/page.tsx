@@ -27,7 +27,7 @@ export default function ForgotPassword() {
     setIsLoading(true);
     try {
       // TODO: Replace with your actual API call for password reset
-      const response = await fetch("/api/auth/forgot-password", {
+      const response = await fetch("https://dse-backend-uv5d.onrender.com/auth/forgot-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
