@@ -1939,14 +1939,14 @@ export default function CostControlPage() {
       console.log("Fetching project payroll for:", {
         projectId: selectedProjectId,
         companyId: (sessionData.user as any)?.company_id,
-        url: `https://dse-backend-uv5d.onrender.com0/employee/payroll/project/${selectedProjectId}?companyId=${
+        url: `https://dse-backend-uv5d.onrender.com/employee/payroll/project/${selectedProjectId}?companyId=${
           (sessionData.user as any)?.company_id
         }`,
       })
 
       try {
         const response = await fetch(
-          `https://dse-backend-uv5d.onrender.com0/employee/payroll/project/${selectedProjectId}?companyId=${
+          `https://dse-backend-uv5d.onrender.com/employee/payroll/project/${selectedProjectId}?companyId=${
             (sessionData.user as any)?.company_id
           }`,
           {
@@ -1967,7 +1967,7 @@ export default function CostControlPage() {
           const errorText = await response.text()
           console.error("Error response:", errorText)
           console.error("Request details:", {
-            url: `https://dse-backend-uv5d.onrender.com0/employee/payroll/project/${selectedProjectId}?companyId=${
+            url: `https://dse-backend-uv5d.onrender.com/employee/payroll/project/${selectedProjectId}?companyId=${
               (sessionData.user as any)?.company_id
             }`,
             projectId: selectedProjectId,
@@ -2194,7 +2194,7 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
     try {
       // Fetch project payroll data for the date range
       const response = await fetch(
-        `https://dse-backend-uv5d.onrender.com0/attendance/payroll/project/${selectedProjectId}?companyId=${
+        `https://dse-backend-uv5d.onrender.com/attendance/payroll/project/${selectedProjectId}?companyId=${
           (sessionData.user as any)?.company_id
         }&startDate=${fromDate}&endDate=${toDate}`,
         {

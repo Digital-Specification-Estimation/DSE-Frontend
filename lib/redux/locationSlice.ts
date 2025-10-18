@@ -4,7 +4,7 @@ export const locationApi = createApi({
   reducerPath: "locationApi",
   baseQuery: fetchBaseQuery({
     // baseUrl: "https://dse-backend-production.up.railway.app/location",
-    baseUrl: "https://dse-backend-uv5d.onrender.com0/location",
+    baseUrl: "https://dse-backend-uv5d.onrender.com/location",
     credentials: "include",
   }),
   endpoints: (builder) => ({

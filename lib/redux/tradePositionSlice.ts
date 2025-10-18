@@ -5,7 +5,7 @@ export const tradePositionApi = createApi({
   baseQuery: fetchBaseQuery({
     // baseUrl: "https://dse-backend-production.up.railway.app/trade-position",
 
-    baseUrl: "https://dse-backend-uv5d.onrender.com0/trade-position",
+    baseUrl: "https://dse-backend-uv5d.onrender.com/trade-position",
     credentials: "include",
   }),
   endpoints: (builder) => ({
@@ -19,7 +19,7 @@ export const tradePositionApi = createApi({
     getTrade: builder.query({
       query: (id) => `get/${id}`,
     }),
-    // getTradeByLocationName: builder.queryhttps://dse-backend-uv5d.onrender.com0<any, string>({
+    // getTradeByLocationName: builder.queryhttps://dse-backend-uv5d.onrender.com<any, string>({
     //   query: (locationName) => `trades-location-name/${locationName}`,
     // }),
     getTrades: builder.query<any, void>({

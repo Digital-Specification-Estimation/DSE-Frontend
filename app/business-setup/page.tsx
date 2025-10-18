@@ -1884,7 +1884,7 @@ export default function BusinessSetup() {
       projectId: projectId.toString(), // Ensure projectId is a string
     };
     try {
-      const response = await fetch(`https://dse-backend-uv5d.onrender.com0/project/budget`, {
+      const response = await fetch(`https://dse-backend-uv5d.onrender.com/project/budget`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

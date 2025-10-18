@@ -11,7 +11,7 @@ export async function PUT(
     console.log(`Updating salary for employee ${id}:`, body);
     
     // Forward the request to the backend
-    const backendResponse = await fetch(`https://dse-backend-uv5d.onrender.com0/employee/update-salary/${id}`, {
+    const backendResponse = await fetch(`https://dse-backend-uv5d.onrender.com/employee/update-salary/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

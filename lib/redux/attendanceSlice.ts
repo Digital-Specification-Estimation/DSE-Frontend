@@ -5,7 +5,7 @@ export const attendanceApi = createApi({
   baseQuery: fetchBaseQuery({
     // baseUrl: "https://dse-backend-production.up.railway.app/location",
 
-    baseUrl: "https://dse-backend-uv5d.onrender.com0/attendance",
+    baseUrl: "https://dse-backend-uv5d.onrender.com/attendance",
     credentials: "include",
   }),
   endpoints: (builder) => ({

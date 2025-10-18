@@ -72,7 +72,7 @@ export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: fetchBaseQuery({
     // baseUrl: "https://dse-backend-production.up.railway.app/auth",
-    baseUrl: "https://dse-backend-uv5d.onrender.com0/auth",
+    baseUrl: "https://dse-backend-uv5d.onrender.com/auth",
     credentials: "include",
   }),
   tagTypes: ['Session'], // Add Session tag

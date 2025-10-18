@@ -20,7 +20,7 @@ export interface RevenueEntry {
 export const revenueApi = createApi({
   reducerPath: "revenueApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "https://dse-backend-uv5d.onrender.com0/cost-control",
+    baseUrl: "https://dse-backend-uv5d.onrender.com/cost-control",
     credentials: "include",
   }),
   tagTypes: ["Revenue"],
