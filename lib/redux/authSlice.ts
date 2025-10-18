@@ -35,7 +35,21 @@ export interface SignupResponseDto {
   deadline_notify: boolean;
   image_url: string;
   role_request_approval?: "PENDING" | "APPROVED" | "REJECTED";
-  settings?: any[]; // Add settings to the interface
+  settings?: any[];
+}
+
+interface ForgotPasswordDto {
+  email: string;
+}
+
+interface ResetPasswordDto {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+interface MessageResponse {
+  message: string;
 }
 
 export enum RoleEnum {
@@ -75,7 +89,7 @@ export const authApi = createApi({
     baseUrl: "https://dse-backend-uv5d.onrender.com/auth",
     credentials: "include",
   }),
-  tagTypes: ['Session'], // Add Session tag
+  tagTypes: ['Session'],
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponseDto, LoginBodyDto>({
       query: (credentials) => ({
@@ -108,7 +122,21 @@ export const authApi = createApi({
         url: "/session",
         method: "GET",
       }),
-      providesTags: ['Session'], // Provide Session tag
+      providesTags: ['Session'], 
+    }),
+    forgotPassword: builder.mutation<MessageResponse, ForgotPasswordDto>({
+      query: (body) => ({
+        url: "/forgot-password",
+        method: "POST",
+        body,
+      }),
+    }),
+    resetPassword: builder.mutation<{ success: boolean }, ResetPasswordDto>({
+      query: (body) => ({
+        url: "/reset-password",
+        method: "POST",
+        body,
+      }),
     }),
   }),
 });
@@ -121,4 +149,6 @@ export const {
   useSignupMutation,
   useLogoutMutation,
   useSessionQuery,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
 } = authApi;
