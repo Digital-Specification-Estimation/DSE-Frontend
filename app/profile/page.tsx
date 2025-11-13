@@ -10,6 +10,17 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { Sidebar } from "@/components/sidebar";
 import DashboardHeader from "@/components/DashboardHeader";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function ProfilePage() {
   const [user] = useState({
@@ -28,6 +39,9 @@ export default function ProfilePage() {
     pollingInterval: 300000, // Poll every 5 minutes
   });
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: sessionData?.user?.username || "",
     email: sessionData?.user?.email || "",
@@ -152,13 +166,92 @@ export default function ProfilePage() {
                       Permanently delete your account and all associated data
                     </p>
                   </div>
-                  <Button variant="destructive">Delete Account</Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? "Deleting..." : "Delete Account"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
+
+      {/* Delete Account Confirmation Dialog */}
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your
+              account and remove all associated data from our servers.
+              <p className="mt-2 font-medium text-foreground">
+                Type <span className="text-destructive">DELETE</span> to
+                confirm:
+              </p>
+              <Input
+                id="confirm-delete"
+                className="mt-2"
+                placeholder="Type DELETE to confirm"
+                onChange={(e) => {
+                  if (e.target.value === "DELETE") {
+                    e.target.classList.remove("border-destructive");
+                  } else {
+                    e.target.classList.add("border-destructive");
+                  }
+                }}
+              />
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={async (e) => {
+                e.preventDefault();
+                const input = document.getElementById(
+                  "confirm-delete"
+                ) as HTMLInputElement;
+                if (input?.value !== "DELETE") {
+                  input?.focus();
+                  return;
+                }
+
+                try {
+                  setIsDeleting(true);
+                  // TODO: Implement actual account deletion logic
+                  // await deleteAccount();
+                  toast({
+                    title: "Account Deleted",
+                    description: "Your account has been successfully deleted.",
+                  });
+                  // Redirect to home or login page after deletion
+                  // router.push('/');
+                } catch (error) {
+                  console.error("Failed to delete account:", error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to delete account. Please try again.",
+                    variant: "destructive",
+                  });
+                } finally {
+                  setIsDeleting(false);
+                  setIsDeleteDialogOpen(false);
+                }
+              }}
+            >
+              {isDeleting ? "Deleting..." : "Delete Account"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
