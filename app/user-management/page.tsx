@@ -185,7 +185,7 @@ export default function ManageUsers() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-white">
         <Sidebar user={currentUser} />
         <div className="flex-1 flex flex-col overflow-hidden">
           <DashboardHeader />
@@ -198,7 +198,7 @@ export default function ManageUsers() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-white">
       <Sidebar user={currentUser} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardHeader />

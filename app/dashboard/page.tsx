@@ -129,7 +129,7 @@ export default function Dashboard() {
     refetchOnMountOrArgChange: true,
     pollingInterval: 300000, // Poll every 5 minutes
   });
-  console.log("attendance data", attendanceData)
+  console.log("attendance data", attendanceData);
   // Redux query hooks with proper options for keeping data fresh
   const {
     data: employees = [],
@@ -151,51 +151,43 @@ export default function Dashboard() {
     refetchOnMountOrArgChange: false,
   });
 
-  console.log("payroll data", payrollData)
- 
- 
+  console.log("payroll data", payrollData);
+
   // Combined loading state
   const isLoading =
-    isEmployeesLoading ||
-    isPayrollLoading ||
-    isAttendanceLoading;
+    isEmployeesLoading || isPayrollLoading || isAttendanceLoading;
   const isFetching =
     isEmployeesFetching || isPayrollFetching || isAttendanceFetching;
-    const handleRefreshData = useCallback(async () => {
-      try {
-        setIsRefreshing(true);
-        toast({
-          title: "Refreshing Data",
-          description: "Fetching the latest dashboard data...",
-        });
-  
-        // Refresh all data sources concurrently
-        await Promise.all([
-          refetchEmployees(),
-          refetchPayroll(),
-          refetchAttendance(),
-        ]);
-  
-        setIsRefreshing(false);
-        toast({
-          title: "Data Refreshed",
-          description: "Dashboard has been updated with the latest data.",
-        });
-      } catch (error) {
-        console.error("Error refreshing data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to refresh dashboard data. Please try again.",
-          variant: "destructive",
-        });
-        setIsRefreshing(false);
-      }
-    }, [
-      refetchEmployees,
-      refetchPayroll,
-      refetchAttendance,
-      toast,
-    ]);
+  const handleRefreshData = useCallback(async () => {
+    try {
+      setIsRefreshing(true);
+      toast({
+        title: "Refreshing Data",
+        description: "Fetching the latest dashboard data...",
+      });
+
+      // Refresh all data sources concurrently
+      await Promise.all([
+        refetchEmployees(),
+        refetchPayroll(),
+        refetchAttendance(),
+      ]);
+
+      setIsRefreshing(false);
+      toast({
+        title: "Data Refreshed",
+        description: "Dashboard has been updated with the latest data.",
+      });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh dashboard data. Please try again.",
+        variant: "destructive",
+      });
+      setIsRefreshing(false);
+    }
+  }, [refetchEmployees, refetchPayroll, refetchAttendance, toast]);
   // Filters state
   const [filters, setFilters] = useState({
     trade: "",
@@ -231,8 +223,6 @@ export default function Dashboard() {
 
   // Set permissions based on user role
 
-
-
   useEffect(() => {
     if (sessionData?.user?.settings && sessionData.user.current_role) {
       const userPermission = sessionData.user.settings.find(
@@ -240,7 +230,6 @@ export default function Dashboard() {
           setting.role.toLowerCase() ===
           sessionData.user.current_role.toLowerCase()
       );
-
 
       if (userPermission) {
         setPermissions(userPermission);
@@ -252,7 +241,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
-      if (sessionData?.user?.currency && sessionData?.user?.companies?.[0]?.base_currency) {
+      if (
+        sessionData?.user?.currency &&
+        sessionData?.user?.companies?.[0]?.base_currency
+      ) {
         const rate = await getExchangeRate(
           sessionData.user.currency,
           sessionData.user.companies[0].base_currency
@@ -260,11 +252,11 @@ export default function Dashboard() {
         setExchangeRate(rate);
       }
     };
-    
+
     fetchExchangeRate();
   }, [sessionData?.user?.currency, sessionData?.user?.companies]);
 
-  payrollData = payrollData.map(item => {
+  payrollData = payrollData.map((item) => {
     // Convert the amount as needed (e.g., multiply by exchange rate, format, etc.)
     const convertedCost = item.cost / exchangeRate;
     const convertedPlanned = item.planned / exchangeRate;
@@ -273,7 +265,7 @@ export default function Dashboard() {
     return {
       ...item,
       cost: convertedCost.toFixed(4),
-      planned: convertedPlanned.toFixed(4)
+      planned: convertedPlanned.toFixed(4),
     };
   });
 
@@ -303,8 +295,9 @@ export default function Dashboard() {
                 currency={sessionData.user.currency}
                 showCurrency={true} 
               /> */}
-              {sessionData.user.currency}{payload[0].value  ?? 0 }
-            </span> 
+              {sessionData.user.currency}
+              {payload[0].value ?? 0}
+            </span>
             <span className="text-sm">Actual Cost</span>
             <span className="text-sm font-medium">
               {/* <ConvertedAmount 
@@ -313,7 +306,7 @@ export default function Dashboard() {
                 showCurrency={true}
               /> */}
               {sessionData.user.currency}
-              {payload[1].value ?? 0} 
+              {payload[1].value ?? 0}
             </span>
           </div>
         </div>
@@ -368,7 +361,7 @@ export default function Dashboard() {
 
   if (isLoading || isSessionLoading) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-white">
         <Sidebar user={user} />
         <div className="flex-1 flex flex-col overflow-hidden">
           <DashboardHeader />
@@ -604,7 +597,7 @@ export default function Dashboard() {
   } = processEmployeeData();
   console.log("total actual payroll", totalActualPayroll);
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-white">
       <Sidebar user={user} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -716,7 +709,8 @@ export default function Dashboard() {
                           Low (&lt; {sessionData.user.currency}100)
                         </SelectItem>
                         <SelectItem value="medium">
-                          {sessionData.user.currency}100 - {sessionData.user.currency}200
+                          {sessionData.user.currency}100 -{" "}
+                          {sessionData.user.currency}200
                         </SelectItem>
                         <SelectItem value="high">
                           High (&gt; {sessionData.user.currency}200)
@@ -786,8 +780,8 @@ export default function Dashboard() {
                 title="Total Actual Payroll"
                 value={
                   <>
-                    <ConvertedAmount 
-                      amount={Number(totalActualPayroll)} 
+                    <ConvertedAmount
+                      amount={Number(totalActualPayroll)}
                       currency={sessionData.user.currency}
                       sessionData={sessionData}
                     />
@@ -814,8 +808,8 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="text-3xl font-bold mb-6">
-                    <ConvertedAmount 
-                      amount={totalActualPayroll} 
+                    <ConvertedAmount
+                      amount={totalActualPayroll}
                       currency={sessionData.user.currency}
                       showCurrency={true}
                       sessionData={sessionData}
@@ -849,12 +843,12 @@ export default function Dashboard() {
                           tickLine={false}
                           tick={{ fontSize: 12, fill: "#888888" }}
                           tickFormatter={(value) => {
-                            return new Intl.NumberFormat('en-US', {
-                              style: 'decimal',
-                              maximumFractionDigits: 0
+                            return new Intl.NumberFormat("en-US", {
+                              style: "decimal",
+                              maximumFractionDigits: 0,
                             }).format(value);
                           }}
-                          domain={[0, (dataMax) =>`${Math.ceil(dataMax)}`]}
+                          domain={[0, (dataMax) => `${Math.ceil(dataMax)}`]}
                           allowDataOverflow={false}
                           width={80}
                           tickCount={6}
@@ -998,15 +992,15 @@ export default function Dashboard() {
                             </div>
                           </td>
                           <td className="p-4">
-                            <ConvertedAmount 
-                              amount={tradeStatistics[trade].planned_budget} 
+                            <ConvertedAmount
+                              amount={tradeStatistics[trade].planned_budget}
                               currency={sessionData.user.currency}
                               sessionData={sessionData}
                             />
                           </td>
                           <td className="p-4">
-                            <ConvertedAmount 
-                              amount={tradeStatistics[trade].actual_cost} 
+                            <ConvertedAmount
+                              amount={tradeStatistics[trade].actual_cost}
                               currency={sessionData.user.currency}
                               sessionData={sessionData}
                             />
@@ -1032,14 +1026,15 @@ export default function Dashboard() {
                                     : ""}
                                 </span>
                               </div>
-                              <ConvertedAmount 
-                                amount={Math.abs(tradeStatistics[trade].difference)} 
+                              <ConvertedAmount
+                                amount={Math.abs(
+                                  tradeStatistics[trade].difference
+                                )}
                                 currency={sessionData.user.currency}
                                 sessionData={sessionData}
                               />
                             </div>
                           </td>
-                
                         </tr>
                       )
                     )}
