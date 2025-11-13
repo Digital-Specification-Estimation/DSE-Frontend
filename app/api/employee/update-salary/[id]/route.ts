@@ -12,7 +12,7 @@ export async function PUT(
 
     // Forward the request to the backend
     const backendResponse = await fetch(
-      `https://dse-backend-uv5d.onrender.com/employee/update-salary/${id}`,
+      `http://localhost:4000/employee/update-salary/${id}`,
       {
         method: "PUT",
         headers: {
