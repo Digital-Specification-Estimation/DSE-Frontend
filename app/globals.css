@@ -81,3 +81,20 @@
   @apply text-green-600 font-medium;
 }
 
+/* .swiper-pagination-bullet {
+  background: #9ca3af;
+  opacity: 0.5;
+  width: 12px;
+  height: 12px;
+}
+
+.swiper-pagination-bullet-active {
+  background: #3b82f6;
+  opacity: 1;
+}
+
+.swiper-button-next,
+.swiper-button-prev {
+  color: #3b82f6;
+  display: none;
+} */
