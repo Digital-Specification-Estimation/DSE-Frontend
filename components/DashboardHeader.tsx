@@ -242,8 +242,8 @@ const DashboardHeader = () => {
               }
             }}
           />
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <kbd className="inline-flex items-center px-2 py-1.5 text-xs font-sans border rounded bg-gray-100 text-gray-500">
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+            <kbd className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded-md border border-gray-200 bg-white text-gray-500 shadow-sm hover:bg-gray-50 transition-colors duration-150 pointer-events-none">
               {navigator.platform.includes("Mac") ? "⌘" : "Ctrl+"}K
             </kbd>
           </div>
@@ -281,7 +281,7 @@ const DashboardHeader = () => {
           <div className="relative flex-row items-center justify-center flex space-x-4">
             <button
               onClick={() => setNotificationShow(!notificationShow)}
-              className=" rounded-md bg-gray-100 px-[10px] h-[40px] hover:bg-gray-200 transition-all duration-200 relative"
+              className=" rounded-md bg-gray-100 border-[1px] border-gray-200 px-[10px] h-[40px] hover:bg-gray-200 transition-all duration-200 relative"
               aria-label="Notifications"
               aria-expanded={notificationShow}
             >
@@ -296,7 +296,7 @@ const DashboardHeader = () => {
             {/* Profile Button */}
             <button
               onClick={() => router.push("/profile")}
-              className="p-2 rounded-full flex flex-row items-center justify-center space-x-[10px] bg-gray-100 hover:bg-gray-200 transition-colors relative"
+              className="p-2 rounded-full border-[1px] border-gray-200 flex flex-row items-center justify-center space-x-[10px] bg-gray-100 hover:bg-gray-200 transition-colors relative"
               aria-label="User profile"
             >
               <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-sm">
