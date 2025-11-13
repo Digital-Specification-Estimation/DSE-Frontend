@@ -46,7 +46,7 @@ export const attendanceApi = createApi({
     getAttendance: builder.query({
       query: ({ daysAgo, status }) => `time/${daysAgo}/${status}`,
     }),
-    
+
     getAttendanceByDate: builder.query({
       query: ({ date, status }) => `by-date?date=${date}&status=${status}`,
     }),
@@ -60,8 +60,8 @@ export const attendanceApi = createApi({
       query: ({ employeeId, startDate, endDate }) => {
         let url = `history/${employeeId}`;
         const params = new URLSearchParams();
-        if (startDate) params.append('startDate', startDate);
-        if (endDate) params.append('endDate', endDate);
+        if (startDate) params.append("startDate", startDate);
+        if (endDate) params.append("endDate", endDate);
         if (params.toString()) url += `?${params.toString()}`;
         return url;
       },
@@ -70,8 +70,8 @@ export const attendanceApi = createApi({
       query: ({ employeeId, startDate, endDate }) => {
         let url = `history/${employeeId}`;
         const params = new URLSearchParams();
-        if (startDate) params.append('startDate', startDate);
-        if (endDate) params.append('endDate', endDate);
+        if (startDate) params.append("startDate", startDate);
+        if (endDate) params.append("endDate", endDate);
         if (params.toString()) url += `?${params.toString()}`;
         return url;
       },
@@ -87,8 +87,8 @@ export const attendanceApi = createApi({
       query: ({ employeeId, startDate, endDate }) => {
         let url = `payroll/${employeeId}`;
         const params = new URLSearchParams();
-        if (startDate) params.append('startDate', startDate);
-        if (endDate) params.append('endDate', endDate);
+        if (startDate) params.append("startDate", startDate);
+        if (endDate) params.append("endDate", endDate);
         if (params.toString()) url += `?${params.toString()}`;
         return url;
       },
@@ -97,8 +97,8 @@ export const attendanceApi = createApi({
       query: ({ companyId, startDate, endDate }) => {
         let url = `payroll/company/${companyId}`;
         const params = new URLSearchParams();
-        if (startDate) params.append('startDate', startDate);
-        if (endDate) params.append('endDate', endDate);
+        if (startDate) params.append("startDate", startDate);
+        if (endDate) params.append("endDate", endDate);
         if (params.toString()) url += `?${params.toString()}`;
         return url;
       },
@@ -107,9 +107,9 @@ export const attendanceApi = createApi({
       query: ({ projectId, companyId, startDate, endDate }) => {
         let url = `payroll/project/${projectId}`;
         const params = new URLSearchParams();
-        params.append('companyId', companyId);
-        if (startDate) params.append('startDate', startDate);
-        if (endDate) params.append('endDate', endDate);
+        params.append("companyId", companyId);
+        if (startDate) params.append("startDate", startDate);
+        if (endDate) params.append("endDate", endDate);
         return `${url}?${params.toString()}`;
       },
     }),

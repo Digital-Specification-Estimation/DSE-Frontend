@@ -89,7 +89,7 @@ export const authApi = createApi({
     baseUrl: "https://dse-backend-uv5d.onrender.com/auth",
     credentials: "include",
   }),
-  tagTypes: ['Session'],
+  tagTypes: ["Session"],
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponseDto, LoginBodyDto>({
       query: (credentials) => ({
@@ -122,7 +122,7 @@ export const authApi = createApi({
         url: "/session",
         method: "GET",
       }),
-      providesTags: ['Session'], 
+      providesTags: ["Session"],
     }),
     forgotPassword: builder.mutation<MessageResponse, ForgotPasswordDto>({
       query: (body) => ({

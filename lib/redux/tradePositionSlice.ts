@@ -38,7 +38,10 @@ export const tradePositionApi = createApi({
         method: "PATCH",
       }),
     }),
-    assignTradeToProject: builder.mutation<any, { projectId: string; tradePositionId: string }>({
+    assignTradeToProject: builder.mutation<
+      any,
+      { projectId: string; tradePositionId: string }
+    >({
       query: ({ projectId, tradePositionId }) => ({
         url: "assign-project",
         method: "POST",

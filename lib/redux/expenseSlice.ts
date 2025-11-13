@@ -6,9 +6,9 @@ export const expenseApi = createApi({
     baseUrl: "https://dse-backend-uv5d.onrender.com/expenses",
     credentials: "include",
     prepareHeaders: (headers) => {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem("authToken");
       if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
+        headers.set("Authorization", `Bearer ${token}`);
       }
       return headers;
     },
@@ -26,15 +26,21 @@ export const expenseApi = createApi({
     }),
 
     // Get all expenses with optional filters
-    getExpenses: builder.query<ExpenseEntity[], { projectId?: string; companyId?: string } | void>({
+    getExpenses: builder.query<
+      ExpenseEntity[],
+      { projectId?: string; companyId?: string } | void
+    >({
       query: (filters) => ({
         url: "/",
         params: filters || {},
       }),
       providesTags: (result) =>
         result
-          ? [...result.map(({ id }) => ({ type: 'Expense' as const, id })), 'Expense']
-          : ['Expense'],
+          ? [
+              ...result.map(({ id }) => ({ type: "Expense" as const, id })),
+              "Expense",
+            ]
+          : ["Expense"],
     }),
 
     // Get expenses by project ID
@@ -42,24 +48,30 @@ export const expenseApi = createApi({
       query: (projectId) => `/project/${projectId}`,
       providesTags: (result) =>
         result
-          ? [...result.map(({ id }) => ({ type: 'Expense' as const, id })), 'Expense']
-          : ['Expense'],
+          ? [
+              ...result.map(({ id }) => ({ type: "Expense" as const, id })),
+              "Expense",
+            ]
+          : ["Expense"],
     }),
 
     // Get single expense by ID
     getExpense: builder.query<ExpenseEntity, string>({
       query: (id) => `/${id}`,
-      providesTags: (result, error, id) => [{ type: 'Expense', id }],
+      providesTags: (result, error, id) => [{ type: "Expense", id }],
     }),
 
     // Update an expense
-    updateExpense: builder.mutation<ExpenseEntity, { id: string; data: Partial<UpdateExpenseDto> }>({
+    updateExpense: builder.mutation<
+      ExpenseEntity,
+      { id: string; data: Partial<UpdateExpenseDto> }
+    >({
       query: ({ id, data }) => ({
         url: `/${id}`,
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Expense', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: "Expense", id }],
     }),
 
     // Delete an expense
@@ -68,7 +80,7 @@ export const expenseApi = createApi({
         url: `/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: (result, error, id) => [{ type: 'Expense', id }],
+      invalidatesTags: (result, error, id) => [{ type: "Expense", id }],
     }),
   }),
 });

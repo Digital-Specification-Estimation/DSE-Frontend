@@ -5,7 +5,7 @@ export interface ProjectTradeAssignment {
   tradeId: string;
   selectedEmployeeIds: string[];
   employeeCount?: number;
-  selectionMode: 'specific' | 'count';
+  selectionMode: "specific" | "count";
 }
 
 export interface EnhancedProjectData {
@@ -80,11 +80,15 @@ export const projectApi = createApi({
     }),
     getProjectEmployees: builder.query({
       query: (projectId) => `${projectId}/employees`,
-      providesTags: (result, error, projectId) => [{ type: "Projects", id: projectId }],
+      providesTags: (result, error, projectId) => [
+        { type: "Projects", id: projectId },
+      ],
     }),
     getProjectFinancialMetrics: builder.query<any, string>({
       query: (projectId) => `${projectId}/financial-metrics`,
-      providesTags: (result, error, projectId) => [{ type: "Projects", id: `${projectId}-metrics` }],
+      providesTags: (result, error, projectId) => [
+        { type: "Projects", id: `${projectId}-metrics` },
+      ],
     }),
   }),
 });

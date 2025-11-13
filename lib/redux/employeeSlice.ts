@@ -67,7 +67,10 @@ export const employeeApi = createApi({
       query: () => "monthly-stats",
       // keepUnusedDataFor: 3600, // 1 hour in seconds
     }),
-    updateEmployeeProject: builder.mutation<any, { employeeId: string; projectId: string | null }>({
+    updateEmployeeProject: builder.mutation<
+      any,
+      { employeeId: string; projectId: string | null }
+    >({
       query: ({ employeeId, projectId }) => ({
         url: `${employeeId}/project`,
         method: "PATCH",
@@ -75,7 +78,10 @@ export const employeeApi = createApi({
       }),
       invalidatesTags: ["Employees"],
     }),
-    updateEmployeesProject: builder.mutation<any, { employeeIds: string[]; projectId: string | null }>({
+    updateEmployeesProject: builder.mutation<
+      any,
+      { employeeIds: string[]; projectId: string | null }
+    >({
       query: ({ employeeIds, projectId }) => ({
         url: "update-project",
         method: "PUT",

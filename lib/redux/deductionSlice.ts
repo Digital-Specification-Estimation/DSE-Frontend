@@ -63,7 +63,10 @@ export const deductionApi = createApi({
     }),
 
     // Update a deduction
-    updateDeduction: builder.mutation<Deduction, { id: string; data: UpdateDeductionDto }>({
+    updateDeduction: builder.mutation<
+      Deduction,
+      { id: string; data: UpdateDeductionDto }
+    >({
       query: ({ id, data }) => ({
         url: `/${id}`,
         method: "PATCH",

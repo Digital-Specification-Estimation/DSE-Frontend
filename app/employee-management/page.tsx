@@ -624,7 +624,9 @@ export default function EmployeeManagement() {
     const fetchCompanies = async () => {
       setIsLoadingCompanies(true);
       try {
-        const response = await fetch("https://dse-backend-uv5d.onrender.com/company/companies");
+        const response = await fetch(
+          "https://dse-backend-uv5d.onrender.com/company/companies"
+        );
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
@@ -1401,7 +1403,7 @@ export default function EmployeeManagement() {
                   } else {
                     pageNum = currentPage - 2 + i;
                   }
-                  
+
                   return (
                     <Button
                       key={pageNum}

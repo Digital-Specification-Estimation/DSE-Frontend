@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo } from "react";
 
 // Professional construction industry units
 const STANDARD_UNITS = [
@@ -55,45 +55,73 @@ const STANDARD_UNITS = [
   { value: "batch", label: "Batch" },
   { value: "job", label: "Job" },
   { value: "lump-sum", label: "Lump Sum" },
-]
-import { Sidebar } from "@/components/sidebar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import DashboardHeader from "@/components/DashboardHeader"
-import { BriefcaseBusiness, CalendarIcon, ChartNetwork, Download, FileText, Percent, Upload } from "lucide-react"
-import { useGetProjectsQuery, useGetProjectFinancialMetricsQuery } from "@/lib/redux/projectSlice"
-import { toast, useToast } from "@/components/ui/use-toast"
-import { useSessionQuery } from "@/lib/redux/authSlice"
-import { useCreateBOQMutation, useGetBOQByProjectQuery, useUpdateBOQProgressMutation } from "@/lib/redux/boqSlice"
-import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice"
-import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice"
-import { useGetDeductionsQuery } from "@/lib/redux/deductionSlice"
+];
+import { Sidebar } from "@/components/sidebar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import DashboardHeader from "@/components/DashboardHeader";
+import {
+  BriefcaseBusiness,
+  CalendarIcon,
+  ChartNetwork,
+  Download,
+  FileText,
+  Percent,
+  Upload,
+} from "lucide-react";
+import {
+  useGetProjectsQuery,
+  useGetProjectFinancialMetricsQuery,
+} from "@/lib/redux/projectSlice";
+import { toast, useToast } from "@/components/ui/use-toast";
+import { useSessionQuery } from "@/lib/redux/authSlice";
+import {
+  useCreateBOQMutation,
+  useGetBOQByProjectQuery,
+  useUpdateBOQProgressMutation,
+} from "@/lib/redux/boqSlice";
+import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
+import { useGetEmployeesQuery } from "@/lib/redux/employeeSlice";
+import { useGetDeductionsQuery } from "@/lib/redux/deductionSlice";
 import {
   useCreateRevenueMutation,
   useGetRevenuesByProjectQuery,
   useDeleteRevenueMutation,
-} from "@/lib/redux/revenueSlice"
-import { useCreateExpenseMutation, useGetExpensesByProjectQuery } from "@/lib/redux/expenseSlice" // Corrected import path
-import { convertCurrency, getExchangeRate } from "@/lib/utils"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { Label } from "@/components/ui/label"
+} from "@/lib/redux/revenueSlice";
+import {
+  useCreateExpenseMutation,
+  useGetExpensesByProjectQuery,
+} from "@/lib/redux/expenseSlice"; // Corrected import path
+import { convertCurrency, getExchangeRate } from "@/lib/utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
 // Assuming BOQItem type is defined elsewhere, or define it here if necessary
 type BOQItem = {
-  id: string
-  item_no: string
-  description: string
-  unit: string
-  quantity: number
-  rate: number
-  amount: number
-  completed_qty?: number
-  project_id: string
-  company_id: string
-}
+  id: string;
+  item_no: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+  completed_qty?: number;
+  project_id: string;
+  company_id: string;
+};
 
 // Component to display converted currency amounts
 function ConvertedAmount({
@@ -102,45 +130,45 @@ function ConvertedAmount({
   showCurrency = true,
   sessionData, // Added sessionData as a prop
 }: {
-  amount: number
-  currency: string
-  showCurrency?: boolean
-  sessionData: any // Type for sessionData
+  amount: number;
+  currency: string;
+  showCurrency?: boolean;
+  sessionData: any; // Type for sessionData
 }) {
-  const [convertedAmount, setConvertedAmount] = useState<string>("...")
+  const [convertedAmount, setConvertedAmount] = useState<string>("...");
   useEffect(() => {
     const convert = async () => {
       // Only convert if amount is defined and not NaN
       if (amount === undefined || isNaN(amount)) {
-        setConvertedAmount("N/A")
-        return
+        setConvertedAmount("N/A");
+        return;
       }
 
       // Ensure sessionData and base_currency are available
-      const baseCurrency = sessionData?.user?.companies?.[0]?.base_currency
+      const baseCurrency = sessionData?.user?.companies?.[0]?.base_currency;
       if (!baseCurrency) {
-        console.error("Base currency not found in sessionData.")
-        setConvertedAmount("N/A")
-        return
+        console.error("Base currency not found in sessionData.");
+        setConvertedAmount("N/A");
+        return;
       }
 
       try {
         // Only convert if the target currency is different from the source
         if (currency === baseCurrency) {
-          setConvertedAmount(amount.toLocaleString())
-          return
+          setConvertedAmount(amount.toLocaleString());
+          return;
         }
 
-        const result = await convertCurrency(amount, currency, baseCurrency)
-        setConvertedAmount(result)
+        const result = await convertCurrency(amount, currency, baseCurrency);
+        setConvertedAmount(result);
       } catch (error) {
-        console.error("Error converting currency:", error)
-        setConvertedAmount("Error")
+        console.error("Error converting currency:", error);
+        setConvertedAmount("Error");
       }
-    }
+    };
 
-    convert()
-  }, [amount, currency, sessionData])
+    convert();
+  }, [amount, currency, sessionData]);
 
   return (
     <>
@@ -154,7 +182,7 @@ function ConvertedAmount({
             maximumFractionDigits: 2,
           })}
     </>
-  )
+  );
 }
 
 // Profit & Loss Statement Component
@@ -194,18 +222,26 @@ const ProfitLossStatement = ({
     const generateInitialPeriods = (count: number) => {
       const now = new Date();
       const periodsObj: any = {};
-      
+
       for (let i = 1; i <= count; i++) {
-        const periodStart = new Date(now.getFullYear(), now.getMonth() - 1 + (i - 1), 1);
-        const periodEnd = new Date(now.getFullYear(), now.getMonth() + (i - 1), 0);
-        
+        const periodStart = new Date(
+          now.getFullYear(),
+          now.getMonth() - 1 + (i - 1),
+          1
+        );
+        const periodEnd = new Date(
+          now.getFullYear(),
+          now.getMonth() + (i - 1),
+          0
+        );
+
         periodsObj[`period${i}`] = {
           startDate: periodStart.toISOString().split("T")[0],
           endDate: periodEnd.toISOString().split("T")[0],
           label: `Period ${i}`,
         };
       }
-      
+
       return periodsObj;
     };
 
@@ -232,23 +268,31 @@ const ProfitLossStatement = ({
   // Function to handle period count changes
   const handlePeriodCountChange = (newCount: number) => {
     setNumberOfPeriods(newCount);
-    
+
     // Generate new periods
     const generatePeriods = (count: number) => {
       const now = new Date();
       const periodsObj: any = {};
-      
+
       for (let i = 1; i <= count; i++) {
-        const periodStart = new Date(now.getFullYear(), now.getMonth() - 1 + (i - 1), 1);
-        const periodEnd = new Date(now.getFullYear(), now.getMonth() + (i - 1), 0);
-        
+        const periodStart = new Date(
+          now.getFullYear(),
+          now.getMonth() - 1 + (i - 1),
+          1
+        );
+        const periodEnd = new Date(
+          now.getFullYear(),
+          now.getMonth() + (i - 1),
+          0
+        );
+
         periodsObj[`period${i}`] = {
           startDate: periodStart.toISOString().split("T")[0],
           endDate: periodEnd.toISOString().split("T")[0],
           label: `Period ${i}`,
         };
       }
-      
+
       return periodsObj;
     };
 
@@ -257,12 +301,12 @@ const ProfitLossStatement = ({
     // Update other states to match new period count
     const newOtherLabour: any = {};
     const newOtherExpenses: any = {};
-    
+
     for (let i = 1; i <= newCount; i++) {
       newOtherLabour[`period${i}`] = otherLabour[`period${i}`] || 0;
       newOtherExpenses[`period${i}`] = otherExpenses[`period${i}`] || 0;
     }
-    
+
     setOtherLabour(newOtherLabour);
     setOtherExpenses(newOtherExpenses);
   };
@@ -274,16 +318,21 @@ const ProfitLossStatement = ({
   useEffect(() => {
     if (selectedProjectId) {
       setIsRecalculating(true);
-      
+
       // Log all current periods dynamically
       const periodLog: any = {};
       for (let i = 1; i <= numberOfPeriods; i++) {
         const periodKey = `period${i}`;
         if (periods[periodKey]) {
-          periodLog[periodKey] = `${periods[periodKey].startDate} to ${periods[periodKey].endDate}`;
+          periodLog[
+            periodKey
+          ] = `${periods[periodKey].startDate} to ${periods[periodKey].endDate}`;
         }
       }
-      console.log("Period dates changed, triggering data recalculation...", periodLog);
+      console.log(
+        "Period dates changed, triggering data recalculation...",
+        periodLog
+      );
 
       // Show toast notification
       toast({
@@ -628,7 +677,7 @@ const ProfitLossStatement = ({
     // Sum revenue from all selected periods dynamically
     let totalRevenue = 0;
     const periodLog: any = {};
-    
+
     for (let i = 1; i <= numberOfPeriods; i++) {
       const periodKey = `period${i}`;
       const periodRevenue = calculatePeriodRevenue(periodKey);
@@ -664,7 +713,7 @@ const ProfitLossStatement = ({
     });
 
     // Add editable other expenses
-    totalExpenses += (otherExpenses[periodKey] || 0);
+    totalExpenses += otherExpenses[periodKey] || 0;
 
     return totalExpenses;
   };
@@ -684,7 +733,7 @@ const ProfitLossStatement = ({
   // Total calculations with memoization for performance
   const totalRevenue = calculateTotalProjectRevenue;
 
-// ... (rest of the code remains the same)
+  // ... (rest of the code remains the same)
   const totalExpenses = useMemo(() => {
     let total = 0;
     for (let i = 1; i <= numberOfPeriods; i++) {
@@ -723,123 +772,151 @@ const ProfitLossStatement = ({
           if (amount === undefined || isNaN(amount)) return "0.00";
           const baseCurrency = sessionData?.user?.companies?.[0]?.base_currency;
           if (!baseCurrency) return amount.toFixed(2);
-          
+
           if (sessionData.user.currency === baseCurrency) {
             return amount.toLocaleString(undefined, {
               minimumFractionDigits: 2,
-              maximumFractionDigits: 2
+              maximumFractionDigits: 2,
             });
           }
-          
-          const result = await convertCurrency(amount, sessionData.user.currency, baseCurrency);
-          return typeof result === 'number' 
-            ? result.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+          const result = await convertCurrency(
+            amount,
+            sessionData.user.currency,
+            baseCurrency
+          );
+          return typeof result === "number"
+            ? result.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })
             : result;
         } catch (error) {
           console.error("Error in formatCurrencyValue:", error);
           return amount?.toFixed(2) || "0.00";
         }
       };
-  
+
       // Pre-calculate all currency values first
       console.log("Starting currency conversions...");
-      
+
       // Revenue calculations
-      const [period1Revenue, period2Revenue, period3Revenue] = await Promise.all([
-        formatCurrencyValue(calculatePeriodRevenue("period1")),
-        formatCurrencyValue(calculatePeriodRevenue("period2")),
-        formatCurrencyValue(calculatePeriodRevenue("period3"))
-      ]);
-      
+      const [period1Revenue, period2Revenue, period3Revenue] =
+        await Promise.all([
+          formatCurrencyValue(calculatePeriodRevenue("period1")),
+          formatCurrencyValue(calculatePeriodRevenue("period2")),
+          formatCurrencyValue(calculatePeriodRevenue("period3")),
+        ]);
+
       const totalRevenue = await formatCurrencyValue(
         calculatePeriodRevenue("period1") +
-        calculatePeriodRevenue("period2") +
-        calculatePeriodRevenue("period3")
+          calculatePeriodRevenue("period2") +
+          calculatePeriodRevenue("period3")
       );
-  
+
       // Process trades
-      const tradeRows = await Promise.all(projectTrades.map(async (trade: any) => {
-        const tradeName = trade.name || trade.trade_name || trade.position_name || trade.title || "Unknown Trade";
-        const [period1Payroll, period2Payroll, period3Payroll] = await Promise.all([
-          formatCurrencyValue(calculateTradePayroll(trade.id, "period1")),
-          formatCurrencyValue(calculateTradePayroll(trade.id, "period2")),
-          formatCurrencyValue(calculateTradePayroll(trade.id, "period3"))
-        ]);
-        
-        const totalTradePayroll = await formatCurrencyValue(
-          calculateTradePayroll(trade.id, "period1") +
-          calculateTradePayroll(trade.id, "period2") +
-          calculateTradePayroll(trade.id, "period3")
-        );
-  
-        return {
-          name: tradeName,
-          period1: period1Payroll,
-          period2: period2Payroll,
-          period3: period3Payroll,
-          total: totalTradePayroll
-        };
-      }));
-  
+      const tradeRows = await Promise.all(
+        projectTrades.map(async (trade: any) => {
+          const tradeName =
+            trade.name ||
+            trade.trade_name ||
+            trade.position_name ||
+            trade.title ||
+            "Unknown Trade";
+          const [period1Payroll, period2Payroll, period3Payroll] =
+            await Promise.all([
+              formatCurrencyValue(calculateTradePayroll(trade.id, "period1")),
+              formatCurrencyValue(calculateTradePayroll(trade.id, "period2")),
+              formatCurrencyValue(calculateTradePayroll(trade.id, "period3")),
+            ]);
+
+          const totalTradePayroll = await formatCurrencyValue(
+            calculateTradePayroll(trade.id, "period1") +
+              calculateTradePayroll(trade.id, "period2") +
+              calculateTradePayroll(trade.id, "period3")
+          );
+
+          return {
+            name: tradeName,
+            period1: period1Payroll,
+            period2: period2Payroll,
+            period3: period3Payroll,
+            total: totalTradePayroll,
+          };
+        })
+      );
+
       // Process expense categories
-      const expenseRows = await Promise.all(expenseCategories.map(async (category: string) => {
-        const [period1, period2, period3] = await Promise.all([
-          formatCurrencyValue(calculateExpenseByCategory(category, "period1")),
-          formatCurrencyValue(calculateExpenseByCategory(category, "period2")),
-          formatCurrencyValue(calculateExpenseByCategory(category, "period3"))
-        ]);
-        
-        const total = await formatCurrencyValue(
-          calculateExpenseByCategory(category, "period1") +
-          calculateExpenseByCategory(category, "period2") +
-          calculateExpenseByCategory(category, "period3")
-        );
-  
-        return { category, period1, period2, period3, total };
-      }));
-  
+      const expenseRows = await Promise.all(
+        expenseCategories.map(async (category: string) => {
+          const [period1, period2, period3] = await Promise.all([
+            formatCurrencyValue(
+              calculateExpenseByCategory(category, "period1")
+            ),
+            formatCurrencyValue(
+              calculateExpenseByCategory(category, "period2")
+            ),
+            formatCurrencyValue(
+              calculateExpenseByCategory(category, "period3")
+            ),
+          ]);
+
+          const total = await formatCurrencyValue(
+            calculateExpenseByCategory(category, "period1") +
+              calculateExpenseByCategory(category, "period2") +
+              calculateExpenseByCategory(category, "period3")
+          );
+
+          return { category, period1, period2, period3, total };
+        })
+      );
+
       // Calculate other values
-      const [otherLabourPeriod1, otherLabourPeriod2, otherLabourPeriod3] = await Promise.all([
-        formatCurrencyValue(otherLabour.period1),
-        formatCurrencyValue(otherLabour.period2),
-        formatCurrencyValue(otherLabour.period3)
-      ]);
-  
+      const [otherLabourPeriod1, otherLabourPeriod2, otherLabourPeriod3] =
+        await Promise.all([
+          formatCurrencyValue(otherLabour.period1),
+          formatCurrencyValue(otherLabour.period2),
+          formatCurrencyValue(otherLabour.period3),
+        ]);
+
       const otherLabourTotal = await formatCurrencyValue(
         otherLabour.period1 + otherLabour.period2 + otherLabour.period3
       );
-  
-      const [totalLabourPeriod1, totalLabourPeriod2, totalLabourPeriod3] = await Promise.all([
-        formatCurrencyValue(calculateTotalLabour("period1")),
-        formatCurrencyValue(calculateTotalLabour("period2")),
-        formatCurrencyValue(calculateTotalLabour("period3"))
-      ]);
-  
+
+      const [totalLabourPeriod1, totalLabourPeriod2, totalLabourPeriod3] =
+        await Promise.all([
+          formatCurrencyValue(calculateTotalLabour("period1")),
+          formatCurrencyValue(calculateTotalLabour("period2")),
+          formatCurrencyValue(calculateTotalLabour("period3")),
+        ]);
+
       const totalLabour = await formatCurrencyValue(
         calculateTotalLabour("period1") +
-        calculateTotalLabour("period2") +
-        calculateTotalLabour("period3")
+          calculateTotalLabour("period2") +
+          calculateTotalLabour("period3")
       );
-  
-      const [totalExpensesPeriod1, totalExpensesPeriod2, totalExpensesPeriod3] = await Promise.all([
-        formatCurrencyValue(calculatePeriodExpenses("period1")),
-        formatCurrencyValue(calculatePeriodExpenses("period2")),
-        formatCurrencyValue(calculatePeriodExpenses("period3"))
-      ]);
-  
+
+      const [totalExpensesPeriod1, totalExpensesPeriod2, totalExpensesPeriod3] =
+        await Promise.all([
+          formatCurrencyValue(calculatePeriodExpenses("period1")),
+          formatCurrencyValue(calculatePeriodExpenses("period2")),
+          formatCurrencyValue(calculatePeriodExpenses("period3")),
+        ]);
+
       const totalExpensesValue = await formatCurrencyValue(totalExpenses);
-  
-      const [netProfitPeriod1, netProfitPeriod2, netProfitPeriod3] = await Promise.all([
-        formatCurrencyValue(calculatePeriodProfit("period1")),
-        formatCurrencyValue(calculatePeriodProfit("period2")),
-        formatCurrencyValue(calculatePeriodProfit("period3"))
-      ]);
-  
+
+      const [netProfitPeriod1, netProfitPeriod2, netProfitPeriod3] =
+        await Promise.all([
+          formatCurrencyValue(calculatePeriodProfit("period1")),
+          formatCurrencyValue(calculatePeriodProfit("period2")),
+          formatCurrencyValue(calculatePeriodProfit("period3")),
+        ]);
+
       const totalNetProfit = await formatCurrencyValue(totalProfit);
-  
+
       // Now that all async operations are complete, build the HTML
       console.log("All data loaded, generating HTML...");
-      
+
       // Build your HTML content here using the pre-calculated values
       const htmlContent = `
       <!DOCTYPE html>
@@ -890,7 +967,10 @@ const ProfitLossStatement = ({
           </div>
           
           <h1>PROFIT & LOSS STATEMENT</h1>
-          <div>DECENT ENGINEERING CONSTRUCTION Ltd - ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
+          <div>DECENT ENGINEERING CONSTRUCTION Ltd - ${new Date().toLocaleDateString(
+            "en-US",
+            { month: "long", year: "numeric" }
+          )}</div>
           
           <table>
               <thead>
@@ -907,48 +987,52 @@ const ProfitLossStatement = ({
                             })
                           : "Invalid Date"
                       } - ${
-                        periods.period1.endDate &&
-                        !isNaN(new Date(periods.period1.endDate).getTime())
-                          ? new Date(periods.period1.endDate).toLocaleDateString("en-US", {
-                              day: "numeric",
-                              month: "short",
-                            })
-                          : "Invalid Date"
-                      })</th>
+        periods.period1.endDate &&
+        !isNaN(new Date(periods.period1.endDate).getTime())
+          ? new Date(periods.period1.endDate).toLocaleDateString("en-US", {
+              day: "numeric",
+              month: "short",
+            })
+          : "Invalid Date"
+      })</th>
                       <th>Period 2 (${
                         periods.period2.startDate &&
                         !isNaN(new Date(periods.period2.startDate).getTime())
-                          ? new Date(periods.period2.startDate).toLocaleDateString("en-US", {
+                          ? new Date(
+                              periods.period2.startDate
+                            ).toLocaleDateString("en-US", {
                               day: "numeric",
                               month: "short",
                             })
                           : "Invalid Date"
                       } - ${
-                        periods.period2.endDate &&
-                        !isNaN(new Date(periods.period2.endDate).getTime())
-                          ? new Date(periods.period2.endDate).toLocaleDateString("en-US", {
-                              day: "numeric",
-                              month: "short",
-                            })
-                          : "Invalid Date"
-                      })</th>
+        periods.period2.endDate &&
+        !isNaN(new Date(periods.period2.endDate).getTime())
+          ? new Date(periods.period2.endDate).toLocaleDateString("en-US", {
+              day: "numeric",
+              month: "short",
+            })
+          : "Invalid Date"
+      })</th>
                       <th>Period 3 (${
                         periods.period3.startDate &&
                         !isNaN(new Date(periods.period3.startDate).getTime())
-                          ? new Date(periods.period3.startDate).toLocaleDateString("en-US", {
+                          ? new Date(
+                              periods.period3.startDate
+                            ).toLocaleDateString("en-US", {
                               day: "numeric",
                               month: "short",
                             })
                           : "Invalid Date"
                       } - ${
-                        periods.period3.endDate &&
-                        !isNaN(new Date(periods.period3.endDate).getTime())
-                          ? new Date(periods.period3.endDate).toLocaleDateString("en-US", {
-                              day: "numeric",
-                              month: "short",
-                            })
-                          : "Invalid Date"
-                      })</th>
+        periods.period3.endDate &&
+        !isNaN(new Date(periods.period3.endDate).getTime())
+          ? new Date(periods.period3.endDate).toLocaleDateString("en-US", {
+              day: "numeric",
+              month: "short",
+            })
+          : "Invalid Date"
+      })</th>
                       <th>TOTAL (${sessionData.user.currency})</th>
                   </tr>
               </thead>
@@ -973,22 +1057,29 @@ const ProfitLossStatement = ({
                   <tr class="section-header expenses">
                       <td>EXPENSES</td><td></td><td></td><td></td><td></td>
                   </tr>
-                  ${await Promise.all(projectTrades.map(async (trade: any) => {
-                    const tradeName =
-                      trade.name ||
-                      trade.trade_name ||
-                      trade.position_name ||
-                      trade.title ||
-                      "Unknown Trade";
-                    const period1Payroll = await formatCurrencyValue(calculateTradePayroll(trade.id, "period1"));
-                    const period2Payroll = await formatCurrencyValue(calculateTradePayroll(trade.id, "period2"));
-                    const period3Payroll = await formatCurrencyValue(calculateTradePayroll(trade.id, "period3"));
-                    const totalTradePayroll = await formatCurrencyValue(
-                      calculateTradePayroll(trade.id, "period1") +
-                      calculateTradePayroll(trade.id, "period2") +
-                      calculateTradePayroll(trade.id, "period3")
-                    );
-                    return `
+                  ${await Promise.all(
+                    projectTrades.map(async (trade: any) => {
+                      const tradeName =
+                        trade.name ||
+                        trade.trade_name ||
+                        trade.position_name ||
+                        trade.title ||
+                        "Unknown Trade";
+                      const period1Payroll = await formatCurrencyValue(
+                        calculateTradePayroll(trade.id, "period1")
+                      );
+                      const period2Payroll = await formatCurrencyValue(
+                        calculateTradePayroll(trade.id, "period2")
+                      );
+                      const period3Payroll = await formatCurrencyValue(
+                        calculateTradePayroll(trade.id, "period3")
+                      );
+                      const totalTradePayroll = await formatCurrencyValue(
+                        calculateTradePayroll(trade.id, "period1") +
+                          calculateTradePayroll(trade.id, "period2") +
+                          calculateTradePayroll(trade.id, "period3")
+                      );
+                      return `
                       <tr>
                           <td class="indent">Labour ${tradeName}</td>
                           <td class="number">${period1Payroll}</td>
@@ -996,39 +1087,59 @@ const ProfitLossStatement = ({
                           <td class="number">${period3Payroll}</td>
                           <td class="number">${totalTradePayroll}</td>
                       </tr>`;
-                  }))}
+                    })
+                  )}
                   <tr>
                       <td class="indent">Other</td>
-                      <td class="number">${await formatCurrencyValue(otherLabour.period1)}</td>
-                      <td class="number">${await formatCurrencyValue(otherLabour.period2)}</td>
-                      <td class="number">${await formatCurrencyValue(otherLabour.period3)}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        otherLabour.period1
+                      )}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        otherLabour.period2
+                      )}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        otherLabour.period3
+                      )}</td>
                       <td class="number">${await formatCurrencyValue(
                         otherLabour.period1 +
-                        otherLabour.period2 +
-                        otherLabour.period3
+                          otherLabour.period2 +
+                          otherLabour.period3
                       )}</td>
                   </tr>
                   <tr class="subtotal">
                       <td class="indent">Total Labour</td>
-                      <td class="number">${await formatCurrencyValue(calculateTotalLabour("period1"))}</td>
-                      <td class="number">${await formatCurrencyValue(calculateTotalLabour("period2"))}</td>
-                      <td class="number">${await formatCurrencyValue(calculateTotalLabour("period3"))}</td>
                       <td class="number">${await formatCurrencyValue(
-                        calculateTotalLabour("period1") +
-                        calculateTotalLabour("period2") +
+                        calculateTotalLabour("period1")
+                      )}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        calculateTotalLabour("period2")
+                      )}</td>
+                      <td class="number">${await formatCurrencyValue(
                         calculateTotalLabour("period3")
                       )}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        calculateTotalLabour("period1") +
+                          calculateTotalLabour("period2") +
+                          calculateTotalLabour("period3")
+                      )}</td>
                   </tr>
-                  ${await Promise.all(expenseCategories.map(async (category: string) => {
-                    const period1Amount = await formatCurrencyValue(calculateExpenseByCategory(category, "period1"));
-                    const period2Amount = await formatCurrencyValue(calculateExpenseByCategory(category, "period2"));
-                    const period3Amount = await formatCurrencyValue(calculateExpenseByCategory(category, "period3"));
-                    const totalAmount = await formatCurrencyValue(
-                      calculateExpenseByCategory(category, "period1") +
-                      calculateExpenseByCategory(category, "period2") +
-                      calculateExpenseByCategory(category, "period3")
-                    );
-                    return `
+                  ${await Promise.all(
+                    expenseCategories.map(async (category: string) => {
+                      const period1Amount = await formatCurrencyValue(
+                        calculateExpenseByCategory(category, "period1")
+                      );
+                      const period2Amount = await formatCurrencyValue(
+                        calculateExpenseByCategory(category, "period2")
+                      );
+                      const period3Amount = await formatCurrencyValue(
+                        calculateExpenseByCategory(category, "period3")
+                      );
+                      const totalAmount = await formatCurrencyValue(
+                        calculateExpenseByCategory(category, "period1") +
+                          calculateExpenseByCategory(category, "period2") +
+                          calculateExpenseByCategory(category, "period3")
+                      );
+                      return `
                       <tr>
                           <td class="indent">${category}</td>
                           <td class="number">${period1Amount}</td>
@@ -1036,47 +1147,78 @@ const ProfitLossStatement = ({
                           <td class="number">${period3Amount}</td>
                           <td class="number">${totalAmount}</td>
                       </tr>`;
-                  }))}
+                    })
+                  )}
                   <tr>
                       <td class="indent">Other Expenses</td>
-                      <td class="number">${await formatCurrencyValue(otherExpenses.period1)}</td>
-                      <td class="number">${await formatCurrencyValue(otherExpenses.period2)}</td>
-                      <td class="number">${await formatCurrencyValue(otherExpenses.period3)}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        otherExpenses.period1
+                      )}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        otherExpenses.period2
+                      )}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        otherExpenses.period3
+                      )}</td>
                       <td class="number">${await formatCurrencyValue(
                         otherExpenses.period1 +
-                        otherExpenses.period2 +
-                        otherExpenses.period3
+                          otherExpenses.period2 +
+                          otherExpenses.period3
                       )}</td>
                   </tr>
                   <tr class="subtotal">
                       <td>TOTAL EXPENSES</td>
-                      <td class="number">${await formatCurrencyValue(calculatePeriodExpenses("period1"))}</td>
-                      <td class="number">${await formatCurrencyValue(calculatePeriodExpenses("period2"))}</td>
-                      <td class="number">${await formatCurrencyValue(calculatePeriodExpenses("period3"))}</td>
-                      <td class="number">${await formatCurrencyValue(totalExpenses)}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        calculatePeriodExpenses("period1")
+                      )}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        calculatePeriodExpenses("period2")
+                      )}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        calculatePeriodExpenses("period3")
+                      )}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        totalExpenses
+                      )}</td>
                   </tr>
                   <tr class="total">
                       <td>NET PROFIT</td>
-                      <td class="number">${await formatCurrencyValue(calculatePeriodProfit("period1"))}</td>
-                      <td class="number">${await formatCurrencyValue(calculatePeriodProfit("period2"))}</td>
-                      <td class="number">${await formatCurrencyValue(calculatePeriodProfit("period3"))}</td>
-                      <td class="number">${await formatCurrencyValue(totalProfit)}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        calculatePeriodProfit("period1")
+                      )}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        calculatePeriodProfit("period2")
+                      )}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        calculatePeriodProfit("period3")
+                      )}</td>
+                      <td class="number">${await formatCurrencyValue(
+                        totalProfit
+                      )}</td>
                   </tr>
                   <tr class="margin">
                       <td>PROFIT MARGIN %</td>
-                      <td class="number">${calculateProfitMargin("period1")}%</td>
-                      <td class="number">${calculateProfitMargin("period2")}%</td>
-                      <td class="number">${calculateProfitMargin("period3")}%</td>
+                      <td class="number">${calculateProfitMargin(
+                        "period1"
+                      )}%</td>
+                      <td class="number">${calculateProfitMargin(
+                        "period2"
+                      )}%</td>
+                      <td class="number">${calculateProfitMargin(
+                        "period3"
+                      )}%</td>
                       <td class="number">${totalProfitMargin}%</td>
                   </tr>
               </tbody>
           </table>
       </body>
       </html>
-    `;  
+    `;
       // Create and download the file
       console.log("Creating blob...");
-      const blob = new Blob([htmlContent], { type: "application/vnd.ms-excel" });
+      const blob = new Blob([htmlContent], {
+        type: "application/vnd.ms-excel",
+      });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -1088,12 +1230,12 @@ const ProfitLossStatement = ({
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       console.log("Export completed successfully");
-  
     } catch (error) {
       console.error("Error in exportToExcel:", error);
       toast({
         title: "Export Failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
     } finally {
@@ -1109,25 +1251,41 @@ const ProfitLossStatement = ({
           <CardTitle className="flex items-center justify-between">
             <span>Project Information</span>
             <Button
-  onClick={exportToExcel}
-  disabled={isExporting}
-  className="flex items-center gap-2"
->
-  {isExporting ? (
-    <>
-      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
-      Exporting...
-    </>
-  ) : (
-    <>
-      <FileText className="h-4 w-4" />
-      Export to Excel
-    </>
-  )}
-</Button>
+              onClick={exportToExcel}
+              disabled={isExporting}
+              className="flex items-center gap-2"
+            >
+              {isExporting ? (
+                <>
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4" />
+                  Export to Excel
+                </>
+              )}
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1172,7 +1330,9 @@ const ProfitLossStatement = ({
               </Label>
               <Select
                 value={numberOfPeriods.toString()}
-                onValueChange={(value) => handlePeriodCountChange(parseInt(value))}
+                onValueChange={(value) =>
+                  handlePeriodCountChange(parseInt(value))
+                }
               >
                 <SelectTrigger className="w-20">
                   <SelectValue />
@@ -1219,11 +1379,16 @@ const ProfitLossStatement = ({
                     const periodNumber = index + 1;
                     const periodKey = `period${periodNumber}`;
                     const period = periods[periodKey];
-                    
+
                     return (
-                      <th key={periodKey} className="border border-gray-300 px-2 py-2 text-center font-bold">
+                      <th
+                        key={periodKey}
+                        className="border border-gray-300 px-2 py-2 text-center font-bold"
+                      >
                         <div className="flex flex-col items-center space-y-2">
-                          <span className="text-xs font-semibold">Period {periodNumber}</span>
+                          <span className="text-xs font-semibold">
+                            Period {periodNumber}
+                          </span>
                           <div className="flex flex-col space-y-1">
                             <Popover>
                               <PopoverTrigger asChild>
@@ -1233,14 +1398,19 @@ const ProfitLossStatement = ({
                                 >
                                   <CalendarIcon className="mr-1 h-3 w-3" />
                                   {period?.startDate
-                                    ? new Date(period.startDate).toLocaleDateString("en-US", {
+                                    ? new Date(
+                                        period.startDate
+                                      ).toLocaleDateString("en-US", {
                                         month: "short",
                                         day: "numeric",
                                       })
                                     : "Start"}
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
+                              <PopoverContent
+                                className="w-auto p-0"
+                                align="start"
+                              >
                                 <Calendar
                                   mode="single"
                                   selected={
@@ -1254,7 +1424,9 @@ const ProfitLossStatement = ({
                                         ...prev,
                                         [periodKey]: {
                                           ...prev[periodKey],
-                                          startDate: date.toISOString().split("T")[0],
+                                          startDate: date
+                                            .toISOString()
+                                            .split("T")[0],
                                         },
                                       }));
                                     }
@@ -1271,14 +1443,19 @@ const ProfitLossStatement = ({
                                 >
                                   <CalendarIcon className="mr-1 h-3 w-3" />
                                   {period?.endDate
-                                    ? new Date(period.endDate).toLocaleDateString("en-US", {
+                                    ? new Date(
+                                        period.endDate
+                                      ).toLocaleDateString("en-US", {
                                         month: "short",
                                         day: "numeric",
                                       })
                                     : "End"}
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
+                              <PopoverContent
+                                className="w-auto p-0"
+                                align="start"
+                              >
                                 <Calendar
                                   mode="single"
                                   selected={
@@ -1292,7 +1469,9 @@ const ProfitLossStatement = ({
                                         ...prev,
                                         [periodKey]: {
                                           ...prev[periodKey],
-                                          endDate: date.toISOString().split("T")[0],
+                                          endDate: date
+                                            .toISOString()
+                                            .split("T")[0],
                                         },
                                       }));
                                     }
@@ -1316,7 +1495,10 @@ const ProfitLossStatement = ({
                 <tr className="bg-blue-100 font-bold">
                   <td className="border border-gray-300 px-4 py-2">REVENUE</td>
                   {Array.from({ length: numberOfPeriods }, (_, index) => (
-                    <td key={`revenue-header-${index}`} className="border border-gray-300 px-4 py-2"></td>
+                    <td
+                      key={`revenue-header-${index}`}
+                      className="border border-gray-300 px-4 py-2"
+                    ></td>
                   ))}
                   <td className="border border-gray-300 px-4 py-2"></td>
                 </tr>
@@ -1399,7 +1581,10 @@ const ProfitLossStatement = ({
                 <tr className="bg-red-100 font-bold">
                   <td className="border border-gray-300 px-4 py-2">EXPENSES</td>
                   {Array.from({ length: numberOfPeriods }, (_, index) => (
-                    <td key={`expenses-header-${index}`} className="border border-gray-300 px-4 py-2"></td>
+                    <td
+                      key={`expenses-header-${index}`}
+                      className="border border-gray-300 px-4 py-2"
+                    ></td>
                   ))}
                   <td className="border border-gray-300 px-4 py-2"></td>
                 </tr>
@@ -1412,11 +1597,11 @@ const ProfitLossStatement = ({
                     trade.position_name ||
                     trade.title ||
                     "Unknown Trade";
-                  
+
                   // Calculate payroll for each period dynamically
                   const periodPayrolls: number[] = [];
                   let totalTradePayroll = 0;
-                  
+
                   for (let i = 1; i <= numberOfPeriods; i++) {
                     const periodKey = `period${i}`;
                     const payroll = calculateTradePayroll(trade.id, periodKey);
@@ -1430,28 +1615,28 @@ const ProfitLossStatement = ({
                         Labour {tradeName}
                       </td>
                       <td className="border border-gray-300 px-4 py-2 text-right">
-                      <ConvertedAmount
-  amount={calculateTradePayroll(trade.id, "period1")}
-  currency={sessionData.user.currency}
-  sessionData={sessionData}
-  showCurrency={true}
-/>
+                        <ConvertedAmount
+                          amount={calculateTradePayroll(trade.id, "period1")}
+                          currency={sessionData.user.currency}
+                          sessionData={sessionData}
+                          showCurrency={true}
+                        />
                       </td>
                       <td className="border border-gray-300 px-4 py-2 text-right">
-                      <ConvertedAmount
-  amount={calculateTradePayroll(trade.id, "period2")}
-  currency={sessionData.user.currency}
-  sessionData={sessionData}
-  showCurrency={true}
-/>
+                        <ConvertedAmount
+                          amount={calculateTradePayroll(trade.id, "period2")}
+                          currency={sessionData.user.currency}
+                          sessionData={sessionData}
+                          showCurrency={true}
+                        />
                       </td>
                       <td className="border border-gray-300 px-4 py-2 text-right">
-                      <ConvertedAmount
-  amount={calculateTradePayroll(trade.id, "period3")}
-  currency={sessionData.user.currency}
-  sessionData={sessionData}
-  showCurrency={true}
-/>
+                        <ConvertedAmount
+                          amount={calculateTradePayroll(trade.id, "period3")}
+                          currency={sessionData.user.currency}
+                          sessionData={sessionData}
+                          showCurrency={true}
+                        />
                       </td>
                       <td className="border border-gray-300 px-4 py-2 text-right">
                         <ConvertedAmount
@@ -1513,12 +1698,11 @@ const ProfitLossStatement = ({
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-right">
-                  
                     <ConvertedAmount
                       amount={
                         otherLabour.period1 +
-                          otherLabour.period2 +
-                          otherLabour.period3
+                        otherLabour.period2 +
+                        otherLabour.period3
                       }
                       sessionData={sessionData}
                       currency={sessionData.user.currency}
@@ -1560,7 +1744,7 @@ const ProfitLossStatement = ({
                     <ConvertedAmount
                       amount={
                         calculateTotalLabour("period1") +
-                          calculateTotalLabour("period2") +
+                        calculateTotalLabour("period2") +
                         calculateTotalLabour("period3")
                       }
                       sessionData={sessionData}
@@ -1615,7 +1799,6 @@ const ProfitLossStatement = ({
                           currency={sessionData.user.currency}
                           showCurrency={true}
                         />
-                        
                       </td>
                       <td className="border border-gray-300 px-4 py-2 text-right">
                         <ConvertedAmount
@@ -1680,8 +1863,8 @@ const ProfitLossStatement = ({
                     <ConvertedAmount
                       amount={
                         otherExpenses.period1 +
-                          otherExpenses.period2 +
-                          otherExpenses.period3
+                        otherExpenses.period2 +
+                        otherExpenses.period3
                       }
                       sessionData={sessionData}
                       currency={sessionData.user.currency}
@@ -1775,7 +1958,10 @@ const ProfitLossStatement = ({
                   {Array.from({ length: numberOfPeriods }, (_, index) => {
                     const periodKey = `period${index + 1}`;
                     return (
-                      <td key={`profit-margin-${index}`} className="border border-gray-300 px-4 py-2 text-right">
+                      <td
+                        key={`profit-margin-${index}`}
+                        className="border border-gray-300 px-4 py-2 text-right"
+                      >
                         {calculateProfitMargin(periodKey)}%
                       </td>
                     );
@@ -1824,35 +2010,39 @@ const ProfitLossStatement = ({
   );
 };
 export default function CostControlPage() {
-  const { toast } = useToast()
+  const { toast } = useToast();
 
   // Helper functions for different toast types
   const showToast = {
     success: (message: string) => toast({ title: message }),
-    error: (message: string) => toast({ title: message, variant: "destructive" }),
+    error: (message: string) =>
+      toast({ title: message, variant: "destructive" }),
     info: (message: string) => toast({ title: message }),
-  }
+  };
 
-  const [activeTab, setActiveTab] = useState<"overview" | "boq" | "revenues" | "expenses" | "profit-loss">("overview")
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "boq" | "revenues" | "expenses" | "profit-loss"
+  >("overview");
   // Project persistence with localStorage (fixed for SSR)
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("")
-  const [isClient, setIsClient] = useState(false)
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [isClient, setIsClient] = useState(false);
 
   // Handle client-side mounting
   React.useEffect(() => {
-    setIsClient(true)
-    const savedProject = localStorage.getItem("cost-control-selected-project") || ""
+    setIsClient(true);
+    const savedProject =
+      localStorage.getItem("cost-control-selected-project") || "";
     if (savedProject) {
-      setSelectedProjectId(savedProject)
+      setSelectedProjectId(savedProject);
     }
-  }, [])
+  }, []);
 
   // Save selected project to localStorage whenever it changes
   React.useEffect(() => {
     if (isClient && selectedProjectId) {
-      localStorage.setItem("cost-control-selected-project", selectedProjectId)
+      localStorage.setItem("cost-control-selected-project", selectedProjectId);
     }
-  }, [selectedProjectId, isClient])
+  }, [selectedProjectId, isClient]);
 
   const {
     data: sessionData = { user: {} },
@@ -1866,8 +2056,8 @@ export default function CostControlPage() {
     refetchOnFocus: true,
     refetchOnReconnect: true,
     skip: false,
-  })
-  console.log("session data", sessionData)
+  });
+  console.log("session data", sessionData);
   // Fetch projects from the backend
   const {
     data: projects = [],
@@ -1875,7 +2065,7 @@ export default function CostControlPage() {
     isError: isErrorProjects,
     error: projectsError,
     refetch: refetchProjects,
-  } = useGetProjectsQuery()
+  } = useGetProjectsQuery();
 
   // Fetch financial metrics for the selected project
   const {
@@ -1884,10 +2074,11 @@ export default function CostControlPage() {
     isError: isErrorMetrics,
   } = useGetProjectFinancialMetricsQuery(selectedProjectId, {
     skip: !selectedProjectId, // Skip the query if no project is selected
-  })
+  });
 
   // Add expense mutation
-  const [createExpense, { isLoading: isCreatingExpense }] = useCreateExpenseMutation()
+  const [createExpense, { isLoading: isCreatingExpense }] =
+    useCreateExpenseMutation();
 
   // Fetch expenses for the selected project
   const {
@@ -1896,45 +2087,47 @@ export default function CostControlPage() {
     refetch: refetchExpenses,
   } = useGetExpensesByProjectQuery(selectedProjectId, {
     skip: !selectedProjectId,
-  })
-  console.log("expenses", expenses)
+  });
+  console.log("expenses", expenses);
 
   // BOQ state and mutations
-  const [boqForm, setBoqForm] = useState<Omit<BOQItem, "total" | "project_id" | "company_id">>({
+  const [boqForm, setBoqForm] = useState<
+    Omit<BOQItem, "total" | "project_id" | "company_id">
+  >({
     item_code: "",
     description: "",
     unit: "pcs",
     quantity: 0,
     unit_rate: 0,
-  })
-  const [createBOQ, { isLoading: isCreatingBOQ }] = useCreateBOQMutation()
+  });
+  const [createBOQ, { isLoading: isCreatingBOQ }] = useCreateBOQMutation();
   const { data: boqItems = [], refetch: refetchBOQ } = useGetBOQByProjectQuery(
     {
       projectId: selectedProjectId,
       companyId: (sessionData.user as any)?.company_id,
     },
-    { skip: !selectedProjectId || !(sessionData.user as any)?.company_id },
-  )
+    { skip: !selectedProjectId || !(sessionData.user as any)?.company_id }
+  );
 
   // Get employees data for payroll calculation
-  const { data: employees = [] } = useGetEmployeesQuery()
+  const { data: employees = [] } = useGetEmployeesQuery();
 
   // Get deductions data
-  const { data: deductions = [] } = useGetDeductionsQuery()
+  const { data: deductions = [] } = useGetDeductionsQuery();
 
   // State for project payroll data from backend
-  const [projectPayrollData, setProjectPayrollData] = useState<any>(null)
-  const [isLoadingProjectPayroll, setIsLoadingProjectPayroll] = useState(false)
+  const [projectPayrollData, setProjectPayrollData] = useState<any>(null);
+  const [isLoadingProjectPayroll, setIsLoadingProjectPayroll] = useState(false);
 
   // Fetch project payroll data from backend API
   useEffect(() => {
     const fetchProjectPayroll = async () => {
       if (!selectedProjectId || !(sessionData.user as any)?.company_id) {
-        setProjectPayrollData(null)
-        return
+        setProjectPayrollData(null);
+        return;
       }
 
-      setIsLoadingProjectPayroll(true)
+      setIsLoadingProjectPayroll(true);
 
       console.log("Fetching project payroll for:", {
         projectId: selectedProjectId,
@@ -1942,7 +2135,7 @@ export default function CostControlPage() {
         url: `https://dse-backend-uv5d.onrender.com/employee/payroll/project/${selectedProjectId}?companyId=${
           (sessionData.user as any)?.company_id
         }`,
-      })
+      });
 
       try {
         const response = await fetch(
@@ -1955,17 +2148,21 @@ export default function CostControlPage() {
               "Content-Type": "application/json",
             },
             credentials: "include",
-          },
-        )
+          }
+        );
 
         if (response.ok) {
-          const payrollData = await response.json()
-          console.log("Project payroll data from backend:", payrollData)
-          setProjectPayrollData(payrollData)
+          const payrollData = await response.json();
+          console.log("Project payroll data from backend:", payrollData);
+          setProjectPayrollData(payrollData);
         } else {
-          console.error("Failed to fetch project payroll data:", response.status, response.statusText)
-          const errorText = await response.text()
-          console.error("Error response:", errorText)
+          console.error(
+            "Failed to fetch project payroll data:",
+            response.status,
+            response.statusText
+          );
+          const errorText = await response.text();
+          console.error("Error response:", errorText);
           console.error("Request details:", {
             url: `https://dse-backend-uv5d.onrender.com/employee/payroll/project/${selectedProjectId}?companyId=${
               (sessionData.user as any)?.company_id
@@ -1974,89 +2171,104 @@ export default function CostControlPage() {
             projectIdType: typeof selectedProjectId,
             companyId: (sessionData.user as any)?.company_id,
             companyIdType: typeof (sessionData.user as any)?.company_id,
-          })
-          setProjectPayrollData(null)
+          });
+          setProjectPayrollData(null);
         }
       } catch (error) {
-        console.error("Error fetching project payroll:", error)
-        setProjectPayrollData(null)
+        console.error("Error fetching project payroll:", error);
+        setProjectPayrollData(null);
       } finally {
-        setIsLoadingProjectPayroll(false)
+        setIsLoadingProjectPayroll(false);
       }
-    }
+    };
 
-    fetchProjectPayroll()
-  }, [selectedProjectId, sessionData])
+    fetchProjectPayroll();
+  }, [selectedProjectId, sessionData]);
 
   // Calculate project payroll from backend data with attendance-based fallback
   const projectPayroll = useMemo(() => {
     // Try to use backend data first
     if (projectPayrollData) {
-      const totalNetPay = projectPayrollData.totalNetPay || 0
+      const totalNetPay = projectPayrollData.totalNetPay || 0;
       console.log("Project payroll from backend:", {
         totalGrossPay: projectPayrollData.totalGrossPay,
         totalDeductions: projectPayrollData.totalDeductions,
         totalNetPay: totalNetPay,
         employeeCount: projectPayrollData.employees?.length || 0,
-      })
-      return totalNetPay
+      });
+      return totalNetPay;
     }
 
     // Fallback: Calculate using attendance data (matching attendance-payroll logic)
     if (!selectedProjectId || !employees.length) {
-      console.log("No project payroll data available - using attendance-based fallback")
-      return 0
+      console.log(
+        "No project payroll data available - using attendance-based fallback"
+      );
+      return 0;
     }
 
-    const projectEmployees = employees.filter((emp: any) => emp.projectId === selectedProjectId)
+    const projectEmployees = employees.filter(
+      (emp: any) => emp.projectId === selectedProjectId
+    );
 
     if (!projectEmployees.length) {
-      console.log("No employees found for project:", selectedProjectId)
-      return 0
+      console.log("No employees found for project:", selectedProjectId);
+      return 0;
     }
 
     // Attendance-based calculation matching attendance-payroll page
-    let totalPayroll = 0
+    let totalPayroll = 0;
     for (const employee of projectEmployees) {
-      const dailyRate = Number(employee.daily_rate || 0)
-      const monthlyRate = Number(employee.monthly_rate || 0)
+      const dailyRate = Number(employee.daily_rate || 0);
+      const monthlyRate = Number(employee.monthly_rate || 0);
 
       // Get employee attendance records from attendance data
       // FIX: attendanceData is undeclared. It should likely be fetched or passed in.
       // Assuming 'attendanceData' is meant to be fetched from a hook or context.
       // For now, we'll assume it's available or will be provided. If not, this will cause an error.
       // const employeeAttendance = attendanceData.filter((att: any) => att.employee_id === employee.id) || [];
-      const employeeAttendance = [] // Placeholder: Replace with actual attendance data fetching
+      const employeeAttendance = []; // Placeholder: Replace with actual attendance data fetching
 
       // Calculate working days (exact logic from attendance-payroll)
-      const presentDays = employeeAttendance.filter((att: any) => att.status === "present").length
-      const lateDays = employeeAttendance.filter((att: any) => att.status === "late").length
-      const sickDays = employeeAttendance.filter((att: any) => att.status === "absent" && att.reason === "sick").length
+      const presentDays = employeeAttendance.filter(
+        (att: any) => att.status === "present"
+      ).length;
+      const lateDays = employeeAttendance.filter(
+        (att: any) => att.status === "late"
+      ).length;
+      const sickDays = employeeAttendance.filter(
+        (att: any) => att.status === "absent" && att.reason === "sick"
+      ).length;
       const vacationDays = employeeAttendance.filter(
-        (att: any) => att.status === "absent" && att.reason === "vacation",
-      ).length
+        (att: any) => att.status === "absent" && att.reason === "vacation"
+      ).length;
 
       // Working days = present + late + paid leave (sick + vacation)
-      const workingDays = presentDays + lateDays + sickDays + vacationDays
+      const workingDays = presentDays + lateDays + sickDays + vacationDays;
 
       // Calculate gross pay based on working days
-      let grossPay = 0
+      let grossPay = 0;
       if (monthlyRate > 0) {
-        grossPay = monthlyRate // Use monthly rate if available
+        grossPay = monthlyRate; // Use monthly rate if available
       } else if (dailyRate > 0) {
-        grossPay = dailyRate * workingDays // Use daily rate × working days
+        grossPay = dailyRate * workingDays; // Use daily rate × working days
       }
 
       // Calculate deductions (exact logic from attendance-payroll)
-      const lateDeduction = lateDays * (dailyRate * 0.1) // 10% penalty per late day
+      const lateDeduction = lateDays * (dailyRate * 0.1); // 10% penalty per late day
 
       // Get manual deductions
-      const employeeDeductions = deductions.filter((d: any) => d.employee_id === employee.id)
-      const manualDeductions = employeeDeductions.reduce((sum: number, d: any) => sum + Number(d.amount || 0), 0)
+      const employeeDeductions = deductions.filter(
+        (d: any) => d.employee_id === employee.id
+      );
+      const manualDeductions = employeeDeductions.reduce(
+        (sum: number, d: any) => sum + Number(d.amount || 0),
+        0
+      );
 
-      const totalDeductions = lateDeduction + manualDeductions
-      const netPay = Math.max(0, grossPay - totalDeductions)
-      totalPayroll += netPay
+      const totalDeductions = lateDeduction + manualDeductions;
+      const netPay = Math.max(0, grossPay - totalDeductions);
+      totalPayroll += netPay;
 
       // Debug logging for Jean Baptiste
       if (employee.username === "Jean Baptiste") {
@@ -2073,48 +2285,57 @@ export default function CostControlPage() {
           manualDeductions,
           totalDeductions,
           netPay,
-        })
+        });
       }
     }
 
     console.log("Attendance-based fallback payroll calculation:", {
       projectEmployees: projectEmployees.length,
       totalPayroll,
-    })
+    });
 
-    return totalPayroll
+    return totalPayroll;
   }, [
     projectPayrollData,
     selectedProjectId,
     employees,
     deductions,
     // attendanceData, // attendanceData is not defined, hence removed from dependency array
-  ])
+  ]);
 
   // Helper function to safely format dates
-  const formatDateSafe = (dateString: string, options?: Intl.DateTimeFormatOptions) => {
-    if (!dateString) return "Invalid Date"
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) return "Invalid Date"
-    return date.toLocaleDateString("en-US", options || { day: "numeric", month: "short" })
-  }
+  const formatDateSafe = (
+    dateString: string,
+    options?: Intl.DateTimeFormatOptions
+  ) => {
+    if (!dateString) return "Invalid Date";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    return date.toLocaleDateString(
+      "en-US",
+      options || { day: "numeric", month: "short" }
+    );
+  };
 
   // Get user currency from session
   const getUserCurrency = () => {
-    if (sessionData && (sessionData.user as any)?.companies?.[0]?.base_currency) {
-      return (sessionData.user as any).companies[0].base_currency
+    if (
+      sessionData &&
+      (sessionData.user as any)?.companies?.[0]?.base_currency
+    ) {
+      return (sessionData.user as any).companies[0].base_currency;
     }
-    return "RWF" // Default currency
-  }
+    return "RWF"; // Default currency
+  };
 
   // Simple currency formatting without conversion
   const formatCurrency = (amount: number) => {
     // Handle invalid amounts
     if (typeof amount !== "number" || isNaN(amount) || !isFinite(amount)) {
-      amount = 0
+      amount = 0;
     }
 
-    const userCurrency = getUserCurrency()
+    const userCurrency = getUserCurrency();
 
     try {
       return new Intl.NumberFormat("en-US", {
@@ -2122,16 +2343,16 @@ export default function CostControlPage() {
         currency: userCurrency,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-      }).format(amount)
+      }).format(amount);
     } catch (error) {
-      console.error("Currency formatting error:", error)
+      console.error("Currency formatting error:", error);
       // Fallback formatting with decimals
       return `${userCurrency} ${amount.toLocaleString(undefined, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-      })}`
+      })}`;
     }
-  }
+  };
 
   // Form state for revenue and payroll fetching
   const [revenueForm, setRevenueForm] = useState({
@@ -2139,27 +2360,40 @@ export default function CostControlPage() {
     toDate: new Date().toISOString().split("T")[0],
     selectedBOQItem: "",
     quantityCompleted: 0,
-  })
+  });
   // Add this function after the revenueForm state definition
-const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-  const { name, value } = e.target
-  setRevenueForm(prev => ({
-    ...prev,
-    [name]: name === 'quantityCompleted' ? (value === '' ? '' : Number(value)) : value
-  }))
-}
-  const [isLoadingPayroll, setIsLoadingPayroll] = useState(false)
-  const [payrollFetched, setPayrollFetched] = useState(false)
+  const handleRevenueInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
+    const { name, value } = e.target;
+    setRevenueForm((prev) => ({
+      ...prev,
+      [name]:
+        name === "quantityCompleted"
+          ? value === ""
+            ? ""
+            : Number(value)
+          : value,
+    }));
+  };
+  const [isLoadingPayroll, setIsLoadingPayroll] = useState(false);
+  const [payrollFetched, setPayrollFetched] = useState(false);
 
   // CSV Upload state
-  const [csvFile, setCsvFile] = useState<File | null>(null)
-  const [isUploadingCsv, setIsUploadingCsv] = useState(false)
-  const [csvUploadType, setCsvUploadType] = useState<"expenses" | "boq">("expenses")
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [isUploadingCsv, setIsUploadingCsv] = useState(false);
+  const [csvUploadType, setCsvUploadType] = useState<"expenses" | "boq">(
+    "expenses"
+  );
 
   // Backend integration for revenue entries
-  const [createRevenue, { isLoading: isCreatingRevenue }] = useCreateRevenueMutation()
-  const [deleteRevenue, { isLoading: isDeletingRevenue }] = useDeleteRevenueMutation()
-  const [updateBOQProgress] = useUpdateBOQProgressMutation()
+  const [createRevenue, { isLoading: isCreatingRevenue }] =
+    useCreateRevenueMutation();
+  const [deleteRevenue, { isLoading: isDeletingRevenue }] =
+    useDeleteRevenueMutation();
+  const [updateBOQProgress] = useUpdateBOQProgressMutation();
 
   // Fetch revenue entries from backend
   const {
@@ -2168,28 +2402,33 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
     refetch: refetchRevenues,
   } = useGetRevenuesByProjectQuery(selectedProjectId, {
     skip: !selectedProjectId,
-  })
+  });
 
   // Handle expense form input changes
   const handleExpenseInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>, // Added TextAreaElement
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    > // Added TextAreaElement
   ) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     setExpenseForm((prev) => ({
       ...prev,
-      [name]: name === "quantity" || name === "unit_price" ? Number.parseFloat(value) || 0 : value,
-    }))
-  }
+      [name]:
+        name === "quantity" || name === "unit_price"
+          ? Number.parseFloat(value) || 0
+          : value,
+    }));
+  };
 
   // Function to fetch labor expenses from payroll data
   const fetchLaborExpenses = async (fromDate: string, toDate: string) => {
     if (!selectedProjectId || !fromDate || !toDate) {
-      showToast.error("Please select project and date range")
-      return
+      showToast.error("Please select project and date range");
+      return;
     }
 
-    setIsLoadingPayroll(true)
-    showToast.info("Fetching labor expenses from payroll data...")
+    setIsLoadingPayroll(true);
+    showToast.info("Fetching labor expenses from payroll data...");
 
     try {
       // Fetch project payroll data for the date range
@@ -2199,19 +2438,23 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
         }&startDate=${fromDate}&endDate=${toDate}`,
         {
           credentials: "include",
-        },
-      )
+        }
+      );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch payroll data: ${response.statusText}`)
+        throw new Error(`Failed to fetch payroll data: ${response.statusText}`);
       }
 
-      const payrollData = await response.json()
-      console.log("Payroll data received:", payrollData)
+      const payrollData = await response.json();
+      console.log("Payroll data received:", payrollData);
 
       // Process payroll data and add as labor expenses
-      if (payrollData && payrollData.employees && payrollData.employees.length > 0) {
-        let addedCount = 0
+      if (
+        payrollData &&
+        payrollData.employees &&
+        payrollData.employees.length > 0
+      ) {
+        let addedCount = 0;
 
         for (const employee of payrollData.employees) {
           // Check if this labor expense already exists to avoid duplicates
@@ -2220,80 +2463,108 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
             (exp: any) =>
               exp.description.includes(employee.name || employee.username) &&
               exp.category === "LABOR" &&
-              exp.created_at?.includes(fromDate.slice(0, 7)), // Check if it's within the same month
-          )
+              exp.created_at?.includes(fromDate.slice(0, 7)) // Check if it's within the same month
+          );
 
           if (!existingExpense && employee.netPay > 0) {
             try {
               await createExpense({
                 project_id: selectedProjectId,
                 company_id: (sessionData.user as any).company_id,
-                description: `Labor - ${employee.name || employee.username} (${fromDate} to ${toDate})`,
+                description: `Labor - ${
+                  employee.name || employee.username
+                } (${fromDate} to ${toDate})`,
                 category: "LABOR",
                 quantity: employee.workingDays || 1,
                 unit: "days",
-                unit_price: Number((employee.netPay / (employee.workingDays || 1)).toFixed(2)),
+                unit_price: Number(
+                  (employee.netPay / (employee.workingDays || 1)).toFixed(2)
+                ),
                 amount: Number(employee.netPay),
-              }).unwrap()
-              addedCount++
+              }).unwrap();
+              addedCount++;
             } catch (error) {
-              console.error(`Failed to add labor expense for ${employee.name}:`, error)
+              console.error(
+                `Failed to add labor expense for ${employee.name}:`,
+                error
+              );
               // Optionally show a toast for individual failures
             }
           }
         }
 
         if (addedCount > 0) {
-          showToast.success(`Successfully added ${addedCount} labor expense(s) from payroll data.`)
-          refetchExpenses() // Refresh the expenses list
-          setPayrollFetched(true)
+          showToast.success(
+            `Successfully added ${addedCount} labor expense(s) from payroll data.`
+          );
+          refetchExpenses(); // Refresh the expenses list
+          setPayrollFetched(true);
         } else {
           showToast.info(
-            "No new labor expenses to add (they may already exist or no payroll data found for the period).",
-          )
+            "No new labor expenses to add (they may already exist or no payroll data found for the period)."
+          );
           // Still set payrollFetched to true if no new expenses were added but the fetch was successful
-          setPayrollFetched(true)
+          setPayrollFetched(true);
         }
       } else {
-        showToast.info("No payroll data found for the selected date range.")
-        setPayrollFetched(true) // Mark as fetched even if empty
+        showToast.info("No payroll data found for the selected date range.");
+        setPayrollFetched(true); // Mark as fetched even if empty
       }
     } catch (error: any) {
-      console.error("Error fetching labor expenses:", error)
-      showToast.error(`Failed to fetch labor expenses: ${error.message || "Unknown error"}`)
-      setPayrollFetched(false) // Reset if there was an error
+      console.error("Error fetching labor expenses:", error);
+      showToast.error(
+        `Failed to fetch labor expenses: ${error.message || "Unknown error"}`
+      );
+      setPayrollFetched(false); // Reset if there was an error
     } finally {
-      setIsLoadingPayroll(false)
+      setIsLoadingPayroll(false);
     }
-  }
+  };
 
   // Auto-fetch labor expenses when date range changes (debounced)
   React.useEffect(() => {
-    if (revenueForm.fromDate && revenueForm.toDate && selectedProjectId && activeTab === "revenues") {
-      const today = new Date().toISOString().split("T")[0]
+    if (
+      revenueForm.fromDate &&
+      revenueForm.toDate &&
+      selectedProjectId &&
+      activeTab === "revenues"
+    ) {
+      const today = new Date().toISOString().split("T")[0];
       // Only trigger fetch if dates have changed and payroll hasn't been fetched yet for this selection
-      if ((revenueForm.fromDate !== today || revenueForm.toDate !== today) && !payrollFetched) {
+      if (
+        (revenueForm.fromDate !== today || revenueForm.toDate !== today) &&
+        !payrollFetched
+      ) {
         const timeoutId = setTimeout(() => {
-          fetchLaborExpenses(revenueForm.fromDate, revenueForm.toDate)
-        }, 1000) // Debounce for 1 second
+          fetchLaborExpenses(revenueForm.fromDate, revenueForm.toDate);
+        }, 1000); // Debounce for 1 second
 
-        return () => clearTimeout(timeoutId)
+        return () => clearTimeout(timeoutId);
       }
     }
-  }, [revenueForm.fromDate, revenueForm.toDate, selectedProjectId, activeTab, payrollFetched])
+  }, [
+    revenueForm.fromDate,
+    revenueForm.toDate,
+    selectedProjectId,
+    activeTab,
+    payrollFetched,
+  ]);
 
   // Handle BOQ form input changes
   const handleBOQInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     setBoqForm((prev) => ({
       ...prev,
-      [name]: name === "quantity" || name === "unit_rate" ? Number.parseFloat(value) || 0 : value,
-    }))
-  }
+      [name]:
+        name === "quantity" || name === "unit_rate"
+          ? Number.parseFloat(value) || 0
+          : value,
+    }));
+  };
 
   // Handle expense form submission
   const handleAddExpense = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (
       !selectedProjectId ||
@@ -2301,16 +2572,16 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
       expenseForm.quantity === undefined || // Check for undefined as well
       expenseForm.unit_price === undefined // Check for undefined
     ) {
-      showToast.error("Please fill in all required fields")
-      return
+      showToast.error("Please fill in all required fields");
+      return;
     }
     // Ensure quantity and unit_price are not negative
     if (expenseForm.quantity < 0 || expenseForm.unit_price < 0) {
-      showToast.error("Quantity and unit price cannot be negative.")
-      return
+      showToast.error("Quantity and unit price cannot be negative.");
+      return;
     }
 
-    const calculatedAmount = expenseForm.quantity * expenseForm.unit_price
+    const calculatedAmount = expenseForm.quantity * expenseForm.unit_price;
 
     try {
       await createExpense({
@@ -2322,7 +2593,7 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
         unit: expenseForm.unit,
         unit_price: Number(expenseForm.unit_price),
         amount: Number(calculatedAmount),
-      }).unwrap()
+      }).unwrap();
 
       // Reset form
       setExpenseForm({
@@ -2331,44 +2602,54 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
         quantity: 1,
         unit: "pcs",
         unit_price: 0,
-      })
+      });
 
       // Show success message
-      showToast.success("Expense added successfully")
+      showToast.success("Expense added successfully");
 
       // Refresh expenses list
-      refetchExpenses()
+      refetchExpenses();
     } catch (error: any) {
-      console.error("Error adding expense:", error)
-      showToast.error(`Failed to add expense: ${error.data?.message || error.message}`)
+      console.error("Error adding expense:", error);
+      showToast.error(
+        `Failed to add expense: ${error.data?.message || error.message}`
+      );
     }
-  }
+  };
 
   // Handle BOQ form submission
   const handleAddBOQItem = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!selectedProjectId || !(sessionData.user as any)?.company_id) {
-      showToast.error("Please select a project and ensure you're logged in with a company")
-      return
+      showToast.error(
+        "Please select a project and ensure you're logged in with a company"
+      );
+      return;
     }
 
     // Validate numeric fields
     if (!boqForm.quantity || boqForm.quantity <= 0) {
-      showToast.error("Please enter a valid quantity greater than zero.")
-      return
+      showToast.error("Please enter a valid quantity greater than zero.");
+      return;
     }
     if (!boqForm.unit_rate || boqForm.unit_rate <= 0) {
-      showToast.error("Please enter a valid unit rate greater than zero.")
-      return
+      showToast.error("Please enter a valid unit rate greater than zero.");
+      return;
     }
-    if (!boqForm.item_code.trim() || !boqForm.description.trim() || !boqForm.unit.trim()) {
-      showToast.error("Please fill in all required fields (Item Code, Description, Unit).")
-      return
+    if (
+      !boqForm.item_code.trim() ||
+      !boqForm.description.trim() ||
+      !boqForm.unit.trim()
+    ) {
+      showToast.error(
+        "Please fill in all required fields (Item Code, Description, Unit)."
+      );
+      return;
     }
     let exchangeRate = await getExchangeRate(
-        sessionData.user.currency,
-        sessionData.user.companies?.[0]?.base_currency
-      );
+      sessionData.user.currency,
+      sessionData.user.companies?.[0]?.base_currency
+    );
 
     try {
       await createBOQ({
@@ -2380,117 +2661,126 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
         amount: Number(boqForm.quantity * boqForm.unit_rate),
         project_id: selectedProjectId,
         company_id: (sessionData.user as any).company_id,
-      }).unwrap()
+      }).unwrap();
 
-      showToast.success("BOQ item added successfully")
+      showToast.success("BOQ item added successfully");
       setBoqForm({
         item_code: "",
         description: "",
         unit: "pcs",
         quantity: 0,
         unit_rate: 0,
-      })
-      refetchBOQ()
+      });
+      refetchBOQ();
     } catch (error: any) {
-      console.error("Failed to add BOQ item:", error)
-      showToast.error(error.data?.message || "Failed to add BOQ item. Please try again.")
+      console.error("Failed to add BOQ item:", error);
+      showToast.error(
+        error.data?.message || "Failed to add BOQ item. Please try again."
+      );
     }
-  }
+  };
 
-  console.log("financial metrics", financialMetrics)
+  console.log("financial metrics", financialMetrics);
 
-  console.log("selected project", selectedProjectId)
+  console.log("selected project", selectedProjectId);
 
   // CSV Upload Functions
   const handleCsvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file && file.type === "text/csv") {
-      setCsvFile(file)
+      setCsvFile(file);
     } else if (file) {
-      showToast.error("Invalid file type. Please upload a CSV file.")
+      showToast.error("Invalid file type. Please upload a CSV file.");
     } else {
-      setCsvFile(null) // Clear file if selection is cancelled
+      setCsvFile(null); // Clear file if selection is cancelled
     }
-  }
+  };
 
   const downloadCsvTemplate = (type: "expenses" | "boq") => {
-    let csvContent = ""
-    let filename = ""
+    let csvContent = "";
+    let filename = "";
 
     if (type === "expenses") {
-      csvContent = "description,category,quantity,unit,unit_price\n"
-      csvContent += "Sample Expense,MATERIALS,10,pcs,100\n"
-      csvContent += "Another Expense,LABOR,5,hours,50\n" // Example for LABOR
-      filename = "expenses_template.csv"
+      csvContent = "description,category,quantity,unit,unit_price\n";
+      csvContent += "Sample Expense,MATERIALS,10,pcs,100\n";
+      csvContent += "Another Expense,LABOR,5,hours,50\n"; // Example for LABOR
+      filename = "expenses_template.csv";
     } else {
-      csvContent = "item_code,description,unit,quantity,unit_rate\n"
-      csvContent += "CONC-001,Concrete Work,m³,100,150\n"
-      csvContent += "STEEL-001,Steel Reinforcement,kg,500,2.5\n"
-      filename = "boq_template.csv"
+      csvContent = "item_code,description,unit,quantity,unit_rate\n";
+      csvContent += "CONC-001,Concrete Work,m³,100,150\n";
+      csvContent += "STEEL-001,Steel Reinforcement,kg,500,2.5\n";
+      filename = "boq_template.csv";
     }
 
-    const blob = new Blob([csvContent], { type: "text/csv" })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = filename
-    link.click()
-    window.URL.revokeObjectURL(url)
-  }
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   const processCsvFile = async () => {
     if (!csvFile || !selectedProjectId) {
-      showToast.error("Please select a CSV file and ensure a project is selected.")
-      return
+      showToast.error(
+        "Please select a CSV file and ensure a project is selected."
+      );
+      return;
     }
 
-    setIsUploadingCsv(true)
+    setIsUploadingCsv(true);
 
     try {
-      const text = await csvFile.text()
-      const lines = text.split("\n").filter((line) => line.trim())
+      const text = await csvFile.text();
+      const lines = text.split("\n").filter((line) => line.trim());
       if (lines.length === 0) {
-        showToast.error("The CSV file is empty.")
-        setIsUploadingCsv(false)
-        return
+        showToast.error("The CSV file is empty.");
+        setIsUploadingCsv(false);
+        return;
       }
 
-      const headers = lines[0].split(",").map((h) => h.trim())
+      const headers = lines[0].split(",").map((h) => h.trim());
       const expectedHeaders =
         csvUploadType === "expenses"
           ? ["description", "category", "quantity", "unit", "unit_price"]
-          : ["item_code", "description", "unit", "quantity", "unit_rate"]
+          : ["item_code", "description", "unit", "quantity", "unit_rate"];
 
       // Header validation
-      if (headers.length !== expectedHeaders.length || !expectedHeaders.every((h) => headers.includes(h))) {
-        showToast.error(`Invalid CSV headers. Expected: ${expectedHeaders.join(", ")}`)
-        setIsUploadingCsv(false)
-        return
+      if (
+        headers.length !== expectedHeaders.length ||
+        !expectedHeaders.every((h) => headers.includes(h))
+      ) {
+        showToast.error(
+          `Invalid CSV headers. Expected: ${expectedHeaders.join(", ")}`
+        );
+        setIsUploadingCsv(false);
+        return;
       }
 
-      let successCount = 0
-      let errorCount = 0
-      const errors: string[] = []
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
 
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(",").map((v) => v.trim())
+        const values = lines[i].split(",").map((v) => v.trim());
         if (values.length !== headers.length) {
-          errors.push(`Row ${i + 1}: Incorrect number of columns.`)
-          errorCount++
-          continue
+          errors.push(`Row ${i + 1}: Incorrect number of columns.`);
+          errorCount++;
+          continue;
         }
 
-        const rowData: any = {}
+        const rowData: any = {};
         headers.forEach((header, index) => {
-          rowData[header] = values[index]
-        })
+          rowData[header] = values[index];
+        });
 
         try {
           if (csvUploadType === "expenses") {
-            const quantity = Number(rowData.quantity) || 1
-            const unit_price = Number(rowData.unit_price) || 0
+            const quantity = Number(rowData.quantity) || 1;
+            const unit_price = Number(rowData.unit_price) || 0;
             if (quantity < 0 || unit_price < 0) {
-              throw new Error("Quantity or unit price cannot be negative.")
+              throw new Error("Quantity or unit price cannot be negative.");
             }
             await createExpense({
               project_id: selectedProjectId,
@@ -2501,13 +2791,15 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
               unit: rowData.unit || "pcs",
               unit_price: unit_price,
               amount: quantity * unit_price,
-            }).unwrap()
+            }).unwrap();
           } else {
             // boq
-            const quantity = Number(rowData.quantity) || 0
-            const unit_rate = Number(rowData.unit_rate) || 0
+            const quantity = Number(rowData.quantity) || 0;
+            const unit_rate = Number(rowData.unit_rate) || 0;
             if (quantity <= 0 || unit_rate <= 0) {
-              throw new Error("Quantity and unit rate must be greater than zero.")
+              throw new Error(
+                "Quantity and unit rate must be greater than zero."
+              );
             }
             await createBOQ({
               item_no: rowData.item_code || `Item ${i + 1}`,
@@ -2518,51 +2810,61 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
               amount: quantity * unit_rate,
               project_id: selectedProjectId,
               company_id: (sessionData.user as any).company_id,
-            }).unwrap()
+            }).unwrap();
           }
-          successCount++
+          successCount++;
         } catch (error: any) {
-          errors.push(`Row ${i + 1}: ${error.message || error.data?.message || "Unknown error"}`)
-          errorCount++
+          errors.push(
+            `Row ${i + 1}: ${
+              error.message || error.data?.message || "Unknown error"
+            }`
+          );
+          errorCount++;
         }
       }
 
       if (errorCount > 0) {
-        showToast.error(`CSV upload completed with ${errorCount} errors. See console for details.`)
-        console.error("CSV Upload Errors:", errors)
+        showToast.error(
+          `CSV upload completed with ${errorCount} errors. See console for details.`
+        );
+        console.error("CSV Upload Errors:", errors);
       } else {
-        showToast.success(`CSV upload successful: ${successCount} items added.`)
+        showToast.success(
+          `CSV upload successful: ${successCount} items added.`
+        );
       }
 
-      setCsvFile(null) // Clear the file after processing
+      setCsvFile(null); // Clear the file after processing
 
       // Refresh data
       if (csvUploadType === "expenses") {
-        refetchExpenses()
+        refetchExpenses();
       } else {
-        refetchBOQ()
+        refetchBOQ();
       }
     } catch (error: any) {
-      console.error("CSV processing error:", error)
-      showToast.error(`Failed to process CSV file: ${error.message || "Unknown error"}`)
+      console.error("CSV processing error:", error);
+      showToast.error(
+        `Failed to process CSV file: ${error.message || "Unknown error"}`
+      );
     } finally {
-      setIsUploadingCsv(false)
+      setIsUploadingCsv(false);
     }
-  }
+  };
 
   // Handle project selection change
   const handleProjectChange = (value: string) => {
-    setSelectedProjectId(value)
+    setSelectedProjectId(value);
     // Reset other states that depend on project selection if necessary
     // e.g., clear forms, reset active tabs, etc.
-    setActiveTab("overview") // Reset to overview tab
+    setActiveTab("overview"); // Reset to overview tab
     setRevenueForm({
       // Reset revenue form
       fromDate: new Date().toISOString().split("T")[0],
       toDate: new Date().toISOString().split("T")[0],
       selectedBOQItem: "",
       quantityCompleted: 0,
-    })
+    });
     setExpenseForm({
       // Reset expense form
       description: "",
@@ -2570,55 +2872,71 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
       quantity: 1,
       unit: "pcs",
       unit_price: 0,
-    })
-    setCsvFile(null) // Clear any selected CSV file
-    setPayrollFetched(false) // Reset payroll fetch status
-  }
+    });
+    setCsvFile(null); // Clear any selected CSV file
+    setPayrollFetched(false); // Reset payroll fetch status
+  };
 
   // TODO: Replace with backend currency data when implementing backend integration
-  const [userCurrency, setUserCurrency] = useState<string>("USD")
-  const [currencyValue, setCurrencyValue] = useState<number>(1)
-  const [currencyShort, setCurrencyShort] = useState<string>("USD")
+  const [userCurrency, setUserCurrency] = useState<string>("USD");
+  const [currencyValue, setCurrencyValue] = useState<number>(1);
+  const [currencyShort, setCurrencyShort] = useState<string>("USD");
 
   // Mock session data
 
-  const companyId = (sessionData?.user as any)?.company_id
+  const companyId = (sessionData?.user as any)?.company_id;
 
   // Calculate comprehensive cost summary
   const costSummary = useMemo(() => {
     if (financialMetrics) {
       return {
         total_expenses: financialMetrics.totalExpenses || 0,
-        total_revenues: (financialMetrics.budget || 0) + (financialMetrics.totalBOQ || 0),
+        total_revenues:
+          (financialMetrics.budget || 0) + (financialMetrics.totalBOQ || 0),
         total_boq_value: financialMetrics.totalBOQ || 0,
         boq_completed_value: financialMetrics.totalBOQ || 0, // Assuming all BOQ is considered completed
         project_budget: financialMetrics.budget || 0,
         net_profit: financialMetrics.netProfit || 0,
         profit_margin: financialMetrics.profitMargin || 0,
         currency: financialMetrics.currency || "RWF",
-      }
+      };
     }
 
     // Fallback to existing calculation if no financial metrics are available
-    const manualExpenses = expenses.reduce((sum: number, expense: any) => sum + Number(expense.amount || 0), 0)
+    const manualExpenses = expenses.reduce(
+      (sum: number, expense: any) => sum + Number(expense.amount || 0),
+      0
+    );
 
     // Get real project budget
-    const selectedProject = projects.find((p: any) => p.id === selectedProjectId)
-    const projectBudget = selectedProject ? Number(selectedProject.budget || 0) : 0
+    const selectedProject = projects.find(
+      (p: any) => p.id === selectedProjectId
+    );
+    const projectBudget = selectedProject
+      ? Number(selectedProject.budget || 0)
+      : 0;
 
     // Calculate BOQ values from real data
-    const totalBOQValue = boqItems.reduce((sum: number, item: any) => sum + Number(item.amount || 0), 0)
+    const totalBOQValue = boqItems.reduce(
+      (sum: number, item: any) => sum + Number(item.amount || 0),
+      0
+    );
     const boqCompletedValue = boqItems.reduce(
-      (sum: number, item: any) => sum + Number(item.completed_qty || 0) * Number(item.rate || 0),
-      0,
-    )
+      (sum: number, item: any) =>
+        sum + Number(item.completed_qty || 0) * Number(item.rate || 0),
+      0
+    );
 
     // Total Revenue = ONLY revenue entries from Add Revenue tab (NOT project budget)
-    const totalRevenues = revenueEntries.reduce((sum: number, revenue: any) => sum + Number(revenue.amount || 0), 0)
+    const totalRevenues = revenueEntries.reduce(
+      (sum: number, revenue: any) => sum + Number(revenue.amount || 0),
+      0
+    );
     // Total Expenses = Project Payroll + Manual Expenses (as per requirement)
-    const totalExpenses = projectPayroll + manualExpenses
-    const netProfit = totalRevenues - totalExpenses
-    const profitMargin = totalRevenues > 0 ? (netProfit / totalRevenues) * 100 : 0
+    const totalExpenses = projectPayroll + manualExpenses;
+    const netProfit = totalRevenues - totalExpenses;
+    const profitMargin =
+      totalRevenues > 0 ? (netProfit / totalRevenues) * 100 : 0;
 
     return {
       total_expenses: totalExpenses,
@@ -2631,41 +2949,53 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
       net_profit: netProfit,
       profit_margin: profitMargin,
       currency: "RWF", // Default currency
-    }
-  }, [expenses, selectedProjectId, financialMetrics, projects, boqItems, projectPayroll, revenueEntries])
+    };
+  }, [
+    expenses,
+    selectedProjectId,
+    financialMetrics,
+    projects,
+    boqItems,
+    projectPayroll,
+    revenueEntries,
+  ]);
 
   // Helper function to split currency value (same as attendance-payroll)
   const splitCurrencyValue = (str: string) => {
-    if (!str) return null
-    const match = str.match(/^([A-Z]+)([\d.]+)$/)
-    if (!match) return null
+    if (!str) return null;
+    const match = str.match(/^([A-Z]+)([\d.]+)$/);
+    if (!match) return null;
     return {
       currency: match[1],
       value: match[2],
-    }
-  }
+    };
+  };
 
   // Currency setup
   React.useEffect(() => {
     if (sessionData && (sessionData.user as any)?.currency) {
-      const currencyData = splitCurrencyValue((sessionData.user as any).currency)
+      const currencyData = splitCurrencyValue(
+        (sessionData.user as any).currency
+      );
       if (currencyData) {
-        setCurrencyValue(Number(currencyData.value))
-        setCurrencyShort(currencyData.currency)
-        setUserCurrency(currencyData.currency)
+        setCurrencyValue(Number(currencyData.value));
+        setCurrencyShort(currencyData.currency);
+        setUserCurrency(currencyData.currency);
       }
     } else {
       // Fallback to default currency
-      setUserCurrency("USD")
-      setCurrencyShort("USD")
-      setCurrencyValue(1)
+      setUserCurrency("USD");
+      setCurrencyShort("USD");
+      setCurrencyValue(1);
     }
-  }, [sessionData])
+  }, [sessionData]);
 
   // Tab switch handler
-  const switchTab = (tab: "overview" | "boq" | "revenues" | "expenses" | "profit-loss") => {
-    setActiveTab(tab)
-  }
+  const switchTab = (
+    tab: "overview" | "boq" | "revenues" | "expenses" | "profit-loss"
+  ) => {
+    setActiveTab(tab);
+  };
 
   // Dummy form state for expense tab
   const [expenseForm, setExpenseForm] = useState({
@@ -2674,7 +3004,7 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
     quantity: 1,
     unit: "pcs",
     unit_price: 0,
-  })
+  });
 
   return (
     <div className="flex h-screen bg-white">
@@ -2692,15 +3022,23 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
           <div className="max-w-7xl mx-auto p-6">
             {/* Header */}
             <div className="bg-white rounded-lg shadow-md border p-6 mb-6">
-              <h1 className="text-3xl font-bold text-slate-800 mb-2">Cost Control Dashboard</h1>
+              <h1 className="text-3xl font-bold text-slate-800 mb-2">
+                Cost Control Dashboard
+              </h1>
               <p className="text-slate-600">
-                Track expenses, revenues, and BOQ progress for accurate project cost management
+                Track expenses, revenues, and BOQ progress for accurate project
+                cost management
               </p>
 
               {/* Project Selection */}
               <div className="mt-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Select Project</label>
-                <Select onValueChange={handleProjectChange} value={selectedProjectId}>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Select Project
+                </label>
+                <Select
+                  onValueChange={handleProjectChange}
+                  value={selectedProjectId}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a project" />
                   </SelectTrigger>
@@ -2713,11 +3051,16 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                   </SelectContent>
                 </Select>
                 {!selectedProjectId && (
-                  <p className="text-sm text-slate-500 mt-2">Please select a project to view cost control data</p>
+                  <p className="text-sm text-slate-500 mt-2">
+                    Please select a project to view cost control data
+                  </p>
                 )}
-                {selectedProjectId && (isLoadingExpenses || isLoadingMetrics) && (
-                  <p className="text-sm text-blue-600 mt-2">Loading project data...</p>
-                )}
+                {selectedProjectId &&
+                  (isLoadingExpenses || isLoadingMetrics) && (
+                    <p className="text-sm text-blue-600 mt-2">
+                      Loading project data...
+                    </p>
+                  )}
               </div>
             </div>
 
@@ -2739,7 +3082,10 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                     role="alert"
                   >
                     <strong className="font-bold">Error!</strong>
-                    <span className="block sm:inline"> Failed to load projects. Please try again later.</span>
+                    <span className="block sm:inline">
+                      {" "}
+                      Failed to load projects. Please try again later.
+                    </span>
                     <button
                       onClick={() => refetchProjects()}
                       className="absolute bg-transparent text-2xl font-semibold leading-none right-0 top-0 mt-0 mr-4 outline-none focus:outline-none"
@@ -2756,8 +3102,12 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white rounded-lg shadow p-6">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-600 text-sm font-medium">Total Revenue</span>
-                    <span className="text-green-500"><ChartNetwork/></span>
+                    <span className="text-slate-600 text-sm font-medium">
+                      Total Revenue
+                    </span>
+                    <span className="text-green-500">
+                      <ChartNetwork />
+                    </span>
                   </div>
                   <p className="text-2xl font-bold text-green-600">
                     <ConvertedAmount
@@ -2767,13 +3117,19 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                       sessionData={sessionData}
                     />
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">From Add Revenue Tab</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    From Add Revenue Tab
+                  </p>
                 </div>
 
                 <div className="bg-white rounded-lg shadow p-6">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-600 text-sm font-medium">Total Expenses</span>
-                    <span className="text-red-500"><ChartNetwork/></span>
+                    <span className="text-slate-600 text-sm font-medium">
+                      Total Expenses
+                    </span>
+                    <span className="text-red-500">
+                      <ChartNetwork />
+                    </span>
                   </div>
                   <p className="text-2xl font-bold text-red-600">
                     <ConvertedAmount
@@ -2784,19 +3140,37 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                     />
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
-                    Payroll: <ConvertedAmount amount={costSummary?.project_payroll || 0} currency={sessionData.user.currency} showCurrency={true} sessionData={sessionData} /> + Manual:{" "}
-                    <ConvertedAmount amount={costSummary?.manual_expenses || 0} currency={sessionData.user.currency} showCurrency={true} sessionData={sessionData} />
+                    Payroll:{" "}
+                    <ConvertedAmount
+                      amount={costSummary?.project_payroll || 0}
+                      currency={sessionData.user.currency}
+                      showCurrency={true}
+                      sessionData={sessionData}
+                    />{" "}
+                    + Manual:{" "}
+                    <ConvertedAmount
+                      amount={costSummary?.manual_expenses || 0}
+                      currency={sessionData.user.currency}
+                      showCurrency={true}
+                      sessionData={sessionData}
+                    />
                   </p>
                 </div>
 
                 <div className="bg-white rounded-lg shadow p-6">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-600 text-sm font-medium">Net Profit</span>
-                    <span className="text-red-500"><BriefcaseBusiness/></span>
+                    <span className="text-slate-600 text-sm font-medium">
+                      Net Profit
+                    </span>
+                    <span className="text-red-500">
+                      <BriefcaseBusiness />
+                    </span>
                   </div>
                   <p
                     className={`text-2xl font-bold ${
-                      (costSummary?.net_profit || 0) >= 0 ? "text-green-600" : "text-red-600"
+                      (costSummary?.net_profit || 0) >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
                     }`}
                   >
                     <ConvertedAmount
@@ -2810,12 +3184,18 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
 
                 <div className="bg-white rounded-lg shadow p-6">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-600 text-sm font-medium">Profit Margin</span>
-                    <span className="text-green-600 text-xs"><Percent/></span>
+                    <span className="text-slate-600 text-sm font-medium">
+                      Profit Margin
+                    </span>
+                    <span className="text-green-600 text-xs">
+                      <Percent />
+                    </span>
                   </div>
                   <p
                     className={`text-2xl font-bold ${
-                      (costSummary?.profit_margin || 0) >= 0 ? "text-green-600" : "text-red-600"
+                      (costSummary?.profit_margin || 0) >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
                     }`}
                   >
                     {costSummary?.profit_margin?.toFixed(1) || "0"}%
@@ -2886,54 +3266,109 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                     <div className="space-y-6">
                       {/* Revenue Summary */}
                       <div>
-                        <h3 className="text-lg font-semibold text-slate-800 mb-4">Revenue Summary</h3>
+                        <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                          Revenue Summary
+                        </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="bg-blue-50 rounded-lg p-4">
-                            <p className="text-sm text-slate-600 mb-1">Total BOQ Value</p>
-                            <p className="text-xl font-bold text-slate-800">
-                              <ConvertedAmount amount={costSummary.total_boq_value} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />
+                            <p className="text-sm text-slate-600 mb-1">
+                              Total BOQ Value
                             </p>
-                            <p className="text-xs text-slate-500 mt-1">Available for Revenue</p>
+                            <p className="text-xl font-bold text-slate-800">
+                              <ConvertedAmount
+                                amount={costSummary.total_boq_value}
+                                sessionData={sessionData}
+                                showCurrency={true}
+                                currency={sessionData.user.currency}
+                              />
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Available for Revenue
+                            </p>
                           </div>
                           <div className="bg-green-50 rounded-lg p-4">
-                            <p className="text-sm text-slate-600 mb-1">Recorded Revenue</p>
-                            <p className="text-2xl font-bold text-green-600">
-                              <ConvertedAmount amount={costSummary?.total_revenues || 0} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />
+                            <p className="text-sm text-slate-600 mb-1">
+                              Recorded Revenue
                             </p>
-                            <p className="text-xs text-slate-500 mt-1">From Add Revenue Tab</p>
+                            <p className="text-2xl font-bold text-green-600">
+                              <ConvertedAmount
+                                amount={costSummary?.total_revenues || 0}
+                                sessionData={sessionData}
+                                showCurrency={true}
+                                currency={sessionData.user.currency}
+                              />
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              From Add Revenue Tab
+                            </p>
                           </div>
                           <div className="bg-amber-50 rounded-lg p-4">
-                            <p className="text-sm text-slate-600 mb-1">Revenue Entries</p>
-                            <p className="text-xl font-bold text-amber-600">{revenueEntries.length}</p>
-                            <p className="text-xs text-slate-500 mt-1">Total Records</p>
+                            <p className="text-sm text-slate-600 mb-1">
+                              Revenue Entries
+                            </p>
+                            <p className="text-xl font-bold text-amber-600">
+                              {revenueEntries.length}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Total Records
+                            </p>
                           </div>
                         </div>
                       </div>
 
                       {/* Total Expenses Breakdown */}
                       <div>
-                        <h3 className="text-lg font-semibold text-slate-800 mb-4">Total Project Expenses</h3>
+                        <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                          Total Project Expenses
+                        </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                           <div className="bg-blue-50 rounded-lg p-4">
-                            <p className="text-sm text-slate-600 mb-1">Project Payroll</p>
-                            <p className="text-xl font-bold text-blue-600">
-                              <ConvertedAmount amount={costSummary?.project_payroll || 0} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />
+                            <p className="text-sm text-slate-600 mb-1">
+                              Project Payroll
                             </p>
-                            <p className="text-xs text-slate-500">Actual Employee Costs</p>
+                            <p className="text-xl font-bold text-blue-600">
+                              <ConvertedAmount
+                                amount={costSummary?.project_payroll || 0}
+                                sessionData={sessionData}
+                                showCurrency={true}
+                                currency={sessionData.user.currency}
+                              />
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              Actual Employee Costs
+                            </p>
                           </div>
                           <div className="bg-purple-50 rounded-lg p-4">
-                            <p className="text-sm text-slate-600 mb-1">Manual Expenses</p>
-                            <p className="text-xl font-bold text-purple-600">
-                              <ConvertedAmount amount={costSummary?.manual_expenses || 0} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />
+                            <p className="text-sm text-slate-600 mb-1">
+                              Manual Expenses
                             </p>
-                            <p className="text-xs text-slate-500">Materials, Equipment, etc.</p>
+                            <p className="text-xl font-bold text-purple-600">
+                              <ConvertedAmount
+                                amount={costSummary?.manual_expenses || 0}
+                                sessionData={sessionData}
+                                showCurrency={true}
+                                currency={sessionData.user.currency}
+                              />
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              Materials, Equipment, etc.
+                            </p>
                           </div>
                           <div className="bg-slate-100 rounded-lg p-4 border-2 border-slate-300">
-                            <p className="text-sm text-slate-600 mb-1">Total Expenses</p>
-                            <p className="text-xl font-bold text-slate-800">
-                              <ConvertedAmount amount={costSummary.total_expenses || 0} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />
+                            <p className="text-sm text-slate-600 mb-1">
+                              Total Expenses
                             </p>
-                            <p className="text-xs text-slate-500">Payroll + Manual Expenses</p>
+                            <p className="text-xl font-bold text-slate-800">
+                              <ConvertedAmount
+                                amount={costSummary.total_expenses || 0}
+                                sessionData={sessionData}
+                                showCurrency={true}
+                                currency={sessionData.user.currency}
+                              />
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              Payroll + Manual Expenses
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -2941,7 +3376,9 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                       {/* Recent Revenue Entries */}
                       {revenueEntries.length > 0 && (
                         <div>
-                          <h3 className="text-lg font-semibold text-slate-800 mb-4">Recent Revenue Entries</h3>
+                          <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                            Recent Revenue Entries
+                          </h3>
                           <div className="space-y-2">
                             {revenueEntries
                               .slice(-5)
@@ -2953,33 +3390,61 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                 >
                                   <div className="flex-1">
                                     <p className="font-medium text-slate-800">
-                                      {revenue.boq_item_no} - {revenue.boq_description}
+                                      {revenue.boq_item_no} -{" "}
+                                      {revenue.boq_description}
                                     </p>
                                     <p className="text-sm text-slate-600">
-                                      {revenue.from_date} to {revenue.to_date} • {revenue.quantity_completed}{" "}
-                                      {revenue.unit} @ <ConvertedAmount amount={revenue.rate} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />/{revenue.unit}
+                                      {revenue.from_date} to {revenue.to_date} •{" "}
+                                      {revenue.quantity_completed}{" "}
+                                      {revenue.unit} @{" "}
+                                      <ConvertedAmount
+                                        amount={revenue.rate}
+                                        sessionData={sessionData}
+                                        showCurrency={true}
+                                        currency={sessionData.user.currency}
+                                      />
+                                      /{revenue.unit}
                                     </p>
                                   </div>
                                   <div className="flex items-center gap-3">
                                     <p className="text-lg font-bold text-green-600">
-                                      +{  <ConvertedAmount amount={Number(revenue.amount)} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />}
+                                      +
+                                      {
+                                        <ConvertedAmount
+                                          amount={Number(revenue.amount)}
+                                          sessionData={sessionData}
+                                          showCurrency={true}
+                                          currency={sessionData.user.currency}
+                                        />
+                                      }
                                     </p>
                                     <button
                                       onClick={async () => {
                                         if (!revenue.id) {
-                                          showToast.error("Revenue entry has no ID")
-                                          return
+                                          showToast.error(
+                                            "Revenue entry has no ID"
+                                          );
+                                          return;
                                         }
                                         try {
-                                          await deleteRevenue(revenue.id).unwrap()
-                                          refetchRevenues()
-                                          refetchBOQ() // Refresh BOQ to update completed quantities
-                                          showToast.success("Revenue entry deleted")
+                                          await deleteRevenue(
+                                            revenue.id
+                                          ).unwrap();
+                                          refetchRevenues();
+                                          refetchBOQ(); // Refresh BOQ to update completed quantities
+                                          showToast.success(
+                                            "Revenue entry deleted"
+                                          );
                                         } catch (error: any) {
-                                          console.error("Failed to delete revenue:", error)
+                                          console.error(
+                                            "Failed to delete revenue:",
+                                            error
+                                          );
                                           showToast.error(
-                                            "Failed to delete revenue: " + (error.data?.message || error.message),
-                                          )
+                                            "Failed to delete revenue: " +
+                                              (error.data?.message ||
+                                                error.message)
+                                          );
                                         }
                                       }}
                                       disabled={isDeletingRevenue}
@@ -2996,20 +3461,32 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
 
                       {/* Manual Expenses by Category */}
                       <div>
-                        <h3 className="text-lg font-semibold text-slate-800 mb-4">Manual Expenses by Category</h3>
+                        <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                          Manual Expenses by Category
+                        </h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           {Object.entries(
-                            expenses.reduce(
-                              (acc, exp) => {
-                                acc[exp.category] = (acc[exp.category] || 0) + exp.amount
-                                return acc
-                              },
-                              {} as Record<string, number>,
-                            ),
+                            expenses.reduce((acc, exp) => {
+                              acc[exp.category] =
+                                (acc[exp.category] || 0) + exp.amount;
+                              return acc;
+                            }, {} as Record<string, number>)
                           ).map(([category, amount]) => (
-                            <div key={category} className="bg-slate-50 rounded-lg p-4">
-                              <p className="text-sm text-slate-600 mb-1">{category}</p>
-                              <p className="text-xl font-bold text-slate-800"><ConvertedAmount amount={Number(amount)} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} /></p>
+                            <div
+                              key={category}
+                              className="bg-slate-50 rounded-lg p-4"
+                            >
+                              <p className="text-sm text-slate-600 mb-1">
+                                {category}
+                              </p>
+                              <p className="text-xl font-bold text-slate-800">
+                                <ConvertedAmount
+                                  amount={Number(amount)}
+                                  sessionData={sessionData}
+                                  showCurrency={true}
+                                  currency={sessionData.user.currency}
+                                />
+                              </p>
                             </div>
                           ))}
                         </div>
@@ -3017,7 +3494,9 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
 
                       {/* Recent Manual Expenses */}
                       <div>
-                        <h3 className="text-lg font-semibold text-slate-800 mb-4">Recent Manual Expenses</h3>
+                        <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                          Recent Manual Expenses
+                        </h3>
                         <div className="space-y-2">
                           {expenses
                             .slice(-5)
@@ -3028,13 +3507,22 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                 className="flex items-center justify-between bg-slate-50 p-4 rounded-lg"
                               >
                                 <div className="flex-1">
-                                  <p className="font-medium text-slate-800">{expense.description}</p>
+                                  <p className="font-medium text-slate-800">
+                                    {expense.description}
+                                  </p>
                                   <p className="text-sm text-slate-600">
-                                    {new Date(expense.created_at).toLocaleDateString()}
+                                    {new Date(
+                                      expense.created_at
+                                    ).toLocaleDateString()}
                                   </p>
                                 </div>
                                 <p className="text-lg font-bold text-red-600">
-                                  <ConvertedAmount amount={Number(expense.amount)} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />
+                                  <ConvertedAmount
+                                    amount={Number(expense.amount)}
+                                    sessionData={sessionData}
+                                    showCurrency={true}
+                                    currency={sessionData.user.currency}
+                                  />
                                 </p>
                               </div>
                             ))}
@@ -3056,10 +3544,16 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                           <CardTitle>Add New BOQ Item</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <form onSubmit={handleAddBOQItem} className="space-y-4">
+                          <form
+                            onSubmit={handleAddBOQItem}
+                            className="space-y-4"
+                          >
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <div className="space-y-2">
-                                <label className="text-sm font-medium" htmlFor="item_code">
+                                <label
+                                  className="text-sm font-medium"
+                                  htmlFor="item_code"
+                                >
                                   Item Code
                                 </label>
                                 <Input
@@ -3073,7 +3567,10 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                               </div>
 
                               <div className="space-y-2">
-                                <label className="text-sm font-medium" htmlFor="description">
+                                <label
+                                  className="text-sm font-medium"
+                                  htmlFor="description"
+                                >
                                   Description
                                 </label>
                                 <Input
@@ -3087,7 +3584,10 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                               </div>
 
                               <div className="space-y-2">
-                                <label className="text-sm font-medium" htmlFor="unit">
+                                <label
+                                  className="text-sm font-medium"
+                                  htmlFor="unit"
+                                >
                                   Unit
                                 </label>
                                 <Select
@@ -3104,7 +3604,10 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                   </SelectTrigger>
                                   <SelectContent>
                                     {STANDARD_UNITS.map((unit) => (
-                                      <SelectItem key={unit.value} value={unit.value}>
+                                      <SelectItem
+                                        key={unit.value}
+                                        value={unit.value}
+                                      >
                                         {unit.label}
                                       </SelectItem>
                                     ))}
@@ -3113,7 +3616,10 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                               </div>
 
                               <div className="space-y-2">
-                                <label className="text-sm font-medium" htmlFor="quantity">
+                                <label
+                                  className="text-sm font-medium"
+                                  htmlFor="quantity"
+                                >
                                   Quantity
                                 </label>
                                 <Input
@@ -3130,7 +3636,10 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                               </div>
 
                               <div className="space-y-2">
-                                <label className="text-sm font-medium" htmlFor="unit_rate">
+                                <label
+                                  className="text-sm font-medium"
+                                  htmlFor="unit_rate"
+                                >
                                   Unit Rate (R)
                                 </label>
                                 <Input
@@ -3147,15 +3656,22 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                               </div>
 
                               <div className="space-y-2">
-                                <label className="text-sm font-medium">Total (R)</label>
+                                <label className="text-sm font-medium">
+                                  Total (R)
+                                </label>
                                 <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                                  {(boqForm.quantity * boqForm.unit_rate).toFixed(2)}
+                                  {(
+                                    boqForm.quantity * boqForm.unit_rate
+                                  ).toFixed(2)}
                                 </div>
                               </div>
                             </div>
 
                             <div className="flex justify-end">
-                              <Button type="submit" disabled={isCreatingBOQ || !selectedProjectId}>
+                              <Button
+                                type="submit"
+                                disabled={isCreatingBOQ || !selectedProjectId}
+                              >
                                 {isCreatingBOQ ? "Adding..." : "Add BOQ Item"}
                               </Button>
                             </div>
@@ -3193,8 +3709,10 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                 <Button
                                   variant="outline"
                                   onClick={() => {
-                                    setCsvUploadType("boq")
-                                    document.getElementById("boq-csv-upload")?.click()
+                                    setCsvUploadType("boq");
+                                    document
+                                      .getElementById("boq-csv-upload")
+                                      ?.click();
                                   }}
                                   className="flex items-center gap-2"
                                 >
@@ -3202,7 +3720,9 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                   Choose CSV File
                                 </Button>
                                 {csvFile && csvUploadType === "boq" && (
-                                  <span className="text-sm text-green-600">{csvFile.name} selected</span>
+                                  <span className="text-sm text-green-600">
+                                    {csvFile.name} selected
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -3214,16 +3734,20 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                   className="flex items-center gap-2"
                                 >
                                   <Upload className="h-4 w-4" />
-                                  {isUploadingCsv ? "Uploading..." : "Upload BOQ Items"}
+                                  {isUploadingCsv
+                                    ? "Uploading..."
+                                    : "Upload BOQ Items"}
                                 </Button>
                               </div>
                             )}
                             <div className="text-sm text-slate-600">
                               <p>
-                                <strong>CSV Format:</strong> item_code, description, unit, quantity, unit_rate
+                                <strong>CSV Format:</strong> item_code,
+                                description, unit, quantity, unit_rate
                               </p>
                               <p>
-                                <strong>Example:</strong> CONC-001, Concrete Work, m³, 100, 150
+                                <strong>Example:</strong> CONC-001, Concrete
+                                Work, m³, 100, 150
                               </p>
                             </div>
                           </div>
@@ -3242,26 +3766,47 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                 <thead>
                                   <tr className="border-b">
                                     <th className="text-left p-4">Item Code</th>
-                                    <th className="text-left p-4">Description</th>
+                                    <th className="text-left p-4">
+                                      Description
+                                    </th>
                                     <th className="text-right p-4">Qty</th>
                                     <th className="text-right p-4">Unit</th>
-                                    <th className="text-right p-4">Unit Rate (R)</th>
-                                    <th className="text-right p-4">Total (R)</th>
+                                    <th className="text-right p-4">
+                                      Unit Rate (R)
+                                    </th>
+                                    <th className="text-right p-4">
+                                      Total (R)
+                                    </th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {boqItems.map((item: any, index: number) => (
                                     <tr
-                                      key={`${item.item_no || item.item_code}-${index}`}
+                                      key={`${
+                                        item.item_no || item.item_code
+                                      }-${index}`}
                                       className="border-b hover:bg-gray-50"
                                     >
-                                      <td className="p-4">{item.item_no || item.item_code}</td>
-                                      <td className="p-4">{item.description}</td>
-                                      <td className="text-right p-4">{item.quantity}</td>
-                                      <td className="text-right p-4">{item.unit}</td>
-                                      <td className="text-right p-4">{item.rate || item.unit_rate}</td>
+                                      <td className="p-4">
+                                        {item.item_no || item.item_code}
+                                      </td>
+                                      <td className="p-4">
+                                        {item.description}
+                                      </td>
+                                      <td className="text-right p-4">
+                                        {item.quantity}
+                                      </td>
+                                      <td className="text-right p-4">
+                                        {item.unit}
+                                      </td>
+                                      <td className="text-right p-4">
+                                        {item.rate || item.unit_rate}
+                                      </td>
                                       <td className="text-right p-4 font-medium">
-                                        {(item.quantity * (item.rate || item.unit_rate)).toFixed(2)}
+                                        {(
+                                          item.quantity *
+                                          (item.rate || item.unit_rate)
+                                        ).toFixed(2)}
                                       </td>
                                     </tr>
                                   ))}
@@ -3285,15 +3830,19 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                         <CardHeader>
                           <CardTitle>Add Revenue from BOQ Progress</CardTitle>
                           <p className="text-sm text-slate-600">
-                            Select a BOQ item, specify the work period, and enter completed quantity. Labor expenses
-                            will be automatically fetched from payroll data for the selected period.
+                            Select a BOQ item, specify the work period, and
+                            enter completed quantity. Labor expenses will be
+                            automatically fetched from payroll data for the
+                            selected period.
                           </p>
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-4">
                             {/* BOQ Item Selection */}
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">Select BOQ Item</label>
+                              <label className="text-sm font-medium">
+                                Select BOQ Item
+                              </label>
                               <Select
                                 value={revenueForm.selectedBOQItem}
                                 onValueChange={(value) =>
@@ -3309,8 +3858,15 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                 <SelectContent>
                                   {boqItems.map((item: any) => (
                                     <SelectItem key={item.id} value={item.id}>
-                                      {item.item_no || item.item_code} - {item.description} (Rate:{" "}
-                                      <ConvertedAmount amount={item.rate || item.unit_rate} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />/{item.unit})
+                                      {item.item_no || item.item_code} -{" "}
+                                      {item.description} (Rate:{" "}
+                                      <ConvertedAmount
+                                        amount={item.rate || item.unit_rate}
+                                        sessionData={sessionData}
+                                        showCurrency={true}
+                                        currency={sessionData.user.currency}
+                                      />
+                                      /{item.unit})
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -3320,27 +3876,31 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                             {/* Date Range Selection */}
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <label className="text-sm font-medium">📅 From Date</label>
+                                <label className="text-sm font-medium">
+                                  📅 From Date
+                                </label>
                                 <Input
                                   type="date"
                                   name="fromDate"
                                   value={revenueForm.fromDate}
                                   onChange={(e) => {
-                                    handleRevenueInputChange(e)
-                                    setPayrollFetched(false) // Reset payroll fetch status when date changes
+                                    handleRevenueInputChange(e);
+                                    setPayrollFetched(false); // Reset payroll fetch status when date changes
                                   }}
                                   className="w-full"
                                 />
                               </div>
                               <div className="space-y-2">
-                                <label className="text-sm font-medium">📅 To Date</label>
+                                <label className="text-sm font-medium">
+                                  📅 To Date
+                                </label>
                                 <Input
                                   type="date"
                                   name="toDate"
                                   value={revenueForm.toDate}
                                   onChange={(e) => {
-                                    handleRevenueInputChange(e)
-                                    setPayrollFetched(false) // Reset payroll fetch status when date changes
+                                    handleRevenueInputChange(e);
+                                    setPayrollFetched(false); // Reset payroll fetch status when date changes
                                   }}
                                   className="w-full"
                                 />
@@ -3349,7 +3909,9 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
 
                             {/* Quantity Input */}
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">Quantity of Work Completed</label>
+                              <label className="text-sm font-medium">
+                                Quantity of Work Completed
+                              </label>
                               <Input
                                 type="number"
                                 name="quantityCompleted"
@@ -3365,43 +3927,70 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                             {revenueForm.selectedBOQItem &&
                               (() => {
                                 const selectedItem = boqItems.find(
-                                  (item: any) => item.id === revenueForm.selectedBOQItem,
-                                )
+                                  (item: any) =>
+                                    item.id === revenueForm.selectedBOQItem
+                                );
                                 if (selectedItem) {
                                   return (
                                     <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                                      <h4 className="font-semibold text-slate-800 mb-2">Selected Item Details</h4>
+                                      <h4 className="font-semibold text-slate-800 mb-2">
+                                        Selected Item Details
+                                      </h4>
                                       <div className="grid grid-cols-2 gap-2 text-sm">
                                         <div>
-                                          <span className="text-slate-600">Total Quantity:</span>
+                                          <span className="text-slate-600">
+                                            Total Quantity:
+                                          </span>
                                           <span className="ml-2 font-semibold">
-                                            {selectedItem.quantity} {selectedItem.unit}
+                                            {selectedItem.quantity}{" "}
+                                            {selectedItem.unit}
                                           </span>
                                         </div>
                                         <div>
-                                          <span className="text-slate-600">Completed:</span>
+                                          <span className="text-slate-600">
+                                            Completed:
+                                          </span>
                                           <span className="ml-2 font-semibold text-green-600">
-                                            {selectedItem.completed_qty || 0} {selectedItem.unit}
+                                            {selectedItem.completed_qty || 0}{" "}
+                                            {selectedItem.unit}
                                           </span>
                                         </div>
                                         <div>
-                                          <span className="text-slate-600">Rate:</span>
+                                          <span className="text-slate-600">
+                                            Rate:
+                                          </span>
                                           <span className="ml-2 font-semibold">
-                                            <ConvertedAmount amount={selectedItem.rate || selectedItem.unit_rate} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />/{selectedItem.unit}
+                                            <ConvertedAmount
+                                              amount={
+                                                selectedItem.rate ||
+                                                selectedItem.unit_rate
+                                              }
+                                              sessionData={sessionData}
+                                              showCurrency={true}
+                                              currency={
+                                                sessionData.user.currency
+                                              }
+                                            />
+                                            /{selectedItem.unit}
                                           </span>
                                         </div>
                                         <div>
-                                          <span className="text-slate-600">Remaining:</span>
+                                          <span className="text-slate-600">
+                                            Remaining:
+                                          </span>
                                           <span className="ml-2 font-semibold text-amber-600">
-                                            {(selectedItem.quantity - (selectedItem.completed_qty || 0)).toFixed(2)}{" "}
+                                            {(
+                                              selectedItem.quantity -
+                                              (selectedItem.completed_qty || 0)
+                                            ).toFixed(2)}{" "}
                                             {selectedItem.unit}
                                           </span>
                                         </div>
                                       </div>
                                     </div>
-                                  )
+                                  );
                                 }
-                                return null
+                                return null;
                               })()}
 
                             {/* Revenue Preview */}
@@ -3409,29 +3998,51 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                               revenueForm.quantityCompleted > 0 &&
                               (() => {
                                 const selectedItem = boqItems.find(
-                                  (item: any) => item.id === revenueForm.selectedBOQItem,
-                                )
+                                  (item: any) =>
+                                    item.id === revenueForm.selectedBOQItem
+                                );
                                 if (selectedItem) {
                                   const calculatedRevenue =
-                                    revenueForm.quantityCompleted * (selectedItem.rate || selectedItem.unit_rate)
+                                    revenueForm.quantityCompleted *
+                                    (selectedItem.rate ||
+                                      selectedItem.unit_rate);
                                   return (
                                     <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
                                       <div className="flex items-center justify-between">
                                         <div>
-                                          <p className="text-sm text-green-700 font-medium">Calculated Revenue</p>
+                                          <p className="text-sm text-green-700 font-medium">
+                                            Calculated Revenue
+                                          </p>
                                           <p className="text-xs text-green-600 mt-1">
-                                            {revenueForm.quantityCompleted} {selectedItem.unit} ×{" "}
-                                            <ConvertedAmount amount={selectedItem.rate || selectedItem.unit_rate} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />/{selectedItem.unit}
+                                            {revenueForm.quantityCompleted}{" "}
+                                            {selectedItem.unit} ×{" "}
+                                            <ConvertedAmount
+                                              amount={
+                                                selectedItem.rate ||
+                                                selectedItem.unit_rate
+                                              }
+                                              sessionData={sessionData}
+                                              showCurrency={true}
+                                              currency={
+                                                sessionData.user.currency
+                                              }
+                                            />
+                                            /{selectedItem.unit}
                                           </p>
                                         </div>
                                         <p className="text-3xl font-bold text-green-600">
-                                          <ConvertedAmount amount={calculatedRevenue} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />
+                                          <ConvertedAmount
+                                            amount={calculatedRevenue}
+                                            sessionData={sessionData}
+                                            showCurrency={true}
+                                            currency={sessionData.user.currency}
+                                          />
                                         </p>
                                       </div>
                                     </div>
-                                  )
+                                  );
                                 }
-                                return null
+                                return null;
                               })()}
 
                             {/* Labor Expense Fetch Section */}
@@ -3439,14 +4050,21 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                                 <div className="flex items-center justify-between mb-3">
                                   <div>
-                                    <h4 className="font-medium text-slate-800">🔄 Auto-Fetch Labor Expenses</h4>
+                                    <h4 className="font-medium text-slate-800">
+                                      🔄 Auto-Fetch Labor Expenses
+                                    </h4>
                                     <p className="text-sm text-slate-600">
-                                      Labor costs are automatically fetched from payroll data when you select a date
-                                      range
+                                      Labor costs are automatically fetched from
+                                      payroll data when you select a date range
                                     </p>
                                   </div>
                                   <Button
-                                    onClick={() => fetchLaborExpenses(revenueForm.fromDate, revenueForm.toDate)}
+                                    onClick={() =>
+                                      fetchLaborExpenses(
+                                        revenueForm.fromDate,
+                                        revenueForm.toDate
+                                      )
+                                    }
                                     disabled={
                                       isLoadingPayroll ||
                                       !selectedProjectId ||
@@ -3475,7 +4093,8 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                     <div className="flex items-center">
                                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600 mr-2"></div>
                                       <p className="text-sm text-yellow-800">
-                                        ⏳ Fetching labor expenses from payroll data for {revenueForm.fromDate} to{" "}
+                                        ⏳ Fetching labor expenses from payroll
+                                        data for {revenueForm.fromDate} to{" "}
                                         {revenueForm.toDate}...
                                       </p>
                                     </div>
@@ -3485,16 +4104,21 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                 {payrollFetched && (
                                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                                     <p className="text-sm text-green-800">
-                                      ✅ Labor expenses have been successfully fetched and added to the expenses list.
-                                      <span className="font-medium">Check the "Add Expenses" tab to see them.</span>
+                                      ✅ Labor expenses have been successfully
+                                      fetched and added to the expenses list.
+                                      <span className="font-medium">
+                                        Check the "Add Expenses" tab to see
+                                        them.
+                                      </span>
                                     </p>
                                   </div>
                                 )}
 
                                 <div className="mt-3 text-xs text-blue-700">
                                   <p>
-                                    <strong>Note:</strong> Labor expenses are automatically added as category "Labor"
-                                    and duplicates are skipped.
+                                    <strong>Note:</strong> Labor expenses are
+                                    automatically added as category "Labor" and
+                                    duplicates are skipped.
                                   </p>
                                 </div>
                               </div>
@@ -3505,71 +4129,104 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                               <Button
                                 onClick={async () => {
                                   // Handle revenue recording logic here
-                                  if (!revenueForm.selectedBOQItem || !revenueForm.quantityCompleted) {
-                                    showToast.error("Please select a BOQ item and enter quantity completed")
-                                    return
+                                  if (
+                                    !revenueForm.selectedBOQItem ||
+                                    !revenueForm.quantityCompleted
+                                  ) {
+                                    showToast.error(
+                                      "Please select a BOQ item and enter quantity completed"
+                                    );
+                                    return;
                                   }
 
                                   // Auto-fetch labor expenses if not already fetched
-                                  if (!payrollFetched && revenueForm.fromDate && revenueForm.toDate) {
-                                    await fetchLaborExpenses(revenueForm.fromDate, revenueForm.toDate)
+                                  if (
+                                    !payrollFetched &&
+                                    revenueForm.fromDate &&
+                                    revenueForm.toDate
+                                  ) {
+                                    await fetchLaborExpenses(
+                                      revenueForm.fromDate,
+                                      revenueForm.toDate
+                                    );
                                   }
 
                                   // Create revenue entry in backend
                                   const selectedItem = boqItems.find(
-                                    (item: any) => item.id === revenueForm.selectedBOQItem,
-                                  )
+                                    (item: any) =>
+                                      item.id === revenueForm.selectedBOQItem
+                                  );
                                   if (selectedItem) {
                                     const revenueAmount =
-                                      revenueForm.quantityCompleted * (selectedItem.rate || selectedItem.unit_rate)
+                                      revenueForm.quantityCompleted *
+                                      (selectedItem.rate ||
+                                        selectedItem.unit_rate);
 
                                     try {
                                       // Create revenue entry
                                       await createRevenue({
                                         project_id: selectedProjectId,
-                                        company_id: (sessionData.user as any).company_id,
+                                        company_id: (sessionData.user as any)
+                                          .company_id,
                                         boq_item_id: selectedItem.id,
-                                        boq_item_no: selectedItem.item_no || selectedItem.item_code,
-                                        boq_description: selectedItem.description,
+                                        boq_item_no:
+                                          selectedItem.item_no ||
+                                          selectedItem.item_code,
+                                        boq_description:
+                                          selectedItem.description,
                                         from_date: revenueForm.fromDate,
                                         to_date: revenueForm.toDate,
-                                        quantity_completed: revenueForm.quantityCompleted,
-                                        rate: selectedItem.rate || selectedItem.unit_rate,
+                                        quantity_completed:
+                                          revenueForm.quantityCompleted,
+                                        rate:
+                                          selectedItem.rate ||
+                                          selectedItem.unit_rate,
                                         unit: selectedItem.unit,
                                         amount: revenueAmount,
-                                      }).unwrap()
+                                      }).unwrap();
 
                                       // Update BOQ progress
-                                      const currentCompleted = selectedItem.completed_qty || 0
+                                      const currentCompleted =
+                                        selectedItem.completed_qty || 0;
                                       await updateBOQProgress({
                                         id: selectedItem.id,
-                                        completed_quantity: currentCompleted + revenueForm.quantityCompleted,
-                                      }).unwrap()
+                                        completed_quantity:
+                                          currentCompleted +
+                                          revenueForm.quantityCompleted,
+                                      }).unwrap();
 
                                       // Refresh data
-                                      refetchRevenues()
-                                      refetchBOQ()
+                                      refetchRevenues();
+                                      refetchBOQ();
                                     } catch (error: any) {
-                                      console.error("Failed to create revenue:", error)
+                                      console.error(
+                                        "Failed to create revenue:",
+                                        error
+                                      );
                                       showToast.error(
-                                        "Failed to record revenue: " + (error.data?.message || error.message),
-                                      )
-                                      return
+                                        "Failed to record revenue: " +
+                                          (error.data?.message || error.message)
+                                      );
+                                      return;
                                     }
                                   }
 
                                   showToast.success(
-                                    "Revenue recorded successfully! Labor expenses have been automatically added.",
-                                  )
+                                    "Revenue recorded successfully! Labor expenses have been automatically added."
+                                  );
 
                                   // Reset form
                                   setRevenueForm({
-                                    fromDate: new Date().toISOString().split("T")[0],
-                                    toDate: new Date().toISOString().split("T")[0],
+                                    fromDate: new Date()
+                                      .toISOString()
+                                      .split("T")[0],
+                                    toDate: new Date()
+                                      .toISOString()
+                                      .split("T")[0],
                                     selectedBOQItem: "",
                                     quantityCompleted: 0,
-                                  })
-                                  setPayrollFetched(false)
+                                  });
+                                  setPayrollFetched(false);
                                 }}
                                 disabled={
                                   !revenueForm.selectedBOQItem ||
@@ -3582,7 +4239,9 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                 {isLoadingPayroll || isCreatingRevenue ? (
                                   <>
                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                    {isCreatingRevenue ? "Recording..." : "Fetching Labor..."}
+                                    {isCreatingRevenue
+                                      ? "Recording..."
+                                      : "Fetching Labor..."}
                                   </>
                                 ) : (
                                   <>➕ Record Revenue</>
@@ -3597,9 +4256,12 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                       {boqItems.length === 0 && (
                         <Card>
                           <CardContent className="text-center py-8">
-                            <p className="text-amber-800 font-medium mb-2">No BOQ Items Available</p>
+                            <p className="text-amber-800 font-medium mb-2">
+                              No BOQ Items Available
+                            </p>
                             <p className="text-amber-700 text-sm mb-4">
-                              Please add BOQ items first before recording revenue.
+                              Please add BOQ items first before recording
+                              revenue.
                             </p>
                             <Button
                               onClick={() => switchTab("boq")}
@@ -3622,11 +4284,15 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                           <CardTitle>Add New Expense</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <form onSubmit={handleAddExpense} className="space-y-4">
+                          <form
+                            onSubmit={handleAddExpense}
+                            className="space-y-4"
+                          >
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <div className="space-y-2">
                                 <label className="text-sm font-medium leading-none">
-                                  Description <span className="text-red-500">*</span>
+                                  Description{" "}
+                                  <span className="text-red-500">*</span>
                                 </label>
                                 <Input
                                   name="description"
@@ -3638,7 +4304,8 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                               </div>
                               <div className="space-y-2">
                                 <label className="text-sm font-medium leading-none">
-                                  Quantity <span className="text-red-500">*</span>
+                                  Quantity{" "}
+                                  <span className="text-red-500">*</span>
                                 </label>
                                 <Input
                                   type="number"
@@ -3652,7 +4319,9 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                 />
                               </div>
                               <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Unit</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                  Unit
+                                </label>
                                 <Select
                                   value={expenseForm.unit}
                                   onValueChange={(value) =>
@@ -3667,7 +4336,10 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                   </SelectTrigger>
                                   <SelectContent>
                                     {STANDARD_UNITS.map((unit) => (
-                                      <SelectItem key={unit.value} value={unit.value}>
+                                      <SelectItem
+                                        key={unit.value}
+                                        value={unit.value}
+                                      >
                                         {unit.label}
                                       </SelectItem>
                                     ))}
@@ -3675,7 +4347,9 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                 </Select>
                               </div>
                               <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                  Unit Price
+                                </label>
                                 <Input
                                   type="number"
                                   name="unit_price"
@@ -3690,7 +4364,9 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none">Category</label>
+                                <label className="text-sm font-medium leading-none">
+                                  Category
+                                </label>
                                 <Select
                                   name="category"
                                   value={expenseForm.category}
@@ -3705,26 +4381,49 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                     <SelectValue placeholder="Select category" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="MATERIALS">Materials</SelectItem>
+                                    <SelectItem value="MATERIALS">
+                                      Materials
+                                    </SelectItem>
                                     <SelectItem value="LABOR">Labor</SelectItem>
-                                    <SelectItem value="EQUIPMENT">Equipment</SelectItem>
-                                    <SelectItem value="SUBCONTRACTOR">Subcontractor</SelectItem>
-                                    <SelectItem value="PERMITS">Permits</SelectItem>
-                                    <SelectItem value="TRANSPORTATION">Transportation</SelectItem>
-                                    <SelectItem value="UTILITIES">Utilities</SelectItem>
+                                    <SelectItem value="EQUIPMENT">
+                                      Equipment
+                                    </SelectItem>
+                                    <SelectItem value="SUBCONTRACTOR">
+                                      Subcontractor
+                                    </SelectItem>
+                                    <SelectItem value="PERMITS">
+                                      Permits
+                                    </SelectItem>
+                                    <SelectItem value="TRANSPORTATION">
+                                      Transportation
+                                    </SelectItem>
+                                    <SelectItem value="UTILITIES">
+                                      Utilities
+                                    </SelectItem>
                                     <SelectItem value="RENT">Rent</SelectItem>
-                                    <SelectItem value="OFFICE_SUPPLIES">Office Supplies</SelectItem>
-                                    <SelectItem value="MARKETING">Marketing</SelectItem>
-                                    <SelectItem value="TRAINING">Training</SelectItem>
+                                    <SelectItem value="OFFICE_SUPPLIES">
+                                      Office Supplies
+                                    </SelectItem>
+                                    <SelectItem value="MARKETING">
+                                      Marketing
+                                    </SelectItem>
+                                    <SelectItem value="TRAINING">
+                                      Training
+                                    </SelectItem>
                                     <SelectItem value="OTHER">Other</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
                               <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none">Total Amount</label>
+                                <label className="text-sm font-medium leading-none">
+                                  Total Amount
+                                </label>
                                 <div className="p-2 bg-gray-50 rounded border text-sm font-medium">
                                   {sessionData.user.currency}
-                                  {(expenseForm.quantity * expenseForm.unit_price).toLocaleString(undefined, {
+                                  {(
+                                    expenseForm.quantity *
+                                    expenseForm.unit_price
+                                  ).toLocaleString(undefined, {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2,
                                   })}
@@ -3732,8 +4431,13 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                               </div>
                             </div>
                             <div className="flex justify-end">
-                              <Button type="submit" disabled={isCreatingExpense}>
-                                {isCreatingExpense ? "Adding..." : "Add Expense"}
+                              <Button
+                                type="submit"
+                                disabled={isCreatingExpense}
+                              >
+                                {isCreatingExpense
+                                  ? "Adding..."
+                                  : "Add Expense"}
                               </Button>
                             </div>
                           </form>
@@ -3770,8 +4474,10 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                 <Button
                                   variant="outline"
                                   onClick={() => {
-                                    setCsvUploadType("expenses")
-                                    document.getElementById("expense-csv-upload")?.click()
+                                    setCsvUploadType("expenses");
+                                    document
+                                      .getElementById("expense-csv-upload")
+                                      ?.click();
                                   }}
                                   className="flex items-center gap-2"
                                 >
@@ -3779,7 +4485,9 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                   Choose CSV File
                                 </Button>
                                 {csvFile && csvUploadType === "expenses" && (
-                                  <span className="text-sm text-green-600">{csvFile.name} selected</span>
+                                  <span className="text-sm text-green-600">
+                                    {csvFile.name} selected
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -3791,16 +4499,20 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                   className="flex items-center gap-2"
                                 >
                                   <Upload className="h-4 w-4" />
-                                  {isUploadingCsv ? "Uploading..." : "Upload Expenses"}
+                                  {isUploadingCsv
+                                    ? "Uploading..."
+                                    : "Upload Expenses"}
                                 </Button>
                               </div>
                             )}
                             <div className="text-sm text-slate-600">
                               <p>
-                                <strong>CSV Format:</strong> description, category, quantity, unit, unit_price
+                                <strong>CSV Format:</strong> description,
+                                category, quantity, unit, unit_price
                               </p>
                               <p>
-                                <strong>Categories:</strong> MATERIALS, LABOR, EQUIPMENT, TRANSPORT, OTHER
+                                <strong>Categories:</strong> MATERIALS, LABOR,
+                                EQUIPMENT, TRANSPORT, OTHER
                               </p>
                             </div>
                           </div>
@@ -3812,8 +4524,13 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                         <CardHeader>
                           <CardTitle className="flex items-center justify-between">
                             <span>Expenses</span>
-                            {expenses.some((exp: any) => exp.category === "LABOR") && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+                            {expenses.some(
+                              (exp: any) => exp.category === "LABOR"
+                            ) && (
+                              <Badge
+                                variant="outline"
+                                className="bg-blue-50 text-blue-700 border-blue-300"
+                              >
                                 🔄 Includes Auto-Fetched Labor
                               </Badge>
                             )}
@@ -3833,16 +4550,24 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                               {/* Expense Summary */}
                               {expenses.length > 0 && (
                                 <div className="bg-slate-50 rounded-lg p-4 mb-6">
-                                  <h4 className="font-medium text-slate-800 mb-3">Expense Summary</h4>
+                                  <h4 className="font-medium text-slate-800 mb-3">
+                                    Expense Summary
+                                  </h4>
                                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     {Object.entries(
                                       expenses.reduce((acc: any, exp: any) => {
-                                        const category = exp.category || "Other"
-                                        acc[category] = (acc[category] || 0) + Number(exp.amount || 0)
-                                        return acc
-                                      }, {}),
+                                        const category =
+                                          exp.category || "Other";
+                                        acc[category] =
+                                          (acc[category] || 0) +
+                                          Number(exp.amount || 0);
+                                        return acc;
+                                      }, {})
                                     ).map(([category, amount]) => (
-                                      <div key={category} className="text-center">
+                                      <div
+                                        key={category}
+                                        className="text-center"
+                                      >
                                         <div
                                           className={`p-3 rounded-lg ${
                                             category === "LABOR"
@@ -3850,12 +4575,23 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                               : "bg-white border border-slate-200"
                                           }`}
                                         >
-                                          <p className="text-sm font-medium text-slate-600">{category}</p>
+                                          <p className="text-sm font-medium text-slate-600">
+                                            {category}
+                                          </p>
                                           <p className="text-lg font-bold text-slate-800">
-                                            <ConvertedAmount amount={Number(amount)} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />
+                                            <ConvertedAmount
+                                              amount={Number(amount)}
+                                              sessionData={sessionData}
+                                              showCurrency={true}
+                                              currency={
+                                                sessionData.user.currency
+                                              }
+                                            />
                                           </p>
                                           {category === "LABOR" && (
-                                            <p className="text-xs text-blue-600 mt-1">Auto-Fetched</p>
+                                            <p className="text-xs text-blue-600 mt-1">
+                                              Auto-Fetched
+                                            </p>
                                           )}
                                         </div>
                                       </div>
@@ -3863,9 +4599,20 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                   </div>
                                   <div className="mt-4 pt-4 border-t border-slate-200">
                                     <div className="flex justify-between items-center">
-                                      <span className="font-medium text-slate-700">Total Expenses:</span>
+                                      <span className="font-medium text-slate-700">
+                                        Total Expenses:
+                                      </span>
                                       <span className="text-xl font-bold text-slate-800">
-                                        <ConvertedAmount amount={expenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0)} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />
+                                        <ConvertedAmount
+                                          amount={expenses.reduce(
+                                            (sum: number, exp: any) =>
+                                              sum + Number(exp.amount || 0),
+                                            0
+                                          )}
+                                          sessionData={sessionData}
+                                          showCurrency={true}
+                                          currency={sessionData.user.currency}
+                                        />
                                       </span>
                                     </div>
                                   </div>
@@ -3877,12 +4624,16 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                   <div
                                     key={expense.id}
                                     className={`border rounded-lg p-4 flex justify-between items-center ${
-                                      expense.category === "LABOR" ? "bg-blue-50 border-blue-200" : "bg-white"
+                                      expense.category === "LABOR"
+                                        ? "bg-blue-50 border-blue-200"
+                                        : "bg-white"
                                     }`}
                                   >
                                     <div className="flex-1">
                                       <div className="flex items-center gap-2">
-                                        <p className="font-medium">{expense.description}</p>
+                                        <p className="font-medium">
+                                          {expense.description}
+                                        </p>
                                         {expense.category === "LABOR" && (
                                           <Badge
                                             variant="outline"
@@ -3894,21 +4645,45 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
                                       </div>
                                       <div className="flex items-center gap-4 mt-1">
                                         <Badge
-                                          variant={expense.category === "LABOR" ? "default" : "secondary"}
-                                          className={expense.category === "LABOR" ? "bg-blue-600" : ""}
+                                          variant={
+                                            expense.category === "LABOR"
+                                              ? "default"
+                                              : "secondary"
+                                          }
+                                          className={
+                                            expense.category === "LABOR"
+                                              ? "bg-blue-600"
+                                              : ""
+                                          }
                                         >
                                           {expense.category}
                                         </Badge>
                                         <p className="text-sm text-gray-500">
                                           {expense.quantity} {expense.unit} ×{" "}
-                                          <ConvertedAmount amount={Number(expense.unit_price || 0)} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} />
+                                          <ConvertedAmount
+                                            amount={Number(
+                                              expense.unit_price || 0
+                                            )}
+                                            sessionData={sessionData}
+                                            showCurrency={true}
+                                            currency={sessionData.user.currency}
+                                          />
                                         </p>
                                       </div>
                                     </div>
                                     <div className="text-right">
-                                      <p className="font-medium text-lg"><ConvertedAmount amount={Number(expense.amount || 0)} sessionData={sessionData} showCurrency={true} currency={sessionData.user.currency} /></p>
+                                      <p className="font-medium text-lg">
+                                        <ConvertedAmount
+                                          amount={Number(expense.amount || 0)}
+                                          sessionData={sessionData}
+                                          showCurrency={true}
+                                          currency={sessionData.user.currency}
+                                        />
+                                      </p>
                                       <p className="text-sm text-gray-500">
-                                        {new Date(expense.created_at).toLocaleDateString()}
+                                        {new Date(
+                                          expense.created_at
+                                        ).toLocaleDateString()}
                                       </p>
                                     </div>
                                   </div>
@@ -3945,5 +4720,5 @@ const handleRevenueInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSe
         </main>
       </div>
     </div>
-  )
+  );
 }

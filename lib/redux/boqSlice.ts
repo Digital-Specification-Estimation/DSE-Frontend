@@ -21,7 +21,8 @@ export const boqApi = createApi({
       providesTags: ["BOQ"],
     }),
     getBOQSummary: builder.query({
-      query: ({ projectId, companyId }) => `project/${projectId}/summary?companyId=${companyId}`,
+      query: ({ projectId, companyId }) =>
+        `project/${projectId}/summary?companyId=${companyId}`,
       providesTags: ["BOQ"],
     }),
     getAllBOQ: builder.query({
@@ -54,7 +55,7 @@ export const boqApi = createApi({
     bulkCreateBOQ: builder.mutation({
       query: ({ projectId, file }) => {
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append("file", file);
         return {
           url: `boq-items/bulk/${projectId}`,
           method: "POST",

@@ -84,18 +84,17 @@ export const userApi = createApi({
       invalidatesTags: ["Users"],
     }),
 
-  approveUser: builder.mutation<
-  { success: boolean; id: string },
-  ApproveUserPayload
->({
-  query: ({ id, role }) => ({
-    url: `role-request/${id}`,  // ✅ matches backend
-    method: "PATCH",            // ✅ matches backend
-    body: { status: "APPROVED", role },
-  }),
-  invalidatesTags: (result, error, { id }) => [{ type: "Users", id }],
-}),
-
+    approveUser: builder.mutation<
+      { success: boolean; id: string },
+      ApproveUserPayload
+    >({
+      query: ({ id, role }) => ({
+        url: `role-request/${id}`, // ✅ matches backend
+        method: "PATCH", // ✅ matches backend
+        body: { status: "APPROVED", role },
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: "Users", id }],
+    }),
 
     updateUser: builder.mutation<User, UpdateUserPayload>({
       query: (data) => ({
@@ -103,7 +102,9 @@ export const userApi = createApi({
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: (result, error, data) => [{ type: "Users", id: data.id }],
+      invalidatesTags: (result, error, data) => [
+        { type: "Users", id: data.id },
+      ],
     }),
 
     updateUserPicture: builder.mutation<User, { id: string; avatar: string }>({
@@ -112,10 +113,15 @@ export const userApi = createApi({
         method: "PATCH",
         body: { avatar: data.avatar },
       }),
-      invalidatesTags: (result, error, data) => [{ type: "Users", id: data.id }],
+      invalidatesTags: (result, error, data) => [
+        { type: "Users", id: data.id },
+      ],
     }),
 
-    deleteUser: builder.mutation<{ success: boolean; id: string }, DeleteUserPayload>({
+    deleteUser: builder.mutation<
+      { success: boolean; id: string },
+      DeleteUserPayload
+    >({
       query: ({ id, company_id }) => ({
         url: `delete/${id}`,
         method: "DELETE",
@@ -124,7 +130,10 @@ export const userApi = createApi({
       invalidatesTags: (result, error, { id }) => [{ type: "Users", id }],
     }),
 
-    updatePrivileges: builder.mutation<{ success: boolean }, UpdatePrivilegePayload>({
+    updatePrivileges: builder.mutation<
+      { success: boolean },
+      UpdatePrivilegePayload
+    >({
       query: (data) => ({
         url: `update-privileges`,
         method: "PATCH",
@@ -133,7 +142,10 @@ export const userApi = createApi({
       invalidatesTags: ["Privileges"],
     }),
 
-    updateSinglePrivilege: builder.mutation<{ success: boolean }, UpdatePrivilegePayload>({
+    updateSinglePrivilege: builder.mutation<
+      { success: boolean },
+      UpdatePrivilegePayload
+    >({
       query: (data) => ({
         url: `single-update-privileges`,
         method: "PATCH",

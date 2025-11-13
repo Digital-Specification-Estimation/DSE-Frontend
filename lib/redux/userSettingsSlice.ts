@@ -1,4 +1,4 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 interface UserSettings {
   id?: string;
@@ -16,44 +16,53 @@ interface UserSettings {
 }
 
 export const userSettingsApi = createApi({
-  reducerPath: 'userSettingsApi',
+  reducerPath: "userSettingsApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: 'https://dse-backend-uv5d.onrender.com/user-settings',
+    baseUrl: "https://dse-backend-uv5d.onrender.com/user-settings",
     prepareHeaders: (headers, { getState }) => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (token) {
-        headers.set('authorization', `Bearer ${token}`);
+        headers.set("authorization", `Bearer ${token}`);
       }
       return headers;
     },
   }),
-  tagTypes: ['UserSettings', 'Session'], // Add Session tag
+  tagTypes: ["UserSettings", "Session"], // Add Session tag
   endpoints: (builder) => ({
-    createUserSettings: builder.mutation<UserSettings, Omit<UserSettings, 'id'>>({
+    createUserSettings: builder.mutation<
+      UserSettings,
+      Omit<UserSettings, "id">
+    >({
       query: (settings) => ({
-        url: '/',
-        method: 'POST',
+        url: "/",
+        method: "POST",
         body: settings,
       }),
-      invalidatesTags: ['UserSettings', 'Session'], // Invalidate Session
+      invalidatesTags: ["UserSettings", "Session"], // Invalidate Session
     }),
-    updateUserSettings: builder.mutation<UserSettings, { id: string; updates: Partial<UserSettings> }>({
+    updateUserSettings: builder.mutation<
+      UserSettings,
+      { id: string; updates: Partial<UserSettings> }
+    >({
       query: ({ id, updates }) => ({
         url: `/${id}`,
-        method: 'PUT',
+        method: "PUT",
         body: updates,
       }),
-      invalidatesTags: ['UserSettings', 'Session'], // Invalidate Session
+      invalidatesTags: ["UserSettings", "Session"], // Invalidate Session
     }),
     getCompanySettings: builder.query<UserSettings[], string>({
       query: (companyId) => `/company/${companyId}`,
       providesTags: (result) =>
         result
           ? [
-              ...result.map(({ id }) => ({ type: 'UserSettings' as const, id })),
-              { type: 'UserSettings', id: 'LIST' },
+              ...result.map(({ id }) => ({
+                type: "UserSettings" as const,
+                id,
+              })),
+              { type: "UserSettings", id: "LIST" },
             ]
-          : [{ type: 'UserSettings', id: 'LIST' }],
+          : [{ type: "UserSettings", id: "LIST" }],
     }),
     getRoleSettings: builder.query<
       UserSettings,
@@ -61,7 +70,7 @@ export const userSettingsApi = createApi({
     >({
       query: ({ role, companyId }) => `/role/${role}/company/${companyId}`,
       providesTags: (result, error, { role }) => [
-        { type: 'UserSettings', id: `${role}-${result?.id || 'role'}` },
+        { type: "UserSettings", id: `${role}-${result?.id || "role"}` },
       ],
     }),
   }),

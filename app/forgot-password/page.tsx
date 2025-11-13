@@ -27,13 +27,16 @@ export default function ForgotPassword() {
     setIsLoading(true);
     try {
       // TODO: Replace with your actual API call for password reset
-      const response = await fetch("https://dse-backend-uv5d.onrender.com/auth/forgot-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
+      const response = await fetch(
+        "https://dse-backend-uv5d.onrender.com/auth/forgot-password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        }
+      );
 
       if (response.ok) {
         toast({
@@ -48,7 +51,8 @@ export default function ForgotPassword() {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        description:
+          error instanceof Error ? error.message : "Something went wrong",
         variant: "destructive",
       });
     } finally {

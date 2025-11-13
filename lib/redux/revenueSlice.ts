@@ -37,7 +37,10 @@ export const revenueApi = createApi({
       query: (projectId) => `revenues/project/${projectId}`,
       providesTags: ["Revenue"],
     }),
-    updateRevenue: builder.mutation<RevenueEntry, { id: string } & Partial<RevenueEntry>>({
+    updateRevenue: builder.mutation<
+      RevenueEntry,
+      { id: string } & Partial<RevenueEntry>
+    >({
       query: ({ id, ...data }) => ({
         url: `revenues/${id}`,
         method: "PATCH",
@@ -52,8 +55,12 @@ export const revenueApi = createApi({
       }),
       invalidatesTags: ["Revenue"],
     }),
-    getProjectRevenueSummary: builder.query<any, { projectId: string; companyId: string }>({
-      query: ({ projectId, companyId }) => `revenues/project/${projectId}/summary?companyId=${companyId}`,
+    getProjectRevenueSummary: builder.query<
+      any,
+      { projectId: string; companyId: string }
+    >({
+      query: ({ projectId, companyId }) =>
+        `revenues/project/${projectId}/summary?companyId=${companyId}`,
       providesTags: ["Revenue"],
     }),
   }),
