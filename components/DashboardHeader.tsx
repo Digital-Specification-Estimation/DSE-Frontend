@@ -1,12 +1,15 @@
 "use client";
 
+import React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { IoMdNotificationsOutline } from "react-icons/io";
-import { FiSearch } from "react-icons/fi";
+import { IoMdNotificationsOutline, IoMdClose } from "react-icons/io";
+import { FiSearch, FiUser, FiClock } from "react-icons/fi";
 import io, { type Socket } from "socket.io-client";
 import { useDispatch, useSelector } from "react-redux";
 import Image from "next/image";
+import { useSessionQuery } from "@/lib/redux/authSlice";
+import { motion, AnimatePresence } from "framer-motion";
 
 import asread from "@/public/asread.svg";
 import {
@@ -35,6 +38,7 @@ const DashboardHeader = () => {
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const { data: sessionData } = useSessionQuery();
 
   // Define available routes with their display names
   const routes = [
@@ -211,7 +215,7 @@ const DashboardHeader = () => {
   };
 
   return (
-    <div className="flex relative z-20 max-[1000px]:w-full items-center justify-between p-4 bg-white border-b">
+    <div className="flex relative  z-20 max-[1000px]:w-full items-center justify-between p-4 bg-white border-b">
       {/* Search Bar */}
       <div className="relative w-1/3 max-w-md" ref={searchRef}>
         <div className="relative">
@@ -256,11 +260,10 @@ const DashboardHeader = () => {
                     index === selectedIndex ? "bg-gray-100" : "hover:bg-gray-50"
                   } text-gray-900 cursor-pointer flex items-center`}
                   onClick={() => handleRouteClick(route.path)}
-                  onMouseEnter={() => setSelectedIndex(index)}
                 >
-                  <FiSearch className="mr-3 h-5 w-5 text-gray-400 flex-shrink-0" />
+                  <FiSearch className="mr-3 h-4 w-4 text-gray-400 flex-shrink-0" />
                   <div>
-                    <p className="font-medium">{route.name}</p>
+                    <p className="font-medium text-sm">{route.name}</p>
                     <p className="text-xs text-gray-500">{route.path}</p>
                   </div>
                 </div>
@@ -273,69 +276,132 @@ const DashboardHeader = () => {
       </div>
 
       {/* Notification and User Section */}
-      <div className="flex items-center space-x-4">
-        <div className="relative">
-          <span
-            className="w-[40px] h-[40px] rounded-full grid place-items-center bg-gray-200 cursor-pointer relative"
-            onClick={() => setNotificationShow(!notificationShow)}
-          >
-            <IoMdNotificationsOutline className="text-gray-600 text-xl" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                {unreadCount}
-              </span>
-            )}
-          </span>
-
-          {notificationShow && (
-            <div className="absolute top-12 right-0 w-[400px] bg-white shadow border rounded-lg p-4">
-              <div className="flex justify-between items-center border-b pb-2">
-                <h3 className="text-gray-800 font-semibold">Notifications</h3>
-                <button
-                  type="button"
-                  title="Mark all as read"
-                  className="bg-gray-200 rounded-full p-3 "
-                  onClick={handleMarkAllAsRead}
-                >
-                  <Image
-                    src={asread || "/placeholder.svg"}
-                    width={20}
-                    height={20}
-                    alt="asread"
-                    title="Mark all as read"
-                  />
-                </button>
-                <button
-                  className="text-gray-500 text-sm"
-                  onClick={() => setNotificationShow(false)}
-                >
-                  Close
-                </button>
-              </div>
-              {notifications.length > 0 ? (
-                notifications.map((notif: NotificationType, index: number) => (
-                  <div key={index} className="mt-4 p-2 border-b">
-                    <p
-                      className={`text-sm ${
-                        notif.read
-                          ? "text-gray-500"
-                          : "text-gray-600 font-semibold"
-                      }`}
-                    >
-                      {notif.message}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {notif.createdAt} <span> {getDay(notif.createdAt)}</span>
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-gray-500 mt-4">
-                  No notifications
-                </p>
+      <div className=" items-center">
+        <div className="relative flex  items-center">
+          <div className="relative flex-row items-center justify-center flex space-x-4">
+            <button
+              onClick={() => setNotificationShow(!notificationShow)}
+              className=" rounded-md bg-gray-100 px-[10px] h-[40px] hover:bg-gray-200 transition-all duration-200 relative"
+              aria-label="Notifications"
+              aria-expanded={notificationShow}
+            >
+              <IoMdNotificationsOutline className="w-5 h-5 text-gray-600" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-medium rounded-full h-4 w-4 flex items-center justify-center">
+                  {unreadCount}
+                </span>
               )}
-            </div>
-          )}
+            </button>
+
+            {/* Profile Button */}
+            <button
+              onClick={() => router.push("/profile")}
+              className="p-2 rounded-full flex flex-row items-center justify-center space-x-[10px] bg-gray-100 hover:bg-gray-200 transition-colors relative"
+              aria-label="User profile"
+            >
+              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-sm">
+                {sessionData?.user?.username?.charAt(0).toUpperCase() || "U"}
+              </div>
+              <span className="ml-2 hidden text-[14px] md:inline">
+                {sessionData?.user?.email || "User"}
+              </span>
+            </button>
+
+            <AnimatePresence>
+              {notificationShow && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="absolute top-12 right-0 w-[320px] md:w-[400px] bg-white shadow-lg border border-gray-100 rounded-lg overflow-hidden z-50"
+                >
+                  <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50">
+                    <h3 className="text-gray-800 font-semibold text-sm">
+                      Notifications
+                    </h3>
+                    <button
+                      onClick={() => setNotificationShow(false)}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                      aria-label="Close notifications"
+                    />
+                    <button
+                      type="button"
+                      className="text-blue-500 hover:text-blue-600 text-xs font-medium transition-colors"
+                      onClick={() => {
+                        dispatch(markAllAsRead());
+                        if (socketRef.current) {
+                          socketRef.current.emit("mark-all-read");
+                        }
+                      }}
+                    >
+                      Mark all as read
+                    </button>
+                  </div>
+                  {notifications.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                      <IoMdNotificationsOutline className="w-10 h-10 text-gray-300 mb-2" />
+                      <p className="text-gray-500 text-sm">
+                        No notifications yet
+                      </p>
+                      <p className="text-gray-400 text-xs mt-1">
+                        We'll notify you when something new arrives
+                      </p>
+                    </div>
+                  ) : (
+                    notifications.map((notification) => {
+                      const date = new Date(notification.createdAt);
+                      const now = new Date();
+                      const diffInHours = Math.floor(
+                        (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+                      );
+
+                      let timeAgo;
+                      if (diffInHours < 24) {
+                        timeAgo = `${diffInHours}h ago`;
+                      } else {
+                        timeAgo = date.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        });
+                      }
+
+                      return (
+                        <motion.div
+                          key={notification.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className={`p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors ${
+                            !notification.read ? "bg-blue-50" : ""
+                          }`}
+                        >
+                          <div className="flex items-start">
+                            <div
+                              className={`flex-shrink-0 h-2 w-2 mt-1.5 rounded-full ${
+                                !notification.read
+                                  ? "bg-blue-500"
+                                  : "bg-transparent"
+                              }`}
+                            />
+                            <div className="ml-2 flex-1">
+                              <p className="text-sm text-gray-800">
+                                {notification.message}
+                              </p>
+                              <div className="flex items-center mt-1 text-xs text-gray-400">
+                                <FiClock className="mr-1 w-3 h-3" />
+                                <span>{timeAgo}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
     </div>
