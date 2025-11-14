@@ -334,30 +334,54 @@ export default function ProfilePage() {
       {/* Delete Account Confirmation Dialog */}
       <AlertDialog
         open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsDeleteDialogOpen(false);
+          }
+        }}
       >
         <AlertDialogContent>
+          <AlertDialogCancel className="absolute right-4 top-4 h-[30px] rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2  disabled:pointer-events-none">
+            <span className="sr-only">Close</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </AlertDialogCancel>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your
-              account and remove all associated data from our servers.
-              <p className="mt-2 font-medium text-foreground">
-                Type <span className="text-destructive">DELETE</span> to
-                confirm:
-              </p>
-              <Input
-                id="confirm-delete"
-                className="mt-2"
-                placeholder="Type DELETE to confirm"
-                onChange={(e) => {
-                  if (e.target.value === "DELETE") {
-                    e.target.classList.remove("border-destructive");
-                  } else {
-                    e.target.classList.add("border-destructive");
-                  }
-                }}
-              />
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                This action cannot be undone. This will permanently delete your
+                account and remove all associated data from our servers.
+                <div className="font-medium text-foreground">
+                  Type <span className="text-destructive">DELETE</span> to
+                  confirm:
+                </div>
+                <Input
+                  id="confirm-delete"
+                  className="mt-2"
+                  placeholder="Type DELETE to confirm"
+                  onChange={(e) => {
+                    if (e.target.value === "DELETE") {
+                      e.target.classList.remove("border-destructive");
+                    } else {
+                      e.target.classList.add("border-destructive");
+                    }
+                  }}
+                />
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -413,15 +437,38 @@ export default function ProfilePage() {
         open={isChangePasswordOpen}
         onOpenChange={(open) => {
           if (!open) {
+            // Reset all form states when closing
             setIsChangePasswordOpen(false);
             setIsVerificationSent(false);
             setVerificationCode("");
+            setCurrentPassword("");
             setNewPassword("");
             setConfirmPassword("");
+          } else {
+            // When opening, ensure the modal is in initial state
+            setIsVerificationSent(false);
           }
         }}
       >
         <AlertDialogContent>
+          <AlertDialogCancel className="absolute right-4 top-4 h-[30px]  rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+            <span className="sr-only">Close</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </AlertDialogCancel>
           <AlertDialogHeader>
             <AlertDialogTitle>Change Password</AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -611,12 +658,18 @@ export default function ProfilePage() {
                       type="button"
                       variant="outline"
                       onClick={() => {
-                        setIsVerificationSent(false);
-                        setVerificationCode("");
+                        if (isVerificationSent) {
+                          // If verification was sent, just go back to verification step
+                          setIsVerificationSent(false);
+                          setVerificationCode("");
+                        } else {
+                          // If on first step, close the modal
+                          setIsChangePasswordOpen(false);
+                        }
                       }}
                       disabled={isChangingPassword}
                     >
-                      Back
+                      {isVerificationSent ? "Back" : "Cancel"}
                     </Button>
                     <Button type="submit" disabled={isChangingPassword}>
                       {isChangingPassword ? "Updating..." : "Update Password"}
