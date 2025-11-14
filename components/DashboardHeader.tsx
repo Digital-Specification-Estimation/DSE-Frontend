@@ -242,8 +242,8 @@ const DashboardHeader = () => {
               }
             }}
           />
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-            <kbd className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded-md border border-gray-200 bg-white text-gray-500 shadow-sm hover:bg-gray-50 transition-colors duration-150 pointer-events-none">
+          <div className="absolute inset-y-0 right-0  flex items-center pr-3">
+            <kbd className="inline-flex items-center  px-2.5 py-1.5 border-gray-500 border-b-[3px] text-xs font-medium rounded-md border border-gray-200 bg-white text-gray-500 shadow-sm hover:bg-gray-50 transition-colors duration-150 pointer-events-none">
               {navigator.platform.includes("Mac") ? "⌘" : "Ctrl+"}K
             </kbd>
           </div>

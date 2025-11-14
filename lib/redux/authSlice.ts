@@ -48,6 +48,17 @@ interface ResetPasswordDto {
   confirmPassword: string;
 }
 
+interface ChangePasswordDto {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+interface ChangePasswordResponse {
+  success: boolean;
+  message: string;
+}
+
 interface MessageResponse {
   message: string;
 }
@@ -138,6 +149,16 @@ export const authApi = createApi({
         body,
       }),
     }),
+    changePassword: builder.mutation<ChangePasswordResponse, ChangePasswordDto>(
+      {
+        query: (body) => ({
+          url: "/change-password",
+          method: "POST",
+          body,
+        }),
+        invalidatesTags: ["Session"],
+      }
+    ),
   }),
 });
 
@@ -151,4 +172,5 @@ export const {
   useSessionQuery,
   useForgotPasswordMutation,
   useResetPasswordMutation,
+  useChangePasswordMutation,
 } = authApi;

@@ -1,10 +1,14 @@
 // app/profile/page.tsx
 "use client";
 
-import { useSessionQuery } from "@/lib/redux/authSlice";
+import {
+  useSessionQuery,
+  useChangePasswordMutation,
+} from "@/lib/redux/authSlice";
 import {
   useUpdateUserMutation,
   useUpdateUserPictureMutation,
+  useDeleteUserMutation,
 } from "@/lib/redux/userSlice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -44,9 +48,18 @@ export default function ProfilePage() {
   });
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteInProgress, setIsDeleteInProgress] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isVerificationSent, setIsVerificationSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const { toast } = useToast();
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
+  const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
+  const [changePassword, { isLoading: isChangingPassword }] =
+    useChangePasswordMutation();
   const [updateUserPicture, { isLoading: isUpdatingPicture }] =
     useUpdateUserPictureMutation();
   // Initialize form data with session data
@@ -274,7 +287,13 @@ export default function ProfilePage() {
                       Set a new password for your account
                     </p>
                   </div>
-                  <Button variant="outline">Change Password</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsChangePasswordOpen(true)}
+                    disabled={isChangingPassword}
+                  >
+                    {isChangingPassword ? "Sending..." : "Change Password"}
+                  </Button>
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
@@ -342,15 +361,19 @@ export default function ProfilePage() {
                 }
 
                 try {
-                  setIsDeleting(true);
-                  // TODO: Implement actual account deletion logic
-                  // await deleteAccount();
+                  setIsDeleteInProgress(true);
+                  await deleteUser({
+                    id: sessionData.user.id,
+                    company_id: sessionData.user.company_id || "",
+                  }).unwrap();
+
                   toast({
                     title: "Account Deleted",
                     description: "Your account has been successfully deleted.",
                   });
-                  // Redirect to home or login page after deletion
-                  // router.push('/');
+
+                  // Sign out and redirect to home page
+                  window.location.href = "/";
                 } catch (error) {
                   console.error("Failed to delete account:", error);
                   toast({
@@ -359,7 +382,7 @@ export default function ProfilePage() {
                     variant: "destructive",
                   });
                 } finally {
-                  setIsDeleting(false);
+                  setIsDeleteInProgress(false);
                   setIsDeleteDialogOpen(false);
                 }
               }}
@@ -367,6 +390,171 @@ export default function ProfilePage() {
               {isDeleting ? "Deleting..." : "Delete Account"}
             </AlertDialogAction>
           </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Change Password Verification Dialog */}
+      <AlertDialog
+        open={isChangePasswordOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsChangePasswordOpen(false);
+            setIsVerificationSent(false);
+            setVerificationCode("");
+            setNewPassword("");
+            setConfirmPassword("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Password</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              {!isVerificationSent ? (
+                <div className="space-y-4">
+                  <p>
+                    We'll send a verification code to your email to confirm your
+                    identity.
+                  </p>
+                  <Button
+                    className="w-full"
+                    onClick={async () => {
+                      try {
+                        // This would be your API call to send verification code
+                        // await sendVerificationCode(sessionData.user.email);
+                        setIsVerificationSent(true);
+                        toast({
+                          title: "Verification sent",
+                          description:
+                            "We've sent a verification code to your email.",
+                        });
+                      } catch (error) {
+                        toast({
+                          title: "Error",
+                          description:
+                            "Failed to send verification code. Please try again.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    disabled={isChangingPassword}
+                  >
+                    {isChangingPassword
+                      ? "Sending..."
+                      : "Send Verification Code"}
+                  </Button>
+                </div>
+              ) : (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (newPassword !== confirmPassword) {
+                      toast({
+                        title: "Error",
+                        description: "Passwords do not match.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+
+                    if (newPassword.length < 8) {
+                      toast({
+                        title: "Error",
+                        description:
+                          "Password must be at least 8 characters long.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+
+                    try {
+                      await changePassword({
+                        userId: sessionData.user.id,
+                        verificationCode,
+                        newPassword,
+                      }).unwrap();
+
+                      toast({
+                        title: "Success",
+                        description:
+                          "Your password has been updated successfully.",
+                      });
+
+                      // Reset form and close modal
+                      setIsChangePasswordOpen(false);
+                      setIsVerificationSent(false);
+                      setVerificationCode("");
+                      setNewPassword("");
+                      setConfirmPassword("");
+                    } catch (error) {
+                      console.error("Failed to change password:", error);
+                      toast({
+                        title: "Error",
+                        description:
+                          "Failed to change password. Please check the verification code and try again.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="verificationCode">Verification Code</Label>
+                    <Input
+                      id="verificationCode"
+                      type="text"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      placeholder="Enter verification code"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">New Password</Label>
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      required
+                      minLength={8}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">
+                      Confirm New Password
+                    </Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      required
+                      minLength={8}
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsVerificationSent(false);
+                        setVerificationCode("");
+                      }}
+                      disabled={isChangingPassword}
+                    >
+                      Back
+                    </Button>
+                    <Button type="submit" disabled={isChangingPassword}>
+                      {isChangingPassword ? "Updating..." : "Update Password"}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
         </AlertDialogContent>
       </AlertDialog>
     </div>
