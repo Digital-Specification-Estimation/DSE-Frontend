@@ -107,12 +107,19 @@ export const userApi = createApi({
       ],
     }),
 
-    updateUserPicture: builder.mutation<User, { id: string; avatar: string }>({
-      query: (data) => ({
-        url: `profile-picture/${data.id}`,
-        method: "PATCH",
-        body: { avatar: data.avatar },
-      }),
+    updateUserPicture: builder.mutation<User, { id: string; image: File }>({
+      query: (data) => {
+        const formData = new FormData();
+        formData.append("image", data.image);
+
+        return {
+          url: `profile-picture/${data.id}`,
+          method: "PATCH",
+          body: formData,
+          // Remove the default Content-Type header to let the browser set it with the correct boundary
+          headers: {},
+        };
+      },
       invalidatesTags: (result, error, data) => [
         { type: "Users", id: data.id },
       ],

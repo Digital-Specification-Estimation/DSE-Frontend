@@ -2,13 +2,16 @@
 "use client";
 
 import { useSessionQuery } from "@/lib/redux/authSlice";
-import { useUpdateUserMutation } from "@/lib/redux/userSlice";
+import {
+  useUpdateUserMutation,
+  useUpdateUserPictureMutation,
+} from "@/lib/redux/userSlice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/sidebar";
 import DashboardHeader from "@/components/DashboardHeader";
 import {
@@ -44,10 +47,24 @@ export default function ProfilePage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
-  const [formData, setFormData] = useState({
-    username: sessionData?.user?.username || "",
-    email: sessionData?.user?.email || "",
-  });
+  const [updateUserPicture, { isLoading: isUpdatingPicture }] =
+    useUpdateUserPictureMutation();
+  // Initialize form data with session data
+  const [formData, setFormData] = useState(() => ({
+    username: "",
+    email: "",
+  }));
+
+  // Update form data when session data is available
+  useEffect(() => {
+    if (sessionData?.user) {
+      setFormData({
+        username: sessionData.user.username || "",
+        email: sessionData.user.email || "",
+      });
+    }
+  }, [sessionData]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -57,12 +74,40 @@ export default function ProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sessionData?.user?.id) return;
-    console.log("user to be submitted", sessionData.user);
+
     try {
-      await updateUser({
-        id: sessionData.user.id,
-        username: formData.username,
-      }).unwrap();
+      // Update username if it has changed
+      if (formData.username !== sessionData.user.username) {
+        await updateUser({
+          id: sessionData.user.id,
+          username: formData.username,
+        }).unwrap();
+      }
+
+      // Update profile picture if a new file was selected
+      if (selectedFile) {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64String = reader.result as string;
+          try {
+            await updateUserPicture({
+              id: sessionData.user.id,
+              image: selectedFile,
+            }).unwrap();
+            setSelectedFile(null);
+          } catch (error) {
+            console.error("Failed to update profile picture:", error);
+            toast({
+              title: "Error",
+              description:
+                "Failed to update profile picture. Please try again.",
+              variant: "destructive",
+            });
+            return;
+          }
+        };
+        reader.readAsDataURL(selectedFile);
+      }
 
       toast({
         title: "Success",
@@ -80,6 +125,22 @@ export default function ProfilePage() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        // 5MB limit
+        toast({
+          title: "File too large",
+          description: "Please select an image smaller than 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+  console.log("user", sessionData.user);
   return (
     <div className="flex h-screen bg-white">
       <Sidebar user={user} />
@@ -106,16 +167,47 @@ export default function ProfilePage() {
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center mb-8">
                   <Avatar className="h-24 w-24 mb-4">
-                    <AvatarImage src={sessionData?.user?.image || ""} />
+                    <AvatarImage
+                      src={
+                        "http://localhost:4000/" +
+                          sessionData?.user?.image_url || ""
+                      }
+                      className="object-cover"
+                    />
                     <AvatarFallback>
                       {sessionData?.user?.username?.charAt(0).toUpperCase() ||
                         "U"}
                     </AvatarFallback>
                   </Avatar>
                   {isEditing && (
-                    <Button variant="outline" size="sm" className="mb-4">
-                      Change Photo
-                    </Button>
+                    <div>
+                      <input
+                        type="file"
+                        id="profile-picture"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileChange}
+                        disabled={isUpdating || isUpdatingPicture}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mb-4"
+                        asChild
+                      >
+                        <label htmlFor="profile-picture">
+                          {selectedFile
+                            ? "Change Selected Photo"
+                            : "Change Photo"}
+                        </label>
+                      </Button>
+                      {selectedFile && (
+                        <p className="text-xs text-muted-foreground text-center">
+                          {selectedFile.name} (
+                          {(selectedFile.size / 1024).toFixed(1)} KB)
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
 
