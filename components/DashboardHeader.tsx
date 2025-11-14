@@ -22,7 +22,8 @@ import {
 import type { RootState } from "@/lib/store";
 
 const SOCKET_SERVER_URL =
-  process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:4000";
+  process.env.NEXT_PUBLIC_SOCKET_SERVER_URL ||
+  "https://dse-backend-uv5d.onrender.com";
 
 const DashboardHeader = () => {
   const dispatch = useDispatch();
@@ -301,7 +302,10 @@ const DashboardHeader = () => {
             >
               {sessionData?.user?.image_url ? (
                 <img
-                  src={"http://localhost:4000/" + sessionData.user.image_url}
+                  src={
+                    "https://dse-backend-uv5d.onrender.com/" +
+                    sessionData.user.image_url
+                  }
                   alt={sessionData.user.username || "User"}
                   className="w-[40px] h-[40px] rounded-full object-cover"
                 />

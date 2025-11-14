@@ -237,8 +237,8 @@ export function Sidebar({ user }: SidebarProps) {
             <Avatar className="h-10 w-10">
               <img
                 src={
-                  "http://localhost:4000/" + sessionData?.user?.image_url ||
-                  "johndoe.jpeg"
+                  "https://dse-backend-uv5d.onrender.com/" +
+                    sessionData?.user?.image_url || "johndoe.jpeg"
                 }
                 alt={userData.username}
                 className="h-10 w-10 object-cover rounded-full"
