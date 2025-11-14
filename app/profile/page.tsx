@@ -10,6 +10,11 @@ import {
   useUpdateUserPictureMutation,
   useDeleteUserMutation,
 } from "@/lib/redux/userSlice";
+import {
+  useRequestVerificationCodeMutation,
+  useVerifyEmailMutation,
+  resetVerificationState,
+} from "@/lib/redux/verificationSlice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -52,13 +57,17 @@ export default function ProfilePage() {
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isVerificationSent, setIsVerificationSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [requestVerificationCode, { isLoading: isSendingCode }] =
+    useRequestVerificationCodeMutation();
+  const [verifyEmail, { isLoading: isVerifying }] = useVerifyEmailMutation();
   const { toast } = useToast();
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
   const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
-  const [changePassword, { isLoading: isChangingPassword }] =
+  const [changePassword, { isLoading: isChangingPasswordState }] =
     useChangePasswordMutation();
   const [updateUserPicture, { isLoading: isUpdatingPicture }] =
     useUpdateUserPictureMutation();
@@ -290,9 +299,15 @@ export default function ProfilePage() {
                   <Button
                     variant="outline"
                     onClick={() => setIsChangePasswordOpen(true)}
-                    disabled={isChangingPassword}
+                    // disabled={
+                    // isChangingPasswordState ||
+                    // isVerifying ||
+                    // !verificationCode || !newPassword || !confirmPassword
+                    // }
                   >
-                    {isChangingPassword ? "Sending..." : "Change Password"}
+                    {isChangingPasswordState || isVerifying
+                      ? "Processing..."
+                      : "Update Password"}
                   </Button>
                 </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -420,8 +435,11 @@ export default function ProfilePage() {
                     className="w-full"
                     onClick={async () => {
                       try {
-                        // This would be your API call to send verification code
-                        // await sendVerificationCode(sessionData.user.email);
+                        setIsChangingPassword(true);
+                        await requestVerificationCode({
+                          email: sessionData.user.email,
+                        }).unwrap();
+
                         setIsVerificationSent(true);
                         toast({
                           title: "Verification sent",
@@ -429,25 +447,36 @@ export default function ProfilePage() {
                             "We've sent a verification code to your email.",
                         });
                       } catch (error) {
+                        console.error("Verification error:", error);
                         toast({
                           title: "Error",
                           description:
                             "Failed to send verification code. Please try again.",
                           variant: "destructive",
                         });
+                      } finally {
+                        setIsChangingPassword(false);
                       }
                     }}
-                    disabled={isChangingPassword}
+                    disabled={isChangingPassword || isSendingCode}
                   >
-                    {isChangingPassword
-                      ? "Sending..."
-                      : "Send Verification Code"}
+                    {isSendingCode ? "Sending..." : "Send Verification Code"}
                   </Button>
                 </div>
               ) : (
                 <form
                   onSubmit={async (e) => {
                     e.preventDefault();
+
+                    if (!currentPassword) {
+                      toast({
+                        title: "Error",
+                        description: "Please enter your current password.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+
                     if (newPassword !== confirmPassword) {
                       toast({
                         title: "Error",
@@ -468,47 +497,89 @@ export default function ProfilePage() {
                     }
 
                     try {
-                      await changePassword({
-                        userId: sessionData.user.id,
-                        verificationCode,
-                        newPassword,
+                      setIsChangingPassword(true);
+
+                      // First verify the email with the code
+                      let response = await verifyEmail({
+                        email: sessionData.user.email,
+                        code: verificationCode,
                       }).unwrap();
+                      console.log("response (ver)", response);
+                      if (response.success) {
+                        // If verification is successful, proceed with password change
+                        // Note: currentPassword is not available in this flow, consider updating the API or flow
+                        await changePassword({
+                          currentPassword: currentPassword,
+                          newPassword: newPassword,
+                          confirmPassword: confirmPassword,
+                        }).unwrap();
 
-                      toast({
-                        title: "Success",
-                        description:
-                          "Your password has been updated successfully.",
-                      });
-
+                        toast({
+                          title: "Success",
+                          description:
+                            "Your password has been updated successfully.",
+                        });
+                      } else {
+                        toast({
+                          title: "Error",
+                          description: response.message,
+                          variant: "destructive",
+                        });
+                        throw new Error(response.message);
+                      }
                       // Reset form and close modal
                       setIsChangePasswordOpen(false);
                       setIsVerificationSent(false);
                       setVerificationCode("");
+                      setCurrentPassword("");
                       setNewPassword("");
                       setConfirmPassword("");
+                      resetVerificationState();
                     } catch (error) {
-                      console.error("Failed to change password:", error);
+                      console.error("Password change error:", error);
                       toast({
                         title: "Error",
                         description:
+                          error?.data?.message ||
                           "Failed to change password. Please check the verification code and try again.",
                         variant: "destructive",
                       });
+                    } finally {
+                      setIsChangingPassword(false);
                     }
                   }}
                   className="space-y-4"
                 >
-                  <div className="space-y-2">
-                    <Label htmlFor="verificationCode">Verification Code</Label>
-                    <Input
-                      id="verificationCode"
-                      type="text"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value)}
-                      placeholder="Enter verification code"
-                      required
-                    />
-                  </div>
+                  {isVerificationSent ? (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="verificationCode">
+                          Verification Code
+                        </Label>
+                        <Input
+                          id="verificationCode"
+                          type="text"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          placeholder="Enter 6-digit code"
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="currentPassword">
+                          Current Password
+                        </Label>
+                        <Input
+                          id="currentPassword"
+                          type="password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          placeholder="Enter your current password"
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">New Password</Label>
                     <Input

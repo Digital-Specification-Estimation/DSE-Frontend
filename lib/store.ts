@@ -17,6 +17,7 @@ import { expenseApi } from "./redux/expenseSlice";
 import { boqApi } from "./redux/boqSlice";
 import { deductionApi } from "./redux/deductionSlice";
 import { revenueApi } from "./redux/revenueSlice";
+import { verificationApi } from "./redux/verificationSlice";
 
 export const makeStore = () => {
   return configureStore({
@@ -37,6 +38,7 @@ export const makeStore = () => {
       [notificationsApi.reducerPath]: notificationsApi.reducer,
       [deductionApi.reducerPath]: deductionApi.reducer,
       [revenueApi.reducerPath]: revenueApi.reducer,
+      [verificationApi.reducerPath]: verificationApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware()
@@ -52,8 +54,9 @@ export const makeStore = () => {
         .concat(expenseApi.middleware)
         .concat(boqApi.middleware)
         .concat(notificationsApi.middleware)
-    .concat(deductionApi.middleware)
+        .concat(deductionApi.middleware)
         .concat(revenueApi.middleware)
+        .concat(verificationApi.middleware),
   });
 };
 
