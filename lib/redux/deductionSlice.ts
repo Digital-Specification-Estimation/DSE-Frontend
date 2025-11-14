@@ -24,7 +24,7 @@ export interface UpdateDeductionDto extends Partial<CreateDeductionDto> {}
 export const deductionApi = createApi({
   reducerPath: "deductionApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "https://dse-backend-uv5d.onrender.com/deductions",
+    baseUrl: "http://localhost:4000/deductions",
     credentials: "include",
   }),
   tagTypes: ["Deductions"],

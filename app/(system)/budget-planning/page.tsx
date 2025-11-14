@@ -1278,17 +1278,9 @@ export default function BudgetPlanning() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-white">
-        <Sidebar user={user} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardHeader />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-              <p className="text-sm text-gray-500">Loading budget data...</p>
-            </div>
-          </div>
-        </div>
+      <div className="flex flex-col items-center gap-2">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <p className="text-sm text-gray-500">Loading budget data...</p>
       </div>
     );
   }
@@ -1307,110 +1299,101 @@ export default function BudgetPlanning() {
   ];
 
   return (
-    <div className="flex h-screen bg-white">
-      <Sidebar user={user} />
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader />
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">
-                Budget Planning & Cost Comparison
-              </h1>
-              {isRefreshing && (
-                <div className="flex items-center gap-1 text-sm text-gray-500">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  <span>Refreshing data...</span>
-                </div>
-              )}
+    <>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">
+            Budget Planning & Cost Comparison
+          </h1>
+          {isRefreshing && (
+            <div className="flex items-center gap-1 text-sm text-gray-500">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Refreshing data...</span>
             </div>
+          )}
+        </div>
 
-            <div className="flex gap-2">
-              {(permissions.generate_reports || permissions.full_access) && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="gap-2 h-12 rounded-full"
-                      disabled={isExporting}
-                    >
-                      {isExporting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Exporting...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="h-4 w-4" />
-                          Export Report
-                        </>
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={exportAllProjectsReport}
-                      disabled={!fetchedData || fetchedData.length === 0}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Export All Projects
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        if (fetchedData && fetchedData.length > 0) {
-                          exportProjectReport(fetchedData[0]);
-                        }
-                      }}
-                      disabled={!fetchedData || fetchedData.length === 0}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Export Current Project
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              {(permissions.manage_employees || permissions.full_access) && (
+        <div className="flex gap-2">
+          {(permissions.generate_reports || permissions.full_access) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
-                  onClick={() => {
-                    setShowAddTrade(true);
-                  }}
-                  className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full"
+                  variant="outline"
+                  className="gap-2 h-12 rounded-full"
+                  disabled={isExporting}
                 >
-                  <Plus className="h-4 w-4" />
-                  Add New Trade
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4" />
+                      Export Report
+                    </>
+                  )}
                 </Button>
-              )}
-            </div>
-          </div>
-
-          <Tabs
-            defaultValue="plan"
-            value={activeTab}
-            onValueChange={setActiveTab}
-          >
-            <div className="border-b mb-6">
-              <TabsList className="p-0 h-auto bg-transparent">
-                <TabsTrigger
-                  value="plan"
-                  className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={exportAllProjectsReport}
+                  disabled={!fetchedData || fetchedData.length === 0}
                 >
-                  Plan Budget
-                </TabsTrigger>
-                <TabsTrigger
-                  value="costs"
-                  className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export All Projects
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (fetchedData && fetchedData.length > 0) {
+                      exportProjectReport(fetchedData[0]);
+                    }
+                  }}
+                  disabled={!fetchedData || fetchedData.length === 0}
                 >
-                  Costs Trend
-                </TabsTrigger>
-              </TabsList>
-            </div>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export Current Project
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {(permissions.manage_employees || permissions.full_access) && (
+            <Button
+              onClick={() => {
+                setShowAddTrade(true);
+              }}
+              className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full"
+            >
+              <Plus className="h-4 w-4" />
+              Add New Trade
+            </Button>
+          )}
+        </div>
+      </div>
 
-            {/* Plan Budget Tab */}
-            <TabsContent value="plan" className="p-0 mt-0">
-              <div className="flex justify-between items-center mb-4">
-                <div className="relative">
-                  {/* <Select
+      <Tabs defaultValue="plan" value={activeTab} onValueChange={setActiveTab}>
+        <div className="border-b mb-6">
+          <TabsList className="p-0 h-auto bg-transparent">
+            <TabsTrigger
+              value="plan"
+              className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+            >
+              Plan Budget
+            </TabsTrigger>
+            <TabsTrigger
+              value="costs"
+              className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+            >
+              Costs Trend
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Plan Budget Tab */}
+        <TabsContent value="plan" className="p-0 mt-0">
+          <div className="flex justify-between items-center mb-4">
+            <div className="relative">
+              {/* <Select
                     defaultValue="This Month"
                     onValueChange={handleTimeFilterChange}
                   >
@@ -1424,640 +1407,621 @@ export default function BudgetPlanning() {
                       <SelectItem value="This Year">This Year</SelectItem>
                     </SelectContent>  
                   </Select> */}
-                </div>
+            </div>
 
-                <div className="relative w-64">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Search project..."
-                    className="pl-10 h-9 w-full"
-                    value={searchTerm}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                  />
-                </div>
-              </div>
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search project..."
+                className="pl-10 h-9 w-full"
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+              />
+            </div>
+          </div>
 
-              {/* Projects list */}
-              {fetchedData && fetchedData.length > 0 ? (
-                fetchedData
-                  .filter((project: any) => {
-                    if (!searchTerm) return true;
+          {/* Projects list */}
+          {fetchedData && fetchedData.length > 0 ? (
+            fetchedData
+              .filter((project: any) => {
+                if (!searchTerm) return true;
 
-                    // Search in project name
-                    if (
-                      project.project_name
-                        .toLowerCase()
-                        .includes(searchTerm.toLowerCase())
-                    )
-                      return true;
+                // Search in project name
+                if (
+                  project.project_name
+                    .toLowerCase()
+                    .includes(searchTerm.toLowerCase())
+                )
+                  return true;
 
-                    // Search in trade positions
-                    if (
-                      project.trade_positions &&
-                      project.trade_positions.length > 0
-                    ) {
-                      return project.trade_positions.some((trade: any) =>
-                        trade.trade_name
-                          .toLowerCase()
-                          .includes(searchTerm.toLowerCase())
-                      );
-                    }
+                // Search in trade positions
+                if (
+                  project.trade_positions &&
+                  project.trade_positions.length > 0
+                ) {
+                  return project.trade_positions.some((trade: any) =>
+                    trade.trade_name
+                      .toLowerCase()
+                      .includes(searchTerm.toLowerCase())
+                  );
+                }
 
-                    return false;
-                  })
-                  .map((project: any) => {
-                    return (
-                      <div
-                        key={project.id}
-                        className="bg-white rounded-lg border mb-4"
-                      >
-                        <div
-                          className="flex items-center p-4 cursor-pointer"
-                          onClick={() => {
-                            setExpandedProjectIds((prev) =>
-                              prev.includes(project.id)
-                                ? prev.filter((id) => id !== project.id)
-                                : [...prev, project.id]
-                            );
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 bg-gray-800 rounded-full flex items-center justify-center text-white">
-                              <svg
-                                className="h-4 w-4"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M3 9L12 5L21 9M3 9V17L12 21M3 9L12 13M12 21L21 17V9M12 21V13M21 9L12 13"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            </div>
-                            <span className="font-medium">
-                              {project.project_name}
-                            </span>
-                            <span className="text-sm bg-gray-100 px-2 py-0.5 rounded-full">
-                              {sessionData.user.currency}
-                              {project.budget ? (
-                                <ConvertedAmount
-                                  amount={project.budget}
-                                  currency={sessionData.user.currency}
-                                  showCurrency={false}
-                                />
-                              ) : (
-                                "0"
-                              )}
-                            </span>
-                          </div>
-                          <div className="ml-auto flex items-center gap-2">
-                            {(permissions.generate_reports ||
-                              permissions.full_access) && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  exportProjectReport(project);
-                                }}
-                                disabled={isExporting}
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                Export
-                              </Button>
-                            )}
-                            {expandedProjectIds.includes(project.id) ? (
-                              <ChevronUp className="h-5 w-5 text-gray-500" />
-                            ) : (
-                              <ChevronDown className="h-5 w-5 text-gray-500" />
-                            )}
-                          </div>
-                        </div>
-
-                        {project && expandedProjectIds.includes(project.id) && (
-                          <div className="overflow-x-auto">
-                            <table className="w-full">
-                              <thead>
-                                <tr className="border-t border-b text-sm text-muted-foreground">
-                                  <th className="px-4 py-3 text-left">SN</th>
-                                  <th className="px-4 py-3 text-left">
-                                    Role/Trade
-                                  </th>
-                                  <th className="px-4 py-3 text-left">
-                                    Employees Number
-                                  </th>
-                                  <th className="px-4 py-3 text-left">
-                                    Work Days
-                                  </th>
-                                  <th className="px-4 py-3 text-left">
-                                    Planned Salary ({sessionData.user.currency})
-                                  </th>
-                                  <th className="w-10 px-4 py-3 text-left"></th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {project.trade_positions &&
-                                project.trade_positions.length !== 0 ? (
-                                  project.trade_positions.map(
-                                    (trade: any, index: any) => (
-                                      <tr
-                                        key={trade.id}
-                                        className="border-b hover:bg-gray-50"
-                                      >
-                                        <td className="px-4 py-3">
-                                          {index + 1}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                          <div className="flex items-center gap-2">
-                                            <Avatar className="h-8 w-8">
-                                              <Input
-                                                type="search"
-                                                placeholder="Search project..."
-                                              />
-                                              <AvatarImage
-                                                src={
-                                                  trade.avatar ||
-                                                  "/placeholder.svg" ||
-                                                  "/placeholder.svg" ||
-                                                  "/placeholder.svg" ||
-                                                  "/placeholder.svg" ||
-                                                  "/placeholder.svg"
-                                                }
-                                                alt={trade.trade_name}
-                                              />
-                                              <AvatarFallback>
-                                                {trade.trade_name.charAt(0)}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                            <span className="font-medium">
-                                              {trade.trade_name}
-                                            </span>
-                                          </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                          {trade.employees &&
-                                            trade.employees.length}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                          {trade.work_days
-                                            ? trade.work_days
-                                            : "unspecified"}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                          {sessionData.user
-                                            .salary_calculation ===
-                                          "monthly rate" ? (
-                                            <>
-                                              <ConvertedAmount
-                                                amount={Number(
-                                                  trade.monthly_planned_cost
-                                                )}
-                                                currency={
-                                                  sessionData.user.currency
-                                                }
-                                                showCurrency={true}
-                                              />
-                                              /month
-                                            </>
-                                          ) : (
-                                            <>
-                                              <ConvertedAmount
-                                                amount={Number(
-                                                  trade.daily_planned_cost
-                                                )}
-                                                currency={
-                                                  sessionData.user.currency
-                                                }
-                                                showCurrency={true}
-                                              />
-                                              /day
-                                            </>
-                                          )}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                          {(permissions.manage_employees ||
-                                            permissions.full_access) && (
-                                            <DropdownMenu>
-                                              <DropdownMenuTrigger asChild>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                >
-                                                  <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                              </DropdownMenuTrigger>
-                                              <DropdownMenuContent align="end">
-                                                <DropdownMenuItem
-                                                  onClick={() =>
-                                                    handleTradeAction(
-                                                      "edit",
-                                                      trade,
-                                                      project.id
-                                                    )
-                                                  }
-                                                >
-                                                  <Edit className="h-4 w-4 mr-2" />
-                                                  Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                  onClick={() =>
-                                                    handleTradeAction(
-                                                      "delete",
-                                                      trade,
-                                                      project.id
-                                                    )
-                                                  }
-                                                >
-                                                  <Trash2 className="h-4 w-4 mr-2" />
-                                                  Delete
-                                                </DropdownMenuItem>
-                                              </DropdownMenuContent>
-                                            </DropdownMenu>
-                                          )}
-                                        </td>
-                                      </tr>
-                                    )
-                                  )
-                                ) : (
-                                  <tr>
-                                    <td
-                                      colSpan={6}
-                                      className="px-4 py-3 text-center"
-                                    >
-                                      No Trade found
-                                    </td>
-                                  </tr>
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-              ) : searchTerm ? (
-                <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
-                  No projects found matching "{searchTerm}". Try a different
-                  search term.
-                </div>
-              ) : (
-                <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
-                  No projects found.
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Costs Trend Tab */}
-            <TabsContent value="costs" className="p-0 mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Planned Budget
-                    </CardTitle>
-                    <CardDescription>Total planned costs</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {sessionData.user.currency}
-                      {
-                        <ConvertedAmount
-                          amount={total_planned_cost}
-                          currency={sessionData.user.currency}
-                          showCurrency={false}
-                        />
-                      }
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      For {timeFilter}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Actual Costs
-                    </CardTitle>
-                    <CardDescription>Total expenses</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {sessionData.user.currency}
-                      {
-                        <ConvertedAmount
-                          amount={total_actual_cost}
-                          currency={sessionData.user.currency}
-                          showCurrency={false}
-                        />
-                      }
-                    </div>
-                    <div className="flex items-center gap-1 mt-1">
-                      {budgetStatus === "under" ? (
-                        <div className="flex items-center text-xs text-green-600">
-                          <ArrowDownRight className="h-3 w-3 mr-1" />
-                          {budgetPercentage}% under budget
-                        </div>
-                      ) : (
-                        <div className="flex items-center text-xs text-red-600">
-                          <ArrowUpRight className="h-3 w-3 mr-1" />
-                          {budgetPercentage}% over budget
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Budget Balance
-                    </CardTitle>
-                    <CardDescription>Remaining budget</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {sessionData.user.currency}
-                      {budgetStatus === "under" ? (
-                        <ConvertedAmount
-                          amount={budgetDifference}
-                          currency={sessionData.user.currency}
-                          showCurrency={false}
-                        />
-                      ) : (
-                        <ConvertedAmount
-                          amount={0}
-                          currency={sessionData.user.currency}
-                          showCurrency={false}
-                        />
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {budgetStatus === "under"
-                        ? "Available to spend"
-                        : "Budget limit exceeded"}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="bg-white rounded-lg border p-6 mb-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-medium mb-1">Cost Comparison</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Budget vs. Actual costs by trade position
-                    </p>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <Select
-                      defaultValue="all"
-                      onValueChange={(value) => {
-                        toast({
-                          title: "Project Filter Changed",
-                          description:
-                            value === "all"
-                              ? "Viewing all projects."
-                              : `Viewing ${value} project.`,
-                        });
+                return false;
+              })
+              .map((project: any) => {
+                return (
+                  <div
+                    key={project.id}
+                    className="bg-white rounded-lg border mb-4"
+                  >
+                    <div
+                      className="flex items-center p-4 cursor-pointer"
+                      onClick={() => {
+                        setExpandedProjectIds((prev) =>
+                          prev.includes(project.id)
+                            ? prev.filter((id) => id !== project.id)
+                            : [...prev, project.id]
+                        );
                       }}
                     >
-                      <SelectTrigger className="w-[180px] bg-white">
-                        <SelectValue placeholder="All Projects" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Projects</SelectItem>
-                        {fetchedData &&
-                          fetchedData.map((project: any) => (
-                            <SelectItem
-                              key={project.id}
-                              value={project.id.toString()}
-                            >
-                              {project.project_name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 bg-gray-800 rounded-full flex items-center justify-center text-white">
+                          <svg
+                            className="h-4 w-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M3 9L12 5L21 9M3 9V17L12 21M3 9L12 13M12 21L21 17V9M12 21V13M21 9L12 13"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </div>
+                        <span className="font-medium">
+                          {project.project_name}
+                        </span>
+                        <span className="text-sm bg-gray-100 px-2 py-0.5 rounded-full">
+                          {sessionData.user.currency}
+                          {project.budget ? (
+                            <ConvertedAmount
+                              amount={project.budget}
+                              currency={sessionData.user.currency}
+                              showCurrency={false}
+                            />
+                          ) : (
+                            "0"
+                          )}
+                        </span>
+                      </div>
+                      <div className="ml-auto flex items-center gap-2">
+                        {(permissions.generate_reports ||
+                          permissions.full_access) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              exportProjectReport(project);
+                            }}
+                            disabled={isExporting}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Export
+                          </Button>
+                        )}
+                        {expandedProjectIds.includes(project.id) ? (
+                          <ChevronUp className="h-5 w-5 text-gray-500" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5 text-gray-500" />
+                        )}
+                      </div>
+                    </div>
 
-                <div className="h-[500px]">
-                  <ChartContainer
-                    config={{
-                      planned: {
-                        label: "Planned Budget",
-                        color: "hsl(22, 100%, 60%)",
-                      },
-                      actual: {
-                        label: "Actual Cost",
-                        color: "hsl(220, 83%, 60%)",
-                      },
-                    }}
-                    className="h-full"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart
-                        data={
-                          tradesFetched && tradesFetched.length > 0
-                            ? tradesFetched.map((trade: any) => ({
-                                name: trade.trade_name,
-                                planned: Math.abs(trade.planned_costs || 0),
-                                actual: Math.abs(trade.actual_cost || 0),
-                              }))
-                            : []
-                        }
-                        margin={{ top: 20, right: 30, left: 70, bottom: 0 }}
-                      >
-                        <CartesianGrid stroke="#f5f5f5" strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="name"
-                          tick={{ fontSize: 12 }}
-                          angle={-15}
-                          textAnchor="end"
-                          interval={0}
-                          height={60}
-                        />
-                        <YAxis
-                          tickFormatter={(value) =>
-                            `${
-                              sessionData.user.currency
-                            }${value.toLocaleString()}`
-                          }
-                          domain={[0, "auto"]}
-                        />
-                        <Tooltip
-                          formatter={customTooltipFormatter}
-                          contentStyle={{
-                            borderRadius: "8px",
-                            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                            border: "1px solid #e2e8f0",
-                          }}
-                        />
-                        <Legend
-                          verticalAlign="top"
-                          height={36}
-                          iconType="circle"
-                          iconSize={10}
-                        />
-                        <Bar
-                          dataKey="planned"
-                          fill="var(--color-planned)"
-                          barSize={20}
-                          radius={[4, 4, 0, 0]}
-                        />
-                        <Bar
-                          dataKey="actual"
-                          fill="var(--color-actual)"
-                          barSize={20}
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-6">
-                {/* Budget vs Actual Report */}
-                <div className="bg-white rounded-lg border p-6">
-                  <h3 className="font-medium mb-4">Budget vs Actual Report</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-t border-b text-sm text-muted-foreground">
-                          <th className="px-4 py-3 text-left">
-                            Trade/Position
-                          </th>
-                          <th className="px-4 py-3 text-left">
-                            <div className="flex items-center gap-2">
-                              <div className="h-3 w-3 rounded-full bg-orange-500"></div>
-                              Planned Budget ({sessionData.user.currency}
-                              {
-                                <ConvertedAmount
-                                  amount={total_planned_cost}
-                                  currency={sessionData.user.currency}
-                                  showCurrency={false}
-                                />
-                              }
+                    {project && expandedProjectIds.includes(project.id) && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-t border-b text-sm text-muted-foreground">
+                              <th className="px-4 py-3 text-left">SN</th>
+                              <th className="px-4 py-3 text-left">
+                                Role/Trade
+                              </th>
+                              <th className="px-4 py-3 text-left">
+                                Employees Number
+                              </th>
+                              <th className="px-4 py-3 text-left">Work Days</th>
+                              <th className="px-4 py-3 text-left">
+                                Planned Salary ({sessionData.user.currency})
+                              </th>
+                              <th className="w-10 px-4 py-3 text-left"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {project.trade_positions &&
+                            project.trade_positions.length !== 0 ? (
+                              project.trade_positions.map(
+                                (trade: any, index: any) => (
+                                  <tr
+                                    key={trade.id}
+                                    className="border-b hover:bg-gray-50"
+                                  >
+                                    <td className="px-4 py-3">{index + 1}</td>
+                                    <td className="px-4 py-3">
+                                      <div className="flex items-center gap-2">
+                                        <Avatar className="h-8 w-8">
+                                          <Input
+                                            type="search"
+                                            placeholder="Search project..."
+                                          />
+                                          <AvatarImage
+                                            src={
+                                              trade.avatar ||
+                                              "/placeholder.svg" ||
+                                              "/placeholder.svg" ||
+                                              "/placeholder.svg" ||
+                                              "/placeholder.svg" ||
+                                              "/placeholder.svg"
+                                            }
+                                            alt={trade.trade_name}
+                                          />
+                                          <AvatarFallback>
+                                            {trade.trade_name.charAt(0)}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <span className="font-medium">
+                                          {trade.trade_name}
+                                        </span>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      {trade.employees &&
+                                        trade.employees.length}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      {trade.work_days
+                                        ? trade.work_days
+                                        : "unspecified"}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      {sessionData.user.salary_calculation ===
+                                      "monthly rate" ? (
+                                        <>
+                                          <ConvertedAmount
+                                            amount={Number(
+                                              trade.monthly_planned_cost
+                                            )}
+                                            currency={sessionData.user.currency}
+                                            showCurrency={true}
+                                          />
+                                          /month
+                                        </>
+                                      ) : (
+                                        <>
+                                          <ConvertedAmount
+                                            amount={Number(
+                                              trade.daily_planned_cost
+                                            )}
+                                            currency={sessionData.user.currency}
+                                            showCurrency={true}
+                                          />
+                                          /day
+                                        </>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      {(permissions.manage_employees ||
+                                        permissions.full_access) && (
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                              <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                              onClick={() =>
+                                                handleTradeAction(
+                                                  "edit",
+                                                  trade,
+                                                  project.id
+                                                )
+                                              }
+                                            >
+                                              <Edit className="h-4 w-4 mr-2" />
+                                              Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() =>
+                                                handleTradeAction(
+                                                  "delete",
+                                                  trade,
+                                                  project.id
+                                                )
+                                              }
+                                            >
+                                              <Trash2 className="h-4 w-4 mr-2" />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      )}
+                                    </td>
+                                  </tr>
+                                )
                               )
-                            </div>
-                          </th>
-                          <th className="px-4 py-3 text-left">
-                            <div className="flex items-center gap-2">
-                              <div className="h-3 w-3 rounded-full bg-blue-700"></div>
-                              Actual Cost ({sessionData.user.currency}
-                              {
-                                <ConvertedAmount
-                                  amount={total_actual_cost}
-                                  currency={sessionData.user.currency}
-                                  showCurrency={false}
-                                />
-                              }
-                              )
-                            </div>
-                          </th>
-                          <th className="px-4 py-3 text-left">Difference</th>
-                          <th className="px-4 py-3 text-left">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tradesFetched && tradesFetched.length > 0 ? (
-                          tradesFetched.map((data: any) => {
-                            const difference =
-                              (data.actual_cost || 0) -
-                              (data.planned_costs || 0);
-                            return (
-                              <tr
-                                key={data.id}
-                                className="border-b hover:bg-gray-50"
-                              >
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="h-8 w-8">
-                                      <AvatarImage
-                                        src={data.avatar || "/placeholder.svg"}
-                                        alt={data.trade_name}
-                                      />
-                                      <AvatarFallback>
-                                        {data.trade_name.charAt(0)}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="font-medium">
-                                      {data.trade_name}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                  {currencyShort}
-                                  {
-                                    <ConvertedAmount
-                                      amount={data.planned_costs || 0}
-                                      currency={sessionData.user.currency}
-                                      showCurrency={false}
-                                    />
-                                  }
-                                </td>
-                                <td className="px-4 py-3">
-                                  {currencyShort}
-                                  {
-                                    <ConvertedAmount
-                                      amount={data.actual_cost || 0}
-                                      currency={sessionData.user.currency}
-                                      showCurrency={false}
-                                    />
-                                  }
-                                </td>
-                                <td className="px-4 py-3">
-                                  {difference > 0 ? (
-                                    <Badge className="bg-red-50 text-red-700">
-                                      +{sessionData.user.currency}
-                                      {difference.toLocaleString()}
-                                    </Badge>
-                                  ) : (
-                                    <Badge className="bg-green-50 text-green-700">
-                                      -{sessionData.user.currency}
-                                      {Math.abs(difference).toLocaleString()}
-                                    </Badge>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {difference > 0 ? (
-                                    <span className="text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full bg-red-100 text-red-800">
-                                      <ArrowUpRight className="w-3 h-3 mr-1" />
-                                      Over budget
-                                    </span>
-                                  ) : (
-                                    <span className="text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">
-                                      <ArrowDownRight className="w-3 h-3 mr-1" />
-                                      Under budget
-                                    </span>
-                                  )}
+                            ) : (
+                              <tr>
+                                <td
+                                  colSpan={6}
+                                  className="px-4 py-3 text-center"
+                                >
+                                  No Trade found
                                 </td>
                               </tr>
-                            );
-                          })
-                        ) : (
-                          <tr>
-                            <td colSpan={5} className="px-4 py-3 text-center">
-                              No trade data available
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+          ) : searchTerm ? (
+            <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
+              No projects found matching "{searchTerm}". Try a different search
+              term.
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
+              No projects found.
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Costs Trend Tab */}
+        <TabsContent value="costs" className="p-0 mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Planned Budget
+                </CardTitle>
+                <CardDescription>Total planned costs</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {sessionData.user.currency}
+                  {
+                    <ConvertedAmount
+                      amount={total_planned_cost}
+                      currency={sessionData.user.currency}
+                      showCurrency={false}
+                    />
+                  }
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  For {timeFilter}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Actual Costs
+                </CardTitle>
+                <CardDescription>Total expenses</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {sessionData.user.currency}
+                  {
+                    <ConvertedAmount
+                      amount={total_actual_cost}
+                      currency={sessionData.user.currency}
+                      showCurrency={false}
+                    />
+                  }
+                </div>
+                <div className="flex items-center gap-1 mt-1">
+                  {budgetStatus === "under" ? (
+                    <div className="flex items-center text-xs text-green-600">
+                      <ArrowDownRight className="h-3 w-3 mr-1" />
+                      {budgetPercentage}% under budget
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-xs text-red-600">
+                      <ArrowUpRight className="h-3 w-3 mr-1" />
+                      {budgetPercentage}% over budget
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Budget Balance
+                </CardTitle>
+                <CardDescription>Remaining budget</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {sessionData.user.currency}
+                  {budgetStatus === "under" ? (
+                    <ConvertedAmount
+                      amount={budgetDifference}
+                      currency={sessionData.user.currency}
+                      showCurrency={false}
+                    />
+                  ) : (
+                    <ConvertedAmount
+                      amount={0}
+                      currency={sessionData.user.currency}
+                      showCurrency={false}
+                    />
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {budgetStatus === "under"
+                    ? "Available to spend"
+                    : "Budget limit exceeded"}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="bg-white rounded-lg border p-6 mb-6">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="font-medium mb-1">Cost Comparison</h3>
+                <p className="text-sm text-muted-foreground">
+                  Budget vs. Actual costs by trade position
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                <Select
+                  defaultValue="all"
+                  onValueChange={(value) => {
+                    toast({
+                      title: "Project Filter Changed",
+                      description:
+                        value === "all"
+                          ? "Viewing all projects."
+                          : `Viewing ${value} project.`,
+                    });
+                  }}
+                >
+                  <SelectTrigger className="w-[180px] bg-white">
+                    <SelectValue placeholder="All Projects" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Projects</SelectItem>
+                    {fetchedData &&
+                      fetchedData.map((project: any) => (
+                        <SelectItem
+                          key={project.id}
+                          value={project.id.toString()}
+                        >
+                          {project.project_name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="h-[500px]">
+              <ChartContainer
+                config={{
+                  planned: {
+                    label: "Planned Budget",
+                    color: "hsl(22, 100%, 60%)",
+                  },
+                  actual: {
+                    label: "Actual Cost",
+                    color: "hsl(220, 83%, 60%)",
+                  },
+                }}
+                className="h-full"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    data={
+                      tradesFetched && tradesFetched.length > 0
+                        ? tradesFetched.map((trade: any) => ({
+                            name: trade.trade_name,
+                            planned: Math.abs(trade.planned_costs || 0),
+                            actual: Math.abs(trade.actual_cost || 0),
+                          }))
+                        : []
+                    }
+                    margin={{ top: 20, right: 30, left: 70, bottom: 0 }}
+                  >
+                    <CartesianGrid stroke="#f5f5f5" strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 12 }}
+                      angle={-15}
+                      textAnchor="end"
+                      interval={0}
+                      height={60}
+                    />
+                    <YAxis
+                      tickFormatter={(value) =>
+                        `${sessionData.user.currency}${value.toLocaleString()}`
+                      }
+                      domain={[0, "auto"]}
+                    />
+                    <Tooltip
+                      formatter={customTooltipFormatter}
+                      contentStyle={{
+                        borderRadius: "8px",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                        border: "1px solid #e2e8f0",
+                      }}
+                    />
+                    <Legend
+                      verticalAlign="top"
+                      height={36}
+                      iconType="circle"
+                      iconSize={10}
+                    />
+                    <Bar
+                      dataKey="planned"
+                      fill="var(--color-planned)"
+                      barSize={20}
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="actual"
+                      fill="var(--color-actual)"
+                      barSize={20}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+            {/* Budget vs Actual Report */}
+            <div className="bg-white rounded-lg border p-6">
+              <h3 className="font-medium mb-4">Budget vs Actual Report</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-t border-b text-sm text-muted-foreground">
+                      <th className="px-4 py-3 text-left">Trade/Position</th>
+                      <th className="px-4 py-3 text-left">
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full bg-orange-500"></div>
+                          Planned Budget ({sessionData.user.currency}
+                          {
+                            <ConvertedAmount
+                              amount={total_planned_cost}
+                              currency={sessionData.user.currency}
+                              showCurrency={false}
+                            />
+                          }
+                          )
+                        </div>
+                      </th>
+                      <th className="px-4 py-3 text-left">
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full bg-blue-700"></div>
+                          Actual Cost ({sessionData.user.currency}
+                          {
+                            <ConvertedAmount
+                              amount={total_actual_cost}
+                              currency={sessionData.user.currency}
+                              showCurrency={false}
+                            />
+                          }
+                          )
+                        </div>
+                      </th>
+                      <th className="px-4 py-3 text-left">Difference</th>
+                      <th className="px-4 py-3 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tradesFetched && tradesFetched.length > 0 ? (
+                      tradesFetched.map((data: any) => {
+                        const difference =
+                          (data.actual_cost || 0) - (data.planned_costs || 0);
+                        return (
+                          <tr
+                            key={data.id}
+                            className="border-b hover:bg-gray-50"
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage
+                                    src={data.avatar || "/placeholder.svg"}
+                                    alt={data.trade_name}
+                                  />
+                                  <AvatarFallback>
+                                    {data.trade_name.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">
+                                  {data.trade_name}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              {currencyShort}
+                              {
+                                <ConvertedAmount
+                                  amount={data.planned_costs || 0}
+                                  currency={sessionData.user.currency}
+                                  showCurrency={false}
+                                />
+                              }
+                            </td>
+                            <td className="px-4 py-3">
+                              {currencyShort}
+                              {
+                                <ConvertedAmount
+                                  amount={data.actual_cost || 0}
+                                  currency={sessionData.user.currency}
+                                  showCurrency={false}
+                                />
+                              }
+                            </td>
+                            <td className="px-4 py-3">
+                              {difference > 0 ? (
+                                <Badge className="bg-red-50 text-red-700">
+                                  +{sessionData.user.currency}
+                                  {difference.toLocaleString()}
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-green-50 text-green-700">
+                                  -{sessionData.user.currency}
+                                  {Math.abs(difference).toLocaleString()}
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {difference > 0 ? (
+                                <span className="text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full bg-red-100 text-red-800">
+                                  <ArrowUpRight className="w-3 h-3 mr-1" />
+                                  Over budget
+                                </span>
+                              ) : (
+                                <span className="text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full bg-green-100 text-green-800">
+                                  <ArrowDownRight className="w-3 h-3 mr-1" />
+                                  Under budget
+                                </span>
+                              )}
                             </td>
                           </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-3 text-center">
+                          No trade data available
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            </TabsContent>
-          </Tabs>
-        </main>
-      </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Add Trade Sheet */}
       <Sheet open={showAddTrade} onOpenChange={setShowAddTrade}>
@@ -2242,6 +2206,6 @@ export default function BudgetPlanning() {
           </Button>
         </SheetContent>
       </Sheet>
-    </div>
+    </>
   );
 }

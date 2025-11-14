@@ -2132,14 +2132,14 @@ export default function CostControlPage() {
       console.log("Fetching project payroll for:", {
         projectId: selectedProjectId,
         companyId: (sessionData.user as any)?.company_id,
-        url: `https://dse-backend-uv5d.onrender.com/employee/payroll/project/${selectedProjectId}?companyId=${
+        url: `http://localhost:4000/employee/payroll/project/${selectedProjectId}?companyId=${
           (sessionData.user as any)?.company_id
         }`,
       });
 
       try {
         const response = await fetch(
-          `https://dse-backend-uv5d.onrender.com/employee/payroll/project/${selectedProjectId}?companyId=${
+          `http://localhost:4000/employee/payroll/project/${selectedProjectId}?companyId=${
             (sessionData.user as any)?.company_id
           }`,
           {
@@ -2164,7 +2164,7 @@ export default function CostControlPage() {
           const errorText = await response.text();
           console.error("Error response:", errorText);
           console.error("Request details:", {
-            url: `https://dse-backend-uv5d.onrender.com/employee/payroll/project/${selectedProjectId}?companyId=${
+            url: `http://localhost:4000/employee/payroll/project/${selectedProjectId}?companyId=${
               (sessionData.user as any)?.company_id
             }`,
             projectId: selectedProjectId,
@@ -2433,7 +2433,7 @@ export default function CostControlPage() {
     try {
       // Fetch project payroll data for the date range
       const response = await fetch(
-        `https://dse-backend-uv5d.onrender.com/attendance/payroll/project/${selectedProjectId}?companyId=${
+        `http://localhost:4000/attendance/payroll/project/${selectedProjectId}?companyId=${
           (sessionData.user as any)?.company_id
         }&startDate=${fromDate}&endDate=${toDate}`,
         {
@@ -3007,1718 +3007,1627 @@ export default function CostControlPage() {
   });
 
   return (
-    <div className="flex h-screen bg-white">
-      <Sidebar
-        user={{
-          name: (sessionData?.user as any)?.username || "Current User",
-          role: (sessionData?.user as any)?.current_role || "user",
-          avatar: "",
-        }}
-      />
+    <div className="max-w-7xl mx-auto p-6">
+      {/* Header */}
+      <div className="bg-white rounded-lg shadow-md border p-6 mb-6">
+        <h1 className="text-3xl font-bold text-slate-800 mb-2">
+          Cost Control Dashboard
+        </h1>
+        <p className="text-slate-600">
+          Track expenses, revenues, and BOQ progress for accurate project cost
+          management
+        </p>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader />
-        <main className="flex-1 overflow-auto bg-white">
-          <div className="max-w-7xl mx-auto p-6">
-            {/* Header */}
-            <div className="bg-white rounded-lg shadow-md border p-6 mb-6">
-              <h1 className="text-3xl font-bold text-slate-800 mb-2">
-                Cost Control Dashboard
-              </h1>
-              <p className="text-slate-600">
-                Track expenses, revenues, and BOQ progress for accurate project
-                cost management
-              </p>
+        {/* Project Selection */}
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Select Project
+          </label>
+          <Select onValueChange={handleProjectChange} value={selectedProjectId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a project" />
+            </SelectTrigger>
+            <SelectContent>
+              {projects?.map((project: any) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.project_name} - {project.location_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {!selectedProjectId && (
+            <p className="text-sm text-slate-500 mt-2">
+              Please select a project to view cost control data
+            </p>
+          )}
+          {selectedProjectId && (isLoadingExpenses || isLoadingMetrics) && (
+            <p className="text-sm text-blue-600 mt-2">
+              Loading project data...
+            </p>
+          )}
+        </div>
+      </div>
 
-              {/* Project Selection */}
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Select Project
-                </label>
-                <Select
-                  onValueChange={handleProjectChange}
-                  value={selectedProjectId}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects?.map((project: any) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.project_name} - {project.location_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {!selectedProjectId && (
-                  <p className="text-sm text-slate-500 mt-2">
-                    Please select a project to view cost control data
-                  </p>
-                )}
-                {selectedProjectId &&
-                  (isLoadingExpenses || isLoadingMetrics) && (
-                    <p className="text-sm text-blue-600 mt-2">
-                      Loading project data...
-                    </p>
-                  )}
-              </div>
+      {/* Loading State */}
+      {isLoadingProjects && (
+        <div className="flex h-screen">
+          <div className="flex-1 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {isErrorProjects && (
+        <div className="flex h-screen">
+          <div className="flex-1 p-8">
+            <div
+              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+              role="alert"
+            >
+              <strong className="font-bold">Error!</strong>
+              <span className="block sm:inline">
+                {" "}
+                Failed to load projects. Please try again later.
+              </span>
+              <button
+                onClick={() => refetchProjects()}
+                className="absolute bg-transparent text-2xl font-semibold leading-none right-0 top-0 mt-0 mr-4 outline-none focus:outline-none"
+              >
+                <span>×</span>
+              </button>
             </div>
+          </div>
+        </div>
+      )}
 
-            {/* Loading State */}
-            {isLoadingProjects && (
-              <div className="flex h-screen">
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-                </div>
-              </div>
-            )}
+      {/* Summary Cards */}
+      {selectedProjectId && !isLoadingProjects && !isErrorProjects && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-slate-600 text-sm font-medium">
+                Total Revenue
+              </span>
+              <span className="text-green-500">
+                <ChartNetwork />
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-green-600">
+              <ConvertedAmount
+                amount={costSummary?.total_revenues || 0}
+                currency={sessionData.user.currency}
+                showCurrency={true}
+                sessionData={sessionData}
+              />
+            </p>
+            <p className="text-xs text-slate-500 mt-1">From Add Revenue Tab</p>
+          </div>
 
-            {/* Error State */}
-            {isErrorProjects && (
-              <div className="flex h-screen">
-                <div className="flex-1 p-8">
-                  <div
-                    className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-                    role="alert"
-                  >
-                    <strong className="font-bold">Error!</strong>
-                    <span className="block sm:inline">
-                      {" "}
-                      Failed to load projects. Please try again later.
-                    </span>
-                    <button
-                      onClick={() => refetchProjects()}
-                      className="absolute bg-transparent text-2xl font-semibold leading-none right-0 top-0 mt-0 mr-4 outline-none focus:outline-none"
-                    >
-                      <span>×</span>
-                    </button>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-slate-600 text-sm font-medium">
+                Total Expenses
+              </span>
+              <span className="text-red-500">
+                <ChartNetwork />
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-red-600">
+              <ConvertedAmount
+                amount={costSummary?.total_expenses || 0}
+                currency={sessionData.user.currency}
+                showCurrency={true}
+                sessionData={sessionData}
+              />
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              Payroll:{" "}
+              <ConvertedAmount
+                amount={costSummary?.project_payroll || 0}
+                currency={sessionData.user.currency}
+                showCurrency={true}
+                sessionData={sessionData}
+              />{" "}
+              + Manual:{" "}
+              <ConvertedAmount
+                amount={costSummary?.manual_expenses || 0}
+                currency={sessionData.user.currency}
+                showCurrency={true}
+                sessionData={sessionData}
+              />
+            </p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-slate-600 text-sm font-medium">
+                Net Profit
+              </span>
+              <span className="text-red-500">
+                <BriefcaseBusiness />
+              </span>
+            </div>
+            <p
+              className={`text-2xl font-bold ${
+                (costSummary?.net_profit || 0) >= 0
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
+              <ConvertedAmount
+                amount={costSummary?.net_profit || 0}
+                currency={sessionData.user.currency}
+                showCurrency={true}
+                sessionData={sessionData}
+              />
+            </p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-slate-600 text-sm font-medium">
+                Profit Margin
+              </span>
+              <span className="text-green-600 text-xs">
+                <Percent />
+              </span>
+            </div>
+            <p
+              className={`text-2xl font-bold ${
+                (costSummary?.profit_margin || 0) >= 0
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
+              {costSummary?.profit_margin?.toFixed(1) || "0"}%
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      {selectedProjectId && !isLoadingProjects && !isErrorProjects && (
+        <div className="bg-white rounded-lg shadow-lg mb-6">
+          <div className="flex border-b overflow-x-auto">
+            <button
+              onClick={() => switchTab("overview")}
+              className={`flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === "overview"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-slate-600 hover:text-slate-800"
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => switchTab("boq")}
+              className={`flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === "boq"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-slate-600 hover:text-slate-800"
+              }`}
+            >
+              Bill of Quantities
+            </button>
+            <button
+              onClick={() => switchTab("revenues")}
+              className={`flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === "revenues"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-slate-600 hover:text-slate-800"
+              }`}
+            >
+              Add Revenue
+            </button>
+            <button
+              onClick={() => switchTab("expenses")}
+              className={`flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === "expenses"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-slate-600 hover:text-slate-800"
+              }`}
+            >
+              Add Expenses
+            </button>
+            <button
+              onClick={() => switchTab("profit-loss")}
+              className={`flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap ${
+                activeTab === "profit-loss"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-slate-600 hover:text-slate-800"
+              }`}
+            >
+              Profit & Loss
+            </button>
+          </div>
+
+          <div className="p-6">
+            {/* Overview Tab */}
+            {activeTab === "overview" && (
+              <div className="space-y-6">
+                {/* Revenue Summary */}
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                    Revenue Summary
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <p className="text-sm text-slate-600 mb-1">
+                        Total BOQ Value
+                      </p>
+                      <p className="text-xl font-bold text-slate-800">
+                        <ConvertedAmount
+                          amount={costSummary.total_boq_value}
+                          sessionData={sessionData}
+                          showCurrency={true}
+                          currency={sessionData.user.currency}
+                        />
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Available for Revenue
+                      </p>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <p className="text-sm text-slate-600 mb-1">
+                        Recorded Revenue
+                      </p>
+                      <p className="text-2xl font-bold text-green-600">
+                        <ConvertedAmount
+                          amount={costSummary?.total_revenues || 0}
+                          sessionData={sessionData}
+                          showCurrency={true}
+                          currency={sessionData.user.currency}
+                        />
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        From Add Revenue Tab
+                      </p>
+                    </div>
+                    <div className="bg-amber-50 rounded-lg p-4">
+                      <p className="text-sm text-slate-600 mb-1">
+                        Revenue Entries
+                      </p>
+                      <p className="text-xl font-bold text-amber-600">
+                        {revenueEntries.length}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Total Records
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* Summary Cards */}
-            {selectedProjectId && !isLoadingProjects && !isErrorProjects && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-white rounded-lg shadow p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-600 text-sm font-medium">
-                      Total Revenue
-                    </span>
-                    <span className="text-green-500">
-                      <ChartNetwork />
-                    </span>
+                {/* Total Expenses Breakdown */}
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                    Total Project Expenses
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <p className="text-sm text-slate-600 mb-1">
+                        Project Payroll
+                      </p>
+                      <p className="text-xl font-bold text-blue-600">
+                        <ConvertedAmount
+                          amount={costSummary?.project_payroll || 0}
+                          sessionData={sessionData}
+                          showCurrency={true}
+                          currency={sessionData.user.currency}
+                        />
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Actual Employee Costs
+                      </p>
+                    </div>
+                    <div className="bg-purple-50 rounded-lg p-4">
+                      <p className="text-sm text-slate-600 mb-1">
+                        Manual Expenses
+                      </p>
+                      <p className="text-xl font-bold text-purple-600">
+                        <ConvertedAmount
+                          amount={costSummary?.manual_expenses || 0}
+                          sessionData={sessionData}
+                          showCurrency={true}
+                          currency={sessionData.user.currency}
+                        />
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Materials, Equipment, etc.
+                      </p>
+                    </div>
+                    <div className="bg-slate-100 rounded-lg p-4 border-2 border-slate-300">
+                      <p className="text-sm text-slate-600 mb-1">
+                        Total Expenses
+                      </p>
+                      <p className="text-xl font-bold text-slate-800">
+                        <ConvertedAmount
+                          amount={costSummary.total_expenses || 0}
+                          sessionData={sessionData}
+                          showCurrency={true}
+                          currency={sessionData.user.currency}
+                        />
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Payroll + Manual Expenses
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-2xl font-bold text-green-600">
-                    <ConvertedAmount
-                      amount={costSummary?.total_revenues || 0}
-                      currency={sessionData.user.currency}
-                      showCurrency={true}
-                      sessionData={sessionData}
-                    />
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    From Add Revenue Tab
-                  </p>
                 </div>
 
-                <div className="bg-white rounded-lg shadow p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-600 text-sm font-medium">
-                      Total Expenses
-                    </span>
-                    <span className="text-red-500">
-                      <ChartNetwork />
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold text-red-600">
-                    <ConvertedAmount
-                      amount={costSummary?.total_expenses || 0}
-                      currency={sessionData.user.currency}
-                      showCurrency={true}
-                      sessionData={sessionData}
-                    />
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Payroll:{" "}
-                    <ConvertedAmount
-                      amount={costSummary?.project_payroll || 0}
-                      currency={sessionData.user.currency}
-                      showCurrency={true}
-                      sessionData={sessionData}
-                    />{" "}
-                    + Manual:{" "}
-                    <ConvertedAmount
-                      amount={costSummary?.manual_expenses || 0}
-                      currency={sessionData.user.currency}
-                      showCurrency={true}
-                      sessionData={sessionData}
-                    />
-                  </p>
-                </div>
-
-                <div className="bg-white rounded-lg shadow p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-600 text-sm font-medium">
-                      Net Profit
-                    </span>
-                    <span className="text-red-500">
-                      <BriefcaseBusiness />
-                    </span>
-                  </div>
-                  <p
-                    className={`text-2xl font-bold ${
-                      (costSummary?.net_profit || 0) >= 0
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}
-                  >
-                    <ConvertedAmount
-                      amount={costSummary?.net_profit || 0}
-                      currency={sessionData.user.currency}
-                      showCurrency={true}
-                      sessionData={sessionData}
-                    />
-                  </p>
-                </div>
-
-                <div className="bg-white rounded-lg shadow p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-600 text-sm font-medium">
-                      Profit Margin
-                    </span>
-                    <span className="text-green-600 text-xs">
-                      <Percent />
-                    </span>
-                  </div>
-                  <p
-                    className={`text-2xl font-bold ${
-                      (costSummary?.profit_margin || 0) >= 0
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}
-                  >
-                    {costSummary?.profit_margin?.toFixed(1) || "0"}%
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Tabs */}
-            {selectedProjectId && !isLoadingProjects && !isErrorProjects && (
-              <div className="bg-white rounded-lg shadow-lg mb-6">
-                <div className="flex border-b overflow-x-auto">
-                  <button
-                    onClick={() => switchTab("overview")}
-                    className={`flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap ${
-                      activeTab === "overview"
-                        ? "text-blue-600 border-b-2 border-blue-600"
-                        : "text-slate-600 hover:text-slate-800"
-                    }`}
-                  >
-                    Overview
-                  </button>
-                  <button
-                    onClick={() => switchTab("boq")}
-                    className={`flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap ${
-                      activeTab === "boq"
-                        ? "text-blue-600 border-b-2 border-blue-600"
-                        : "text-slate-600 hover:text-slate-800"
-                    }`}
-                  >
-                    Bill of Quantities
-                  </button>
-                  <button
-                    onClick={() => switchTab("revenues")}
-                    className={`flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap ${
-                      activeTab === "revenues"
-                        ? "text-blue-600 border-b-2 border-blue-600"
-                        : "text-slate-600 hover:text-slate-800"
-                    }`}
-                  >
-                    Add Revenue
-                  </button>
-                  <button
-                    onClick={() => switchTab("expenses")}
-                    className={`flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap ${
-                      activeTab === "expenses"
-                        ? "text-blue-600 border-b-2 border-blue-600"
-                        : "text-slate-600 hover:text-slate-800"
-                    }`}
-                  >
-                    Add Expenses
-                  </button>
-                  <button
-                    onClick={() => switchTab("profit-loss")}
-                    className={`flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap ${
-                      activeTab === "profit-loss"
-                        ? "text-blue-600 border-b-2 border-blue-600"
-                        : "text-slate-600 hover:text-slate-800"
-                    }`}
-                  >
-                    Profit & Loss
-                  </button>
-                </div>
-
-                <div className="p-6">
-                  {/* Overview Tab */}
-                  {activeTab === "overview" && (
-                    <div className="space-y-6">
-                      {/* Revenue Summary */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                          Revenue Summary
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="bg-blue-50 rounded-lg p-4">
-                            <p className="text-sm text-slate-600 mb-1">
-                              Total BOQ Value
-                            </p>
-                            <p className="text-xl font-bold text-slate-800">
-                              <ConvertedAmount
-                                amount={costSummary.total_boq_value}
-                                sessionData={sessionData}
-                                showCurrency={true}
-                                currency={sessionData.user.currency}
-                              />
-                            </p>
-                            <p className="text-xs text-slate-500 mt-1">
-                              Available for Revenue
-                            </p>
-                          </div>
-                          <div className="bg-green-50 rounded-lg p-4">
-                            <p className="text-sm text-slate-600 mb-1">
-                              Recorded Revenue
-                            </p>
-                            <p className="text-2xl font-bold text-green-600">
-                              <ConvertedAmount
-                                amount={costSummary?.total_revenues || 0}
-                                sessionData={sessionData}
-                                showCurrency={true}
-                                currency={sessionData.user.currency}
-                              />
-                            </p>
-                            <p className="text-xs text-slate-500 mt-1">
-                              From Add Revenue Tab
-                            </p>
-                          </div>
-                          <div className="bg-amber-50 rounded-lg p-4">
-                            <p className="text-sm text-slate-600 mb-1">
-                              Revenue Entries
-                            </p>
-                            <p className="text-xl font-bold text-amber-600">
-                              {revenueEntries.length}
-                            </p>
-                            <p className="text-xs text-slate-500 mt-1">
-                              Total Records
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Total Expenses Breakdown */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                          Total Project Expenses
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                          <div className="bg-blue-50 rounded-lg p-4">
-                            <p className="text-sm text-slate-600 mb-1">
-                              Project Payroll
-                            </p>
-                            <p className="text-xl font-bold text-blue-600">
-                              <ConvertedAmount
-                                amount={costSummary?.project_payroll || 0}
-                                sessionData={sessionData}
-                                showCurrency={true}
-                                currency={sessionData.user.currency}
-                              />
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              Actual Employee Costs
-                            </p>
-                          </div>
-                          <div className="bg-purple-50 rounded-lg p-4">
-                            <p className="text-sm text-slate-600 mb-1">
-                              Manual Expenses
-                            </p>
-                            <p className="text-xl font-bold text-purple-600">
-                              <ConvertedAmount
-                                amount={costSummary?.manual_expenses || 0}
-                                sessionData={sessionData}
-                                showCurrency={true}
-                                currency={sessionData.user.currency}
-                              />
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              Materials, Equipment, etc.
-                            </p>
-                          </div>
-                          <div className="bg-slate-100 rounded-lg p-4 border-2 border-slate-300">
-                            <p className="text-sm text-slate-600 mb-1">
-                              Total Expenses
-                            </p>
-                            <p className="text-xl font-bold text-slate-800">
-                              <ConvertedAmount
-                                amount={costSummary.total_expenses || 0}
-                                sessionData={sessionData}
-                                showCurrency={true}
-                                currency={sessionData.user.currency}
-                              />
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              Payroll + Manual Expenses
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Recent Revenue Entries */}
-                      {revenueEntries.length > 0 && (
-                        <div>
-                          <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                            Recent Revenue Entries
-                          </h3>
-                          <div className="space-y-2">
-                            {revenueEntries
-                              .slice(-5)
-                              .reverse()
-                              .map((revenue) => (
-                                <div
-                                  key={revenue.id}
-                                  className="flex items-center justify-between bg-green-50 p-4 rounded-lg border border-green-200"
-                                >
-                                  <div className="flex-1">
-                                    <p className="font-medium text-slate-800">
-                                      {revenue.boq_item_no} -{" "}
-                                      {revenue.boq_description}
-                                    </p>
-                                    <p className="text-sm text-slate-600">
-                                      {revenue.from_date} to {revenue.to_date} •{" "}
-                                      {revenue.quantity_completed}{" "}
-                                      {revenue.unit} @{" "}
-                                      <ConvertedAmount
-                                        amount={revenue.rate}
-                                        sessionData={sessionData}
-                                        showCurrency={true}
-                                        currency={sessionData.user.currency}
-                                      />
-                                      /{revenue.unit}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <p className="text-lg font-bold text-green-600">
-                                      +
-                                      {
-                                        <ConvertedAmount
-                                          amount={Number(revenue.amount)}
-                                          sessionData={sessionData}
-                                          showCurrency={true}
-                                          currency={sessionData.user.currency}
-                                        />
-                                      }
-                                    </p>
-                                    <button
-                                      onClick={async () => {
-                                        if (!revenue.id) {
-                                          showToast.error(
-                                            "Revenue entry has no ID"
-                                          );
-                                          return;
-                                        }
-                                        try {
-                                          await deleteRevenue(
-                                            revenue.id
-                                          ).unwrap();
-                                          refetchRevenues();
-                                          refetchBOQ(); // Refresh BOQ to update completed quantities
-                                          showToast.success(
-                                            "Revenue entry deleted"
-                                          );
-                                        } catch (error: any) {
-                                          console.error(
-                                            "Failed to delete revenue:",
-                                            error
-                                          );
-                                          showToast.error(
-                                            "Failed to delete revenue: " +
-                                              (error.data?.message ||
-                                                error.message)
-                                          );
-                                        }
-                                      }}
-                                      disabled={isDeletingRevenue}
-                                      className="text-slate-400 hover:text-red-500 disabled:opacity-50"
-                                    >
-                                      {isDeletingRevenue ? "⏳" : "🗑️"}
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Manual Expenses by Category */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                          Manual Expenses by Category
-                        </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          {Object.entries(
-                            expenses.reduce((acc, exp) => {
-                              acc[exp.category] =
-                                (acc[exp.category] || 0) + exp.amount;
-                              return acc;
-                            }, {} as Record<string, number>)
-                          ).map(([category, amount]) => (
-                            <div
-                              key={category}
-                              className="bg-slate-50 rounded-lg p-4"
-                            >
-                              <p className="text-sm text-slate-600 mb-1">
-                                {category}
+                {/* Recent Revenue Entries */}
+                {revenueEntries.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                      Recent Revenue Entries
+                    </h3>
+                    <div className="space-y-2">
+                      {revenueEntries
+                        .slice(-5)
+                        .reverse()
+                        .map((revenue) => (
+                          <div
+                            key={revenue.id}
+                            className="flex items-center justify-between bg-green-50 p-4 rounded-lg border border-green-200"
+                          >
+                            <div className="flex-1">
+                              <p className="font-medium text-slate-800">
+                                {revenue.boq_item_no} -{" "}
+                                {revenue.boq_description}
                               </p>
-                              <p className="text-xl font-bold text-slate-800">
+                              <p className="text-sm text-slate-600">
+                                {revenue.from_date} to {revenue.to_date} •{" "}
+                                {revenue.quantity_completed} {revenue.unit} @{" "}
                                 <ConvertedAmount
-                                  amount={Number(amount)}
+                                  amount={revenue.rate}
                                   sessionData={sessionData}
                                   showCurrency={true}
                                   currency={sessionData.user.currency}
                                 />
+                                /{revenue.unit}
                               </p>
                             </div>
-                          ))}
+                            <div className="flex items-center gap-3">
+                              <p className="text-lg font-bold text-green-600">
+                                +
+                                {
+                                  <ConvertedAmount
+                                    amount={Number(revenue.amount)}
+                                    sessionData={sessionData}
+                                    showCurrency={true}
+                                    currency={sessionData.user.currency}
+                                  />
+                                }
+                              </p>
+                              <button
+                                onClick={async () => {
+                                  if (!revenue.id) {
+                                    showToast.error("Revenue entry has no ID");
+                                    return;
+                                  }
+                                  try {
+                                    await deleteRevenue(revenue.id).unwrap();
+                                    refetchRevenues();
+                                    refetchBOQ(); // Refresh BOQ to update completed quantities
+                                    showToast.success("Revenue entry deleted");
+                                  } catch (error: any) {
+                                    console.error(
+                                      "Failed to delete revenue:",
+                                      error
+                                    );
+                                    showToast.error(
+                                      "Failed to delete revenue: " +
+                                        (error.data?.message || error.message)
+                                    );
+                                  }
+                                }}
+                                disabled={isDeletingRevenue}
+                                className="text-slate-400 hover:text-red-500 disabled:opacity-50"
+                              >
+                                {isDeletingRevenue ? "⏳" : "🗑️"}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Manual Expenses by Category */}
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                    Manual Expenses by Category
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {Object.entries(
+                      expenses.reduce((acc, exp) => {
+                        acc[exp.category] =
+                          (acc[exp.category] || 0) + exp.amount;
+                        return acc;
+                      }, {} as Record<string, number>)
+                    ).map(([category, amount]) => (
+                      <div
+                        key={category}
+                        className="bg-slate-50 rounded-lg p-4"
+                      >
+                        <p className="text-sm text-slate-600 mb-1">
+                          {category}
+                        </p>
+                        <p className="text-xl font-bold text-slate-800">
+                          <ConvertedAmount
+                            amount={Number(amount)}
+                            sessionData={sessionData}
+                            showCurrency={true}
+                            currency={sessionData.user.currency}
+                          />
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Recent Manual Expenses */}
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                    Recent Manual Expenses
+                  </h3>
+                  <div className="space-y-2">
+                    {expenses
+                      .slice(-5)
+                      .reverse()
+                      .map((expense) => (
+                        <div
+                          key={expense.id}
+                          className="flex items-center justify-between bg-slate-50 p-4 rounded-lg"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-800">
+                              {expense.description}
+                            </p>
+                            <p className="text-sm text-slate-600">
+                              {new Date(
+                                expense.created_at
+                              ).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <p className="text-lg font-bold text-red-600">
+                            <ConvertedAmount
+                              amount={Number(expense.amount)}
+                              sessionData={sessionData}
+                              showCurrency={true}
+                              currency={sessionData.user.currency}
+                            />
+                          </p>
+                        </div>
+                      ))}
+                    {expenses.length === 0 && (
+                      <p className="text-slate-500 text-center py-8">
+                        No manual expenses recorded yet for this project
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* BOQ Tab */}
+            {activeTab === "boq" && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Add New BOQ Item</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleAddBOQItem} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <label
+                            className="text-sm font-medium"
+                            htmlFor="item_code"
+                          >
+                            Item Code
+                          </label>
+                          <Input
+                            id="item_code"
+                            name="item_code"
+                            value={boqForm.item_code}
+                            onChange={handleBOQInputChange}
+                            placeholder="e.g., CONC-001"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label
+                            className="text-sm font-medium"
+                            htmlFor="description"
+                          >
+                            Description
+                          </label>
+                          <Input
+                            id="description"
+                            name="description"
+                            value={boqForm.description}
+                            onChange={handleBOQInputChange}
+                            placeholder="Item description"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium" htmlFor="unit">
+                            Unit
+                          </label>
+                          <Select
+                            value={boqForm.unit}
+                            onValueChange={(value) =>
+                              setBoqForm((prev) => ({
+                                ...prev,
+                                unit: value,
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select unit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STANDARD_UNITS.map((unit) => (
+                                <SelectItem key={unit.value} value={unit.value}>
+                                  {unit.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label
+                            className="text-sm font-medium"
+                            htmlFor="quantity"
+                          >
+                            Quantity
+                          </label>
+                          <Input
+                            id="quantity"
+                            name="quantity"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={boqForm.quantity || ""}
+                            onChange={handleBOQInputChange}
+                            placeholder="0.00"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label
+                            className="text-sm font-medium"
+                            htmlFor="unit_rate"
+                          >
+                            Unit Rate (R)
+                          </label>
+                          <Input
+                            id="unit_rate"
+                            name="unit_rate"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={boqForm.unit_rate || ""}
+                            onChange={handleBOQInputChange}
+                            placeholder="0.00"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">
+                            Total (R)
+                          </label>
+                          <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                            {(boqForm.quantity * boqForm.unit_rate).toFixed(2)}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Recent Manual Expenses */}
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                          Recent Manual Expenses
-                        </h3>
-                        <div className="space-y-2">
-                          {expenses
-                            .slice(-5)
-                            .reverse()
-                            .map((expense) => (
-                              <div
-                                key={expense.id}
-                                className="flex items-center justify-between bg-slate-50 p-4 rounded-lg"
+                      <div className="flex justify-end">
+                        <Button
+                          type="submit"
+                          disabled={isCreatingBOQ || !selectedProjectId}
+                        >
+                          {isCreatingBOQ ? "Adding..." : "Add BOQ Item"}
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                {/* CSV Upload for BOQ */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Upload className="h-5 w-5" />
+                      Bulk Upload BOQ Items
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => downloadCsvTemplate("boq")}
+                          className="flex items-center gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download Template
+                        </Button>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="file"
+                            accept=".csv"
+                            onChange={handleCsvFileChange}
+                            className="hidden"
+                            id="boq-csv-upload"
+                          />
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setCsvUploadType("boq");
+                              document
+                                .getElementById("boq-csv-upload")
+                                ?.click();
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            <FileText className="h-4 w-4" />
+                            Choose CSV File
+                          </Button>
+                          {csvFile && csvUploadType === "boq" && (
+                            <span className="text-sm text-green-600">
+                              {csvFile.name} selected
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {csvFile && csvUploadType === "boq" && (
+                        <div className="flex justify-end">
+                          <Button
+                            onClick={processCsvFile}
+                            disabled={isUploadingCsv}
+                            className="flex items-center gap-2"
+                          >
+                            <Upload className="h-4 w-4" />
+                            {isUploadingCsv
+                              ? "Uploading..."
+                              : "Upload BOQ Items"}
+                          </Button>
+                        </div>
+                      )}
+                      <div className="text-sm text-slate-600">
+                        <p>
+                          <strong>CSV Format:</strong> item_code, description,
+                          unit, quantity, unit_rate
+                        </p>
+                        <p>
+                          <strong>Example:</strong> CONC-001, Concrete Work, m³,
+                          100, 150
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Add BOQ items table here */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>BOQ Items</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {boqItems.length > 0 ? (
+                      <div className="rounded-md border">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left p-4">Item Code</th>
+                              <th className="text-left p-4">Description</th>
+                              <th className="text-right p-4">Qty</th>
+                              <th className="text-right p-4">Unit</th>
+                              <th className="text-right p-4">Unit Rate (R)</th>
+                              <th className="text-right p-4">Total (R)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {boqItems.map((item: any, index: number) => (
+                              <tr
+                                key={`${
+                                  item.item_no || item.item_code
+                                }-${index}`}
+                                className="border-b hover:bg-gray-50"
                               >
-                                <div className="flex-1">
-                                  <p className="font-medium text-slate-800">
-                                    {expense.description}
-                                  </p>
-                                  <p className="text-sm text-slate-600">
-                                    {new Date(
-                                      expense.created_at
-                                    ).toLocaleDateString()}
+                                <td className="p-4">
+                                  {item.item_no || item.item_code}
+                                </td>
+                                <td className="p-4">{item.description}</td>
+                                <td className="text-right p-4">
+                                  {item.quantity}
+                                </td>
+                                <td className="text-right p-4">{item.unit}</td>
+                                <td className="text-right p-4">
+                                  {item.rate || item.unit_rate}
+                                </td>
+                                <td className="text-right p-4 font-medium">
+                                  {(
+                                    item.quantity *
+                                    (item.rate || item.unit_rate)
+                                  ).toFixed(2)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-center text-gray-500 py-8">
+                        No BOQ items found. Add your first item above.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Revenue Tab */}
+            {activeTab === "revenues" && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Add Revenue from BOQ Progress</CardTitle>
+                    <p className="text-sm text-slate-600">
+                      Select a BOQ item, specify the work period, and enter
+                      completed quantity. Labor expenses will be automatically
+                      fetched from payroll data for the selected period.
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* BOQ Item Selection */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          Select BOQ Item
+                        </label>
+                        <Select
+                          value={revenueForm.selectedBOQItem}
+                          onValueChange={(value) =>
+                            setRevenueForm((prev) => ({
+                              ...prev,
+                              selectedBOQItem: value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="-- Select BOQ Item --" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {boqItems.map((item: any) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.item_no || item.item_code} -{" "}
+                                {item.description} (Rate:{" "}
+                                <ConvertedAmount
+                                  amount={item.rate || item.unit_rate}
+                                  sessionData={sessionData}
+                                  showCurrency={true}
+                                  currency={sessionData.user.currency}
+                                />
+                                /{item.unit})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Date Range Selection */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">
+                            📅 From Date
+                          </label>
+                          <Input
+                            type="date"
+                            name="fromDate"
+                            value={revenueForm.fromDate}
+                            onChange={(e) => {
+                              handleRevenueInputChange(e);
+                              setPayrollFetched(false); // Reset payroll fetch status when date changes
+                            }}
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">
+                            📅 To Date
+                          </label>
+                          <Input
+                            type="date"
+                            name="toDate"
+                            value={revenueForm.toDate}
+                            onChange={(e) => {
+                              handleRevenueInputChange(e);
+                              setPayrollFetched(false); // Reset payroll fetch status when date changes
+                            }}
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Quantity Input */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          Quantity of Work Completed
+                        </label>
+                        <Input
+                          type="number"
+                          name="quantityCompleted"
+                          value={revenueForm.quantityCompleted || ""}
+                          onChange={handleRevenueInputChange}
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+
+                      {/* Selected BOQ Item Details */}
+                      {revenueForm.selectedBOQItem &&
+                        (() => {
+                          const selectedItem = boqItems.find(
+                            (item: any) =>
+                              item.id === revenueForm.selectedBOQItem
+                          );
+                          if (selectedItem) {
+                            return (
+                              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                                <h4 className="font-semibold text-slate-800 mb-2">
+                                  Selected Item Details
+                                </h4>
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                  <div>
+                                    <span className="text-slate-600">
+                                      Total Quantity:
+                                    </span>
+                                    <span className="ml-2 font-semibold">
+                                      {selectedItem.quantity}{" "}
+                                      {selectedItem.unit}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-600">
+                                      Completed:
+                                    </span>
+                                    <span className="ml-2 font-semibold text-green-600">
+                                      {selectedItem.completed_qty || 0}{" "}
+                                      {selectedItem.unit}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-600">
+                                      Rate:
+                                    </span>
+                                    <span className="ml-2 font-semibold">
+                                      <ConvertedAmount
+                                        amount={
+                                          selectedItem.rate ||
+                                          selectedItem.unit_rate
+                                        }
+                                        sessionData={sessionData}
+                                        showCurrency={true}
+                                        currency={sessionData.user.currency}
+                                      />
+                                      /{selectedItem.unit}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-600">
+                                      Remaining:
+                                    </span>
+                                    <span className="ml-2 font-semibold text-amber-600">
+                                      {(
+                                        selectedItem.quantity -
+                                        (selectedItem.completed_qty || 0)
+                                      ).toFixed(2)}{" "}
+                                      {selectedItem.unit}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+
+                      {/* Revenue Preview */}
+                      {revenueForm.selectedBOQItem &&
+                        revenueForm.quantityCompleted > 0 &&
+                        (() => {
+                          const selectedItem = boqItems.find(
+                            (item: any) =>
+                              item.id === revenueForm.selectedBOQItem
+                          );
+                          if (selectedItem) {
+                            const calculatedRevenue =
+                              revenueForm.quantityCompleted *
+                              (selectedItem.rate || selectedItem.unit_rate);
+                            return (
+                              <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-sm text-green-700 font-medium">
+                                      Calculated Revenue
+                                    </p>
+                                    <p className="text-xs text-green-600 mt-1">
+                                      {revenueForm.quantityCompleted}{" "}
+                                      {selectedItem.unit} ×{" "}
+                                      <ConvertedAmount
+                                        amount={
+                                          selectedItem.rate ||
+                                          selectedItem.unit_rate
+                                        }
+                                        sessionData={sessionData}
+                                        showCurrency={true}
+                                        currency={sessionData.user.currency}
+                                      />
+                                      /{selectedItem.unit}
+                                    </p>
+                                  </div>
+                                  <p className="text-3xl font-bold text-green-600">
+                                    <ConvertedAmount
+                                      amount={calculatedRevenue}
+                                      sessionData={sessionData}
+                                      showCurrency={true}
+                                      currency={sessionData.user.currency}
+                                    />
                                   </p>
                                 </div>
-                                <p className="text-lg font-bold text-red-600">
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+
+                      {/* Labor Expense Fetch Section */}
+                      <div className="border-t pt-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <h4 className="font-medium text-slate-800">
+                                🔄 Auto-Fetch Labor Expenses
+                              </h4>
+                              <p className="text-sm text-slate-600">
+                                Labor costs are automatically fetched from
+                                payroll data when you select a date range
+                              </p>
+                            </div>
+                            <Button
+                              onClick={() =>
+                                fetchLaborExpenses(
+                                  revenueForm.fromDate,
+                                  revenueForm.toDate
+                                )
+                              }
+                              disabled={
+                                isLoadingPayroll ||
+                                !selectedProjectId ||
+                                !revenueForm.fromDate ||
+                                !revenueForm.toDate
+                              }
+                              variant="outline"
+                              className="bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                            >
+                              {isLoadingPayroll ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                                  Fetching...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-4 h-4 mr-2" />
+                                  Fetch Labor Expenses
+                                </>
+                              )}
+                            </Button>
+                          </div>
+
+                          {isLoadingPayroll && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+                              <div className="flex items-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600 mr-2"></div>
+                                <p className="text-sm text-yellow-800">
+                                  ⏳ Fetching labor expenses from payroll data
+                                  for {revenueForm.fromDate} to{" "}
+                                  {revenueForm.toDate}...
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {payrollFetched && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                              <p className="text-sm text-green-800">
+                                ✅ Labor expenses have been successfully fetched
+                                and added to the expenses list.
+                                <span className="font-medium">
+                                  Check the "Add Expenses" tab to see them.
+                                </span>
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="mt-3 text-xs text-blue-700">
+                            <p>
+                              <strong>Note:</strong> Labor expenses are
+                              automatically added as category "Labor" and
+                              duplicates are skipped.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Record Revenue Button */}
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={async () => {
+                            // Handle revenue recording logic here
+                            if (
+                              !revenueForm.selectedBOQItem ||
+                              !revenueForm.quantityCompleted
+                            ) {
+                              showToast.error(
+                                "Please select a BOQ item and enter quantity completed"
+                              );
+                              return;
+                            }
+
+                            // Auto-fetch labor expenses if not already fetched
+                            if (
+                              !payrollFetched &&
+                              revenueForm.fromDate &&
+                              revenueForm.toDate
+                            ) {
+                              await fetchLaborExpenses(
+                                revenueForm.fromDate,
+                                revenueForm.toDate
+                              );
+                            }
+
+                            // Create revenue entry in backend
+                            const selectedItem = boqItems.find(
+                              (item: any) =>
+                                item.id === revenueForm.selectedBOQItem
+                            );
+                            if (selectedItem) {
+                              const revenueAmount =
+                                revenueForm.quantityCompleted *
+                                (selectedItem.rate || selectedItem.unit_rate);
+
+                              try {
+                                // Create revenue entry
+                                await createRevenue({
+                                  project_id: selectedProjectId,
+                                  company_id: (sessionData.user as any)
+                                    .company_id,
+                                  boq_item_id: selectedItem.id,
+                                  boq_item_no:
+                                    selectedItem.item_no ||
+                                    selectedItem.item_code,
+                                  boq_description: selectedItem.description,
+                                  from_date: revenueForm.fromDate,
+                                  to_date: revenueForm.toDate,
+                                  quantity_completed:
+                                    revenueForm.quantityCompleted,
+                                  rate:
+                                    selectedItem.rate || selectedItem.unit_rate,
+                                  unit: selectedItem.unit,
+                                  amount: revenueAmount,
+                                }).unwrap();
+
+                                // Update BOQ progress
+                                const currentCompleted =
+                                  selectedItem.completed_qty || 0;
+                                await updateBOQProgress({
+                                  id: selectedItem.id,
+                                  completed_quantity:
+                                    currentCompleted +
+                                    revenueForm.quantityCompleted,
+                                }).unwrap();
+
+                                // Refresh data
+                                refetchRevenues();
+                                refetchBOQ();
+                              } catch (error: any) {
+                                console.error(
+                                  "Failed to create revenue:",
+                                  error
+                                );
+                                showToast.error(
+                                  "Failed to record revenue: " +
+                                    (error.data?.message || error.message)
+                                );
+                                return;
+                              }
+                            }
+
+                            showToast.success(
+                              "Revenue recorded successfully! Labor expenses have been automatically added."
+                            );
+
+                            // Reset form
+                            setRevenueForm({
+                              fromDate: new Date().toISOString().split("T")[0],
+                              toDate: new Date().toISOString().split("T")[0],
+                              selectedBOQItem: "",
+                              quantityCompleted: 0,
+                            });
+                            setPayrollFetched(false);
+                          }}
+                          disabled={
+                            !revenueForm.selectedBOQItem ||
+                            !revenueForm.quantityCompleted ||
+                            isLoadingPayroll ||
+                            isCreatingRevenue
+                          }
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          {isLoadingPayroll || isCreatingRevenue ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              {isCreatingRevenue
+                                ? "Recording..."
+                                : "Fetching Labor..."}
+                            </>
+                          ) : (
+                            <>➕ Record Revenue</>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* BOQ Items Status */}
+                {boqItems.length === 0 && (
+                  <Card>
+                    <CardContent className="text-center py-8">
+                      <p className="text-amber-800 font-medium mb-2">
+                        No BOQ Items Available
+                      </p>
+                      <p className="text-amber-700 text-sm mb-4">
+                        Please add BOQ items first before recording revenue.
+                      </p>
+                      <Button
+                        onClick={() => switchTab("boq")}
+                        variant="outline"
+                        className="bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
+                      >
+                        Go to BOQ Tab
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* Expense Tab */}
+            {activeTab === "expenses" && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Add New Expense</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleAddExpense} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium leading-none">
+                            Description <span className="text-red-500">*</span>
+                          </label>
+                          <Input
+                            name="description"
+                            value={expenseForm.description}
+                            onChange={handleExpenseInputChange}
+                            placeholder="Expense description"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium leading-none">
+                            Quantity <span className="text-red-500">*</span>
+                          </label>
+                          <Input
+                            type="number"
+                            name="quantity"
+                            value={expenseForm.quantity}
+                            onChange={handleExpenseInputChange}
+                            placeholder="1"
+                            min="0"
+                            step="1"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Unit
+                          </label>
+                          <Select
+                            value={expenseForm.unit}
+                            onValueChange={(value) =>
+                              setExpenseForm((prev) => ({
+                                ...prev,
+                                unit: value,
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select unit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STANDARD_UNITS.map((unit) => (
+                                <SelectItem key={unit.value} value={unit.value}>
+                                  {unit.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Unit Price
+                          </label>
+                          <Input
+                            type="number"
+                            name="unit_price"
+                            value={expenseForm.unit_price}
+                            onChange={handleExpenseInputChange}
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium leading-none">
+                            Category
+                          </label>
+                          <Select
+                            name="category"
+                            value={expenseForm.category}
+                            onValueChange={(value) =>
+                              setExpenseForm((prev) => ({
+                                ...prev,
+                                category: value,
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="MATERIALS">
+                                Materials
+                              </SelectItem>
+                              <SelectItem value="LABOR">Labor</SelectItem>
+                              <SelectItem value="EQUIPMENT">
+                                Equipment
+                              </SelectItem>
+                              <SelectItem value="SUBCONTRACTOR">
+                                Subcontractor
+                              </SelectItem>
+                              <SelectItem value="PERMITS">Permits</SelectItem>
+                              <SelectItem value="TRANSPORTATION">
+                                Transportation
+                              </SelectItem>
+                              <SelectItem value="UTILITIES">
+                                Utilities
+                              </SelectItem>
+                              <SelectItem value="RENT">Rent</SelectItem>
+                              <SelectItem value="OFFICE_SUPPLIES">
+                                Office Supplies
+                              </SelectItem>
+                              <SelectItem value="MARKETING">
+                                Marketing
+                              </SelectItem>
+                              <SelectItem value="TRAINING">Training</SelectItem>
+                              <SelectItem value="OTHER">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium leading-none">
+                            Total Amount
+                          </label>
+                          <div className="p-2 bg-gray-50 rounded border text-sm font-medium">
+                            {sessionData.user.currency}
+                            {(
+                              expenseForm.quantity * expenseForm.unit_price
+                            ).toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button type="submit" disabled={isCreatingExpense}>
+                          {isCreatingExpense ? "Adding..." : "Add Expense"}
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                {/* CSV Upload for Expenses */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Upload className="h-5 w-5" />
+                      Bulk Upload Expenses
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => downloadCsvTemplate("expenses")}
+                          className="flex items-center gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download Template
+                        </Button>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="file"
+                            accept=".csv"
+                            onChange={handleCsvFileChange}
+                            className="hidden"
+                            id="expense-csv-upload"
+                          />
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setCsvUploadType("expenses");
+                              document
+                                .getElementById("expense-csv-upload")
+                                ?.click();
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            <FileText className="h-4 w-4" />
+                            Choose CSV File
+                          </Button>
+                          {csvFile && csvUploadType === "expenses" && (
+                            <span className="text-sm text-green-600">
+                              {csvFile.name} selected
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {csvFile && csvUploadType === "expenses" && (
+                        <div className="flex justify-end">
+                          <Button
+                            onClick={processCsvFile}
+                            disabled={isUploadingCsv}
+                            className="flex items-center gap-2"
+                          >
+                            <Upload className="h-4 w-4" />
+                            {isUploadingCsv
+                              ? "Uploading..."
+                              : "Upload Expenses"}
+                          </Button>
+                        </div>
+                      )}
+                      <div className="text-sm text-slate-600">
+                        <p>
+                          <strong>CSV Format:</strong> description, category,
+                          quantity, unit, unit_price
+                        </p>
+                        <p>
+                          <strong>Categories:</strong> MATERIALS, LABOR,
+                          EQUIPMENT, TRANSPORT, OTHER
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Expenses List */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>Expenses</span>
+                      {expenses.some(
+                        (exp: any) => exp.category === "LABOR"
+                      ) && (
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-50 text-blue-700 border-blue-300"
+                        >
+                          🔄 Includes Auto-Fetched Labor
+                        </Badge>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoadingExpenses ? (
+                      <div className="flex justify-center p-4">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                      </div>
+                    ) : expenses.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        No expenses found. Add your first expense above.
+                      </div>
+                    ) : (
+                      <>
+                        {/* Expense Summary */}
+                        {expenses.length > 0 && (
+                          <div className="bg-slate-50 rounded-lg p-4 mb-6">
+                            <h4 className="font-medium text-slate-800 mb-3">
+                              Expense Summary
+                            </h4>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              {Object.entries(
+                                expenses.reduce((acc: any, exp: any) => {
+                                  const category = exp.category || "Other";
+                                  acc[category] =
+                                    (acc[category] || 0) +
+                                    Number(exp.amount || 0);
+                                  return acc;
+                                }, {})
+                              ).map(([category, amount]) => (
+                                <div key={category} className="text-center">
+                                  <div
+                                    className={`p-3 rounded-lg ${
+                                      category === "LABOR"
+                                        ? "bg-blue-100 border border-blue-200"
+                                        : "bg-white border border-slate-200"
+                                    }`}
+                                  >
+                                    <p className="text-sm font-medium text-slate-600">
+                                      {category}
+                                    </p>
+                                    <p className="text-lg font-bold text-slate-800">
+                                      <ConvertedAmount
+                                        amount={Number(amount)}
+                                        sessionData={sessionData}
+                                        showCurrency={true}
+                                        currency={sessionData.user.currency}
+                                      />
+                                    </p>
+                                    {category === "LABOR" && (
+                                      <p className="text-xs text-blue-600 mt-1">
+                                        Auto-Fetched
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-slate-200">
+                              <div className="flex justify-between items-center">
+                                <span className="font-medium text-slate-700">
+                                  Total Expenses:
+                                </span>
+                                <span className="text-xl font-bold text-slate-800">
                                   <ConvertedAmount
-                                    amount={Number(expense.amount)}
+                                    amount={expenses.reduce(
+                                      (sum: number, exp: any) =>
+                                        sum + Number(exp.amount || 0),
+                                      0
+                                    )}
+                                    sessionData={sessionData}
+                                    showCurrency={true}
+                                    currency={sessionData.user.currency}
+                                  />
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-4">
+                          {expenses.map((expense) => (
+                            <div
+                              key={expense.id}
+                              className={`border rounded-lg p-4 flex justify-between items-center ${
+                                expense.category === "LABOR"
+                                  ? "bg-blue-50 border-blue-200"
+                                  : "bg-white"
+                              }`}
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">
+                                    {expense.description}
+                                  </p>
+                                  {expense.category === "LABOR" && (
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-blue-100 text-blue-700 border-blue-300 text-xs"
+                                    >
+                                      Auto-Fetched
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-4 mt-1">
+                                  <Badge
+                                    variant={
+                                      expense.category === "LABOR"
+                                        ? "default"
+                                        : "secondary"
+                                    }
+                                    className={
+                                      expense.category === "LABOR"
+                                        ? "bg-blue-600"
+                                        : ""
+                                    }
+                                  >
+                                    {expense.category}
+                                  </Badge>
+                                  <p className="text-sm text-gray-500">
+                                    {expense.quantity} {expense.unit} ×{" "}
+                                    <ConvertedAmount
+                                      amount={Number(expense.unit_price || 0)}
+                                      sessionData={sessionData}
+                                      showCurrency={true}
+                                      currency={sessionData.user.currency}
+                                    />
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-medium text-lg">
+                                  <ConvertedAmount
+                                    amount={Number(expense.amount || 0)}
                                     sessionData={sessionData}
                                     showCurrency={true}
                                     currency={sessionData.user.currency}
                                   />
                                 </p>
+                                <p className="text-sm text-gray-500">
+                                  {new Date(
+                                    expense.created_at
+                                  ).toLocaleDateString()}
+                                </p>
                               </div>
-                            ))}
-                          {expenses.length === 0 && (
-                            <p className="text-slate-500 text-center py-8">
-                              No manual expenses recorded yet for this project
-                            </p>
-                          )}
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* BOQ Tab */}
-                  {activeTab === "boq" && (
-                    <div className="space-y-6">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Add New BOQ Item</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <form
-                            onSubmit={handleAddBOQItem}
-                            className="space-y-4"
-                          >
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <div className="space-y-2">
-                                <label
-                                  className="text-sm font-medium"
-                                  htmlFor="item_code"
-                                >
-                                  Item Code
-                                </label>
-                                <Input
-                                  id="item_code"
-                                  name="item_code"
-                                  value={boqForm.item_code}
-                                  onChange={handleBOQInputChange}
-                                  placeholder="e.g., CONC-001"
-                                  required
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <label
-                                  className="text-sm font-medium"
-                                  htmlFor="description"
-                                >
-                                  Description
-                                </label>
-                                <Input
-                                  id="description"
-                                  name="description"
-                                  value={boqForm.description}
-                                  onChange={handleBOQInputChange}
-                                  placeholder="Item description"
-                                  required
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <label
-                                  className="text-sm font-medium"
-                                  htmlFor="unit"
-                                >
-                                  Unit
-                                </label>
-                                <Select
-                                  value={boqForm.unit}
-                                  onValueChange={(value) =>
-                                    setBoqForm((prev) => ({
-                                      ...prev,
-                                      unit: value,
-                                    }))
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select unit" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {STANDARD_UNITS.map((unit) => (
-                                      <SelectItem
-                                        key={unit.value}
-                                        value={unit.value}
-                                      >
-                                        {unit.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div className="space-y-2">
-                                <label
-                                  className="text-sm font-medium"
-                                  htmlFor="quantity"
-                                >
-                                  Quantity
-                                </label>
-                                <Input
-                                  id="quantity"
-                                  name="quantity"
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={boqForm.quantity || ""}
-                                  onChange={handleBOQInputChange}
-                                  placeholder="0.00"
-                                  required
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <label
-                                  className="text-sm font-medium"
-                                  htmlFor="unit_rate"
-                                >
-                                  Unit Rate (R)
-                                </label>
-                                <Input
-                                  id="unit_rate"
-                                  name="unit_rate"
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={boqForm.unit_rate || ""}
-                                  onChange={handleBOQInputChange}
-                                  placeholder="0.00"
-                                  required
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium">
-                                  Total (R)
-                                </label>
-                                <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                                  {(
-                                    boqForm.quantity * boqForm.unit_rate
-                                  ).toFixed(2)}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex justify-end">
-                              <Button
-                                type="submit"
-                                disabled={isCreatingBOQ || !selectedProjectId}
-                              >
-                                {isCreatingBOQ ? "Adding..." : "Add BOQ Item"}
-                              </Button>
-                            </div>
-                          </form>
-                        </CardContent>
-                      </Card>
-
-                      {/* CSV Upload for BOQ */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <Upload className="h-5 w-5" />
-                            Bulk Upload BOQ Items
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-4">
-                              <Button
-                                variant="outline"
-                                onClick={() => downloadCsvTemplate("boq")}
-                                className="flex items-center gap-2"
-                              >
-                                <Download className="h-4 w-4" />
-                                Download Template
-                              </Button>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="file"
-                                  accept=".csv"
-                                  onChange={handleCsvFileChange}
-                                  className="hidden"
-                                  id="boq-csv-upload"
-                                />
-                                <Button
-                                  variant="outline"
-                                  onClick={() => {
-                                    setCsvUploadType("boq");
-                                    document
-                                      .getElementById("boq-csv-upload")
-                                      ?.click();
-                                  }}
-                                  className="flex items-center gap-2"
-                                >
-                                  <FileText className="h-4 w-4" />
-                                  Choose CSV File
-                                </Button>
-                                {csvFile && csvUploadType === "boq" && (
-                                  <span className="text-sm text-green-600">
-                                    {csvFile.name} selected
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {csvFile && csvUploadType === "boq" && (
-                              <div className="flex justify-end">
-                                <Button
-                                  onClick={processCsvFile}
-                                  disabled={isUploadingCsv}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Upload className="h-4 w-4" />
-                                  {isUploadingCsv
-                                    ? "Uploading..."
-                                    : "Upload BOQ Items"}
-                                </Button>
-                              </div>
-                            )}
-                            <div className="text-sm text-slate-600">
-                              <p>
-                                <strong>CSV Format:</strong> item_code,
-                                description, unit, quantity, unit_rate
-                              </p>
-                              <p>
-                                <strong>Example:</strong> CONC-001, Concrete
-                                Work, m³, 100, 150
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Add BOQ items table here */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>BOQ Items</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          {boqItems.length > 0 ? (
-                            <div className="rounded-md border">
-                              <table className="w-full">
-                                <thead>
-                                  <tr className="border-b">
-                                    <th className="text-left p-4">Item Code</th>
-                                    <th className="text-left p-4">
-                                      Description
-                                    </th>
-                                    <th className="text-right p-4">Qty</th>
-                                    <th className="text-right p-4">Unit</th>
-                                    <th className="text-right p-4">
-                                      Unit Rate (R)
-                                    </th>
-                                    <th className="text-right p-4">
-                                      Total (R)
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {boqItems.map((item: any, index: number) => (
-                                    <tr
-                                      key={`${
-                                        item.item_no || item.item_code
-                                      }-${index}`}
-                                      className="border-b hover:bg-gray-50"
-                                    >
-                                      <td className="p-4">
-                                        {item.item_no || item.item_code}
-                                      </td>
-                                      <td className="p-4">
-                                        {item.description}
-                                      </td>
-                                      <td className="text-right p-4">
-                                        {item.quantity}
-                                      </td>
-                                      <td className="text-right p-4">
-                                        {item.unit}
-                                      </td>
-                                      <td className="text-right p-4">
-                                        {item.rate || item.unit_rate}
-                                      </td>
-                                      <td className="text-right p-4 font-medium">
-                                        {(
-                                          item.quantity *
-                                          (item.rate || item.unit_rate)
-                                        ).toFixed(2)}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          ) : (
-                            <p className="text-center text-gray-500 py-8">
-                              No BOQ items found. Add your first item above.
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-
-                  {/* Revenue Tab */}
-                  {activeTab === "revenues" && (
-                    <div className="space-y-6">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Add Revenue from BOQ Progress</CardTitle>
-                          <p className="text-sm text-slate-600">
-                            Select a BOQ item, specify the work period, and
-                            enter completed quantity. Labor expenses will be
-                            automatically fetched from payroll data for the
-                            selected period.
-                          </p>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            {/* BOQ Item Selection */}
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">
-                                Select BOQ Item
-                              </label>
-                              <Select
-                                value={revenueForm.selectedBOQItem}
-                                onValueChange={(value) =>
-                                  setRevenueForm((prev) => ({
-                                    ...prev,
-                                    selectedBOQItem: value,
-                                  }))
-                                }
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="-- Select BOQ Item --" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {boqItems.map((item: any) => (
-                                    <SelectItem key={item.id} value={item.id}>
-                                      {item.item_no || item.item_code} -{" "}
-                                      {item.description} (Rate:{" "}
-                                      <ConvertedAmount
-                                        amount={item.rate || item.unit_rate}
-                                        sessionData={sessionData}
-                                        showCurrency={true}
-                                        currency={sessionData.user.currency}
-                                      />
-                                      /{item.unit})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Date Range Selection */}
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium">
-                                  📅 From Date
-                                </label>
-                                <Input
-                                  type="date"
-                                  name="fromDate"
-                                  value={revenueForm.fromDate}
-                                  onChange={(e) => {
-                                    handleRevenueInputChange(e);
-                                    setPayrollFetched(false); // Reset payroll fetch status when date changes
-                                  }}
-                                  className="w-full"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium">
-                                  📅 To Date
-                                </label>
-                                <Input
-                                  type="date"
-                                  name="toDate"
-                                  value={revenueForm.toDate}
-                                  onChange={(e) => {
-                                    handleRevenueInputChange(e);
-                                    setPayrollFetched(false); // Reset payroll fetch status when date changes
-                                  }}
-                                  className="w-full"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Quantity Input */}
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">
-                                Quantity of Work Completed
-                              </label>
-                              <Input
-                                type="number"
-                                name="quantityCompleted"
-                                value={revenueForm.quantityCompleted || ""}
-                                onChange={handleRevenueInputChange}
-                                placeholder="0.00"
-                                step="0.01"
-                                min="0"
-                              />
-                            </div>
-
-                            {/* Selected BOQ Item Details */}
-                            {revenueForm.selectedBOQItem &&
-                              (() => {
-                                const selectedItem = boqItems.find(
-                                  (item: any) =>
-                                    item.id === revenueForm.selectedBOQItem
-                                );
-                                if (selectedItem) {
-                                  return (
-                                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                                      <h4 className="font-semibold text-slate-800 mb-2">
-                                        Selected Item Details
-                                      </h4>
-                                      <div className="grid grid-cols-2 gap-2 text-sm">
-                                        <div>
-                                          <span className="text-slate-600">
-                                            Total Quantity:
-                                          </span>
-                                          <span className="ml-2 font-semibold">
-                                            {selectedItem.quantity}{" "}
-                                            {selectedItem.unit}
-                                          </span>
-                                        </div>
-                                        <div>
-                                          <span className="text-slate-600">
-                                            Completed:
-                                          </span>
-                                          <span className="ml-2 font-semibold text-green-600">
-                                            {selectedItem.completed_qty || 0}{" "}
-                                            {selectedItem.unit}
-                                          </span>
-                                        </div>
-                                        <div>
-                                          <span className="text-slate-600">
-                                            Rate:
-                                          </span>
-                                          <span className="ml-2 font-semibold">
-                                            <ConvertedAmount
-                                              amount={
-                                                selectedItem.rate ||
-                                                selectedItem.unit_rate
-                                              }
-                                              sessionData={sessionData}
-                                              showCurrency={true}
-                                              currency={
-                                                sessionData.user.currency
-                                              }
-                                            />
-                                            /{selectedItem.unit}
-                                          </span>
-                                        </div>
-                                        <div>
-                                          <span className="text-slate-600">
-                                            Remaining:
-                                          </span>
-                                          <span className="ml-2 font-semibold text-amber-600">
-                                            {(
-                                              selectedItem.quantity -
-                                              (selectedItem.completed_qty || 0)
-                                            ).toFixed(2)}{" "}
-                                            {selectedItem.unit}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                }
-                                return null;
-                              })()}
-
-                            {/* Revenue Preview */}
-                            {revenueForm.selectedBOQItem &&
-                              revenueForm.quantityCompleted > 0 &&
-                              (() => {
-                                const selectedItem = boqItems.find(
-                                  (item: any) =>
-                                    item.id === revenueForm.selectedBOQItem
-                                );
-                                if (selectedItem) {
-                                  const calculatedRevenue =
-                                    revenueForm.quantityCompleted *
-                                    (selectedItem.rate ||
-                                      selectedItem.unit_rate);
-                                  return (
-                                    <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
-                                      <div className="flex items-center justify-between">
-                                        <div>
-                                          <p className="text-sm text-green-700 font-medium">
-                                            Calculated Revenue
-                                          </p>
-                                          <p className="text-xs text-green-600 mt-1">
-                                            {revenueForm.quantityCompleted}{" "}
-                                            {selectedItem.unit} ×{" "}
-                                            <ConvertedAmount
-                                              amount={
-                                                selectedItem.rate ||
-                                                selectedItem.unit_rate
-                                              }
-                                              sessionData={sessionData}
-                                              showCurrency={true}
-                                              currency={
-                                                sessionData.user.currency
-                                              }
-                                            />
-                                            /{selectedItem.unit}
-                                          </p>
-                                        </div>
-                                        <p className="text-3xl font-bold text-green-600">
-                                          <ConvertedAmount
-                                            amount={calculatedRevenue}
-                                            sessionData={sessionData}
-                                            showCurrency={true}
-                                            currency={sessionData.user.currency}
-                                          />
-                                        </p>
-                                      </div>
-                                    </div>
-                                  );
-                                }
-                                return null;
-                              })()}
-
-                            {/* Labor Expense Fetch Section */}
-                            <div className="border-t pt-4">
-                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                                <div className="flex items-center justify-between mb-3">
-                                  <div>
-                                    <h4 className="font-medium text-slate-800">
-                                      🔄 Auto-Fetch Labor Expenses
-                                    </h4>
-                                    <p className="text-sm text-slate-600">
-                                      Labor costs are automatically fetched from
-                                      payroll data when you select a date range
-                                    </p>
-                                  </div>
-                                  <Button
-                                    onClick={() =>
-                                      fetchLaborExpenses(
-                                        revenueForm.fromDate,
-                                        revenueForm.toDate
-                                      )
-                                    }
-                                    disabled={
-                                      isLoadingPayroll ||
-                                      !selectedProjectId ||
-                                      !revenueForm.fromDate ||
-                                      !revenueForm.toDate
-                                    }
-                                    variant="outline"
-                                    className="bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
-                                  >
-                                    {isLoadingPayroll ? (
-                                      <>
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                                        Fetching...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Download className="w-4 h-4 mr-2" />
-                                        Fetch Labor Expenses
-                                      </>
-                                    )}
-                                  </Button>
-                                </div>
-
-                                {isLoadingPayroll && (
-                                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
-                                    <div className="flex items-center">
-                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600 mr-2"></div>
-                                      <p className="text-sm text-yellow-800">
-                                        ⏳ Fetching labor expenses from payroll
-                                        data for {revenueForm.fromDate} to{" "}
-                                        {revenueForm.toDate}...
-                                      </p>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {payrollFetched && (
-                                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                    <p className="text-sm text-green-800">
-                                      ✅ Labor expenses have been successfully
-                                      fetched and added to the expenses list.
-                                      <span className="font-medium">
-                                        Check the "Add Expenses" tab to see
-                                        them.
-                                      </span>
-                                    </p>
-                                  </div>
-                                )}
-
-                                <div className="mt-3 text-xs text-blue-700">
-                                  <p>
-                                    <strong>Note:</strong> Labor expenses are
-                                    automatically added as category "Labor" and
-                                    duplicates are skipped.
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Record Revenue Button */}
-                            <div className="flex justify-end">
-                              <Button
-                                onClick={async () => {
-                                  // Handle revenue recording logic here
-                                  if (
-                                    !revenueForm.selectedBOQItem ||
-                                    !revenueForm.quantityCompleted
-                                  ) {
-                                    showToast.error(
-                                      "Please select a BOQ item and enter quantity completed"
-                                    );
-                                    return;
-                                  }
-
-                                  // Auto-fetch labor expenses if not already fetched
-                                  if (
-                                    !payrollFetched &&
-                                    revenueForm.fromDate &&
-                                    revenueForm.toDate
-                                  ) {
-                                    await fetchLaborExpenses(
-                                      revenueForm.fromDate,
-                                      revenueForm.toDate
-                                    );
-                                  }
-
-                                  // Create revenue entry in backend
-                                  const selectedItem = boqItems.find(
-                                    (item: any) =>
-                                      item.id === revenueForm.selectedBOQItem
-                                  );
-                                  if (selectedItem) {
-                                    const revenueAmount =
-                                      revenueForm.quantityCompleted *
-                                      (selectedItem.rate ||
-                                        selectedItem.unit_rate);
-
-                                    try {
-                                      // Create revenue entry
-                                      await createRevenue({
-                                        project_id: selectedProjectId,
-                                        company_id: (sessionData.user as any)
-                                          .company_id,
-                                        boq_item_id: selectedItem.id,
-                                        boq_item_no:
-                                          selectedItem.item_no ||
-                                          selectedItem.item_code,
-                                        boq_description:
-                                          selectedItem.description,
-                                        from_date: revenueForm.fromDate,
-                                        to_date: revenueForm.toDate,
-                                        quantity_completed:
-                                          revenueForm.quantityCompleted,
-                                        rate:
-                                          selectedItem.rate ||
-                                          selectedItem.unit_rate,
-                                        unit: selectedItem.unit,
-                                        amount: revenueAmount,
-                                      }).unwrap();
-
-                                      // Update BOQ progress
-                                      const currentCompleted =
-                                        selectedItem.completed_qty || 0;
-                                      await updateBOQProgress({
-                                        id: selectedItem.id,
-                                        completed_quantity:
-                                          currentCompleted +
-                                          revenueForm.quantityCompleted,
-                                      }).unwrap();
-
-                                      // Refresh data
-                                      refetchRevenues();
-                                      refetchBOQ();
-                                    } catch (error: any) {
-                                      console.error(
-                                        "Failed to create revenue:",
-                                        error
-                                      );
-                                      showToast.error(
-                                        "Failed to record revenue: " +
-                                          (error.data?.message || error.message)
-                                      );
-                                      return;
-                                    }
-                                  }
-
-                                  showToast.success(
-                                    "Revenue recorded successfully! Labor expenses have been automatically added."
-                                  );
-
-                                  // Reset form
-                                  setRevenueForm({
-                                    fromDate: new Date()
-                                      .toISOString()
-                                      .split("T")[0],
-                                    toDate: new Date()
-                                      .toISOString()
-                                      .split("T")[0],
-                                    selectedBOQItem: "",
-                                    quantityCompleted: 0,
-                                  });
-                                  setPayrollFetched(false);
-                                }}
-                                disabled={
-                                  !revenueForm.selectedBOQItem ||
-                                  !revenueForm.quantityCompleted ||
-                                  isLoadingPayroll ||
-                                  isCreatingRevenue
-                                }
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                {isLoadingPayroll || isCreatingRevenue ? (
-                                  <>
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                    {isCreatingRevenue
-                                      ? "Recording..."
-                                      : "Fetching Labor..."}
-                                  </>
-                                ) : (
-                                  <>➕ Record Revenue</>
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* BOQ Items Status */}
-                      {boqItems.length === 0 && (
-                        <Card>
-                          <CardContent className="text-center py-8">
-                            <p className="text-amber-800 font-medium mb-2">
-                              No BOQ Items Available
-                            </p>
-                            <p className="text-amber-700 text-sm mb-4">
-                              Please add BOQ items first before recording
-                              revenue.
-                            </p>
-                            <Button
-                              onClick={() => switchTab("boq")}
-                              variant="outline"
-                              className="bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
-                            >
-                              Go to BOQ Tab
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Expense Tab */}
-                  {activeTab === "expenses" && (
-                    <div className="space-y-6">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Add New Expense</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <form
-                            onSubmit={handleAddExpense}
-                            className="space-y-4"
-                          >
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none">
-                                  Description{" "}
-                                  <span className="text-red-500">*</span>
-                                </label>
-                                <Input
-                                  name="description"
-                                  value={expenseForm.description}
-                                  onChange={handleExpenseInputChange}
-                                  placeholder="Expense description"
-                                  required
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none">
-                                  Quantity{" "}
-                                  <span className="text-red-500">*</span>
-                                </label>
-                                <Input
-                                  type="number"
-                                  name="quantity"
-                                  value={expenseForm.quantity}
-                                  onChange={handleExpenseInputChange}
-                                  placeholder="1"
-                                  min="0"
-                                  step="1"
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                  Unit
-                                </label>
-                                <Select
-                                  value={expenseForm.unit}
-                                  onValueChange={(value) =>
-                                    setExpenseForm((prev) => ({
-                                      ...prev,
-                                      unit: value,
-                                    }))
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select unit" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {STANDARD_UNITS.map((unit) => (
-                                      <SelectItem
-                                        key={unit.value}
-                                        value={unit.value}
-                                      >
-                                        {unit.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                  Unit Price
-                                </label>
-                                <Input
-                                  type="number"
-                                  name="unit_price"
-                                  value={expenseForm.unit_price}
-                                  onChange={handleExpenseInputChange}
-                                  placeholder="0.00"
-                                  min="0"
-                                  step="0.01"
-                                  required
-                                />
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none">
-                                  Category
-                                </label>
-                                <Select
-                                  name="category"
-                                  value={expenseForm.category}
-                                  onValueChange={(value) =>
-                                    setExpenseForm((prev) => ({
-                                      ...prev,
-                                      category: value,
-                                    }))
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select category" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="MATERIALS">
-                                      Materials
-                                    </SelectItem>
-                                    <SelectItem value="LABOR">Labor</SelectItem>
-                                    <SelectItem value="EQUIPMENT">
-                                      Equipment
-                                    </SelectItem>
-                                    <SelectItem value="SUBCONTRACTOR">
-                                      Subcontractor
-                                    </SelectItem>
-                                    <SelectItem value="PERMITS">
-                                      Permits
-                                    </SelectItem>
-                                    <SelectItem value="TRANSPORTATION">
-                                      Transportation
-                                    </SelectItem>
-                                    <SelectItem value="UTILITIES">
-                                      Utilities
-                                    </SelectItem>
-                                    <SelectItem value="RENT">Rent</SelectItem>
-                                    <SelectItem value="OFFICE_SUPPLIES">
-                                      Office Supplies
-                                    </SelectItem>
-                                    <SelectItem value="MARKETING">
-                                      Marketing
-                                    </SelectItem>
-                                    <SelectItem value="TRAINING">
-                                      Training
-                                    </SelectItem>
-                                    <SelectItem value="OTHER">Other</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none">
-                                  Total Amount
-                                </label>
-                                <div className="p-2 bg-gray-50 rounded border text-sm font-medium">
-                                  {sessionData.user.currency}
-                                  {(
-                                    expenseForm.quantity *
-                                    expenseForm.unit_price
-                                  ).toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex justify-end">
-                              <Button
-                                type="submit"
-                                disabled={isCreatingExpense}
-                              >
-                                {isCreatingExpense
-                                  ? "Adding..."
-                                  : "Add Expense"}
-                              </Button>
-                            </div>
-                          </form>
-                        </CardContent>
-                      </Card>
-
-                      {/* CSV Upload for Expenses */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <Upload className="h-5 w-5" />
-                            Bulk Upload Expenses
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-4">
-                              <Button
-                                variant="outline"
-                                onClick={() => downloadCsvTemplate("expenses")}
-                                className="flex items-center gap-2"
-                              >
-                                <Download className="h-4 w-4" />
-                                Download Template
-                              </Button>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="file"
-                                  accept=".csv"
-                                  onChange={handleCsvFileChange}
-                                  className="hidden"
-                                  id="expense-csv-upload"
-                                />
-                                <Button
-                                  variant="outline"
-                                  onClick={() => {
-                                    setCsvUploadType("expenses");
-                                    document
-                                      .getElementById("expense-csv-upload")
-                                      ?.click();
-                                  }}
-                                  className="flex items-center gap-2"
-                                >
-                                  <FileText className="h-4 w-4" />
-                                  Choose CSV File
-                                </Button>
-                                {csvFile && csvUploadType === "expenses" && (
-                                  <span className="text-sm text-green-600">
-                                    {csvFile.name} selected
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {csvFile && csvUploadType === "expenses" && (
-                              <div className="flex justify-end">
-                                <Button
-                                  onClick={processCsvFile}
-                                  disabled={isUploadingCsv}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Upload className="h-4 w-4" />
-                                  {isUploadingCsv
-                                    ? "Uploading..."
-                                    : "Upload Expenses"}
-                                </Button>
-                              </div>
-                            )}
-                            <div className="text-sm text-slate-600">
-                              <p>
-                                <strong>CSV Format:</strong> description,
-                                category, quantity, unit, unit_price
-                              </p>
-                              <p>
-                                <strong>Categories:</strong> MATERIALS, LABOR,
-                                EQUIPMENT, TRANSPORT, OTHER
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Expenses List */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center justify-between">
-                            <span>Expenses</span>
-                            {expenses.some(
-                              (exp: any) => exp.category === "LABOR"
-                            ) && (
-                              <Badge
-                                variant="outline"
-                                className="bg-blue-50 text-blue-700 border-blue-300"
-                              >
-                                🔄 Includes Auto-Fetched Labor
-                              </Badge>
-                            )}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          {isLoadingExpenses ? (
-                            <div className="flex justify-center p-4">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                            </div>
-                          ) : expenses.length === 0 ? (
-                            <div className="text-center py-8 text-gray-500">
-                              No expenses found. Add your first expense above.
-                            </div>
-                          ) : (
-                            <>
-                              {/* Expense Summary */}
-                              {expenses.length > 0 && (
-                                <div className="bg-slate-50 rounded-lg p-4 mb-6">
-                                  <h4 className="font-medium text-slate-800 mb-3">
-                                    Expense Summary
-                                  </h4>
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {Object.entries(
-                                      expenses.reduce((acc: any, exp: any) => {
-                                        const category =
-                                          exp.category || "Other";
-                                        acc[category] =
-                                          (acc[category] || 0) +
-                                          Number(exp.amount || 0);
-                                        return acc;
-                                      }, {})
-                                    ).map(([category, amount]) => (
-                                      <div
-                                        key={category}
-                                        className="text-center"
-                                      >
-                                        <div
-                                          className={`p-3 rounded-lg ${
-                                            category === "LABOR"
-                                              ? "bg-blue-100 border border-blue-200"
-                                              : "bg-white border border-slate-200"
-                                          }`}
-                                        >
-                                          <p className="text-sm font-medium text-slate-600">
-                                            {category}
-                                          </p>
-                                          <p className="text-lg font-bold text-slate-800">
-                                            <ConvertedAmount
-                                              amount={Number(amount)}
-                                              sessionData={sessionData}
-                                              showCurrency={true}
-                                              currency={
-                                                sessionData.user.currency
-                                              }
-                                            />
-                                          </p>
-                                          {category === "LABOR" && (
-                                            <p className="text-xs text-blue-600 mt-1">
-                                              Auto-Fetched
-                                            </p>
-                                          )}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                  <div className="mt-4 pt-4 border-t border-slate-200">
-                                    <div className="flex justify-between items-center">
-                                      <span className="font-medium text-slate-700">
-                                        Total Expenses:
-                                      </span>
-                                      <span className="text-xl font-bold text-slate-800">
-                                        <ConvertedAmount
-                                          amount={expenses.reduce(
-                                            (sum: number, exp: any) =>
-                                              sum + Number(exp.amount || 0),
-                                            0
-                                          )}
-                                          sessionData={sessionData}
-                                          showCurrency={true}
-                                          currency={sessionData.user.currency}
-                                        />
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="space-y-4">
-                                {expenses.map((expense) => (
-                                  <div
-                                    key={expense.id}
-                                    className={`border rounded-lg p-4 flex justify-between items-center ${
-                                      expense.category === "LABOR"
-                                        ? "bg-blue-50 border-blue-200"
-                                        : "bg-white"
-                                    }`}
-                                  >
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <p className="font-medium">
-                                          {expense.description}
-                                        </p>
-                                        {expense.category === "LABOR" && (
-                                          <Badge
-                                            variant="outline"
-                                            className="bg-blue-100 text-blue-700 border-blue-300 text-xs"
-                                          >
-                                            Auto-Fetched
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-4 mt-1">
-                                        <Badge
-                                          variant={
-                                            expense.category === "LABOR"
-                                              ? "default"
-                                              : "secondary"
-                                          }
-                                          className={
-                                            expense.category === "LABOR"
-                                              ? "bg-blue-600"
-                                              : ""
-                                          }
-                                        >
-                                          {expense.category}
-                                        </Badge>
-                                        <p className="text-sm text-gray-500">
-                                          {expense.quantity} {expense.unit} ×{" "}
-                                          <ConvertedAmount
-                                            amount={Number(
-                                              expense.unit_price || 0
-                                            )}
-                                            sessionData={sessionData}
-                                            showCurrency={true}
-                                            currency={sessionData.user.currency}
-                                          />
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="font-medium text-lg">
-                                        <ConvertedAmount
-                                          amount={Number(expense.amount || 0)}
-                                          sessionData={sessionData}
-                                          showCurrency={true}
-                                          currency={sessionData.user.currency}
-                                        />
-                                      </p>
-                                      <p className="text-sm text-gray-500">
-                                        {new Date(
-                                          expense.created_at
-                                        ).toLocaleDateString()}
-                                      </p>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-
-                  {/* Profit & Loss Tab */}
-                  {activeTab === "profit-loss" && (
-                    <ProfitLossStatement
-                      selectedProjectId={selectedProjectId}
-                      sessionData={sessionData}
-                      costSummary={costSummary}
-                      projects={projects}
-                      boqItems={boqItems}
-                      formatCurrency={formatCurrency}
-                      getUserCurrency={getUserCurrency}
-                      isLoadingMetrics={isLoadingMetrics}
-                      isLoadingProjects={isLoadingProjects}
-                      isErrorProjects={isErrorProjects}
-                      handleProjectChange={handleProjectChange}
-                      activeTab={activeTab}
-                    />
-                  )}
-                </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             )}
+
+            {/* Profit & Loss Tab */}
+            {activeTab === "profit-loss" && (
+              <ProfitLossStatement
+                selectedProjectId={selectedProjectId}
+                sessionData={sessionData}
+                costSummary={costSummary}
+                projects={projects}
+                boqItems={boqItems}
+                formatCurrency={formatCurrency}
+                getUserCurrency={getUserCurrency}
+                isLoadingMetrics={isLoadingMetrics}
+                isLoadingProjects={isLoadingProjects}
+                isErrorProjects={isErrorProjects}
+                handleProjectChange={handleProjectChange}
+                activeTab={activeTab}
+              />
+            )}
           </div>
-        </main>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1884,16 +1884,13 @@ export default function BusinessSetup() {
       projectId: projectId.toString(), // Ensure projectId is a string
     };
     try {
-      const response = await fetch(
-        `https://dse-backend-uv5d.onrender.com/project/budget`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(body),
-        }
-      );
+      const response = await fetch(`http://localhost:4000/project/budget`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
       refetchProjects();
     } catch (error) {
       console.error("Error updating budget:", error);
@@ -2094,365 +2091,342 @@ export default function BusinessSetup() {
 
   if (isLoading && !locations.length && !trades.length && !projects.length) {
     return (
-      <div className="flex h-screen bg-[#FAFAFA]">
-        <Sidebar user={user} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardHeader />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-              <p className="text-sm text-gray-500">Loading business data...</p>
-            </div>
-          </div>
-        </div>
+      <div className="flex flex-col items-center gap-2">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <p className="text-sm text-gray-500">Loading business data...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-[#FAFAFA]">
-      <Sidebar user={user} />
+    <div className="w-full mx-auto py-4 px-3 sm:py-6 sm:px-4 lg:py-8 lg:px-6 max-w-[1400px]">
+      <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
+        <h1 className="text-lg sm:text-xl lg:text-[22px] font-semibold text-gray-900">
+          Business Setup
+        </h1>
+      </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader />
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto">
-          <div className="w-full mx-auto py-4 px-3 sm:py-6 sm:px-4 lg:py-8 lg:px-6 max-w-[1400px]">
-            <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
-              <h1 className="text-lg sm:text-xl lg:text-[22px] font-semibold text-gray-900">
-                Business Setup
-              </h1>
-            </div>
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        {/* Navigation */}
+        <div className="w-full lg:w-44 xl:w-48 bg-white rounded-lg border border-gray-200 overflow-hidden p-2 sm:p-3 flex-shrink-0">
+          <button
+            className={`w-full px-3 py-2.5 text-xs sm:text-sm text-left transition-colors rounded-lg ${
+              activeTab === "locations"
+                ? "text-gray-900 font-medium border border-gray-300 rounded-2xl bg-gray-200"
+                : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+            }`}
+            onClick={() => handleTabChange("locations")}
+          >
+            Locations
+          </button>
+          <button
+            className={`w-full px-3 py-2.5 text-xs sm:text-sm text-left transition-colors rounded-lg ${
+              activeTab === "trades"
+                ? "text-gray-900 font-medium border border-gray-300 rounded-2xl bg-gray-200"
+                : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+            }`}
+            onClick={() => handleTabChange("trades")}
+          >
+            Trades
+          </button>
+          <button
+            className={`w-full px-3 py-2.5 text-xs sm:text-sm text-left transition-colors rounded-lg ${
+              activeTab === "projects"
+                ? "text-gray-900 font-medium border border-gray-300 rounded-2xl bg-gray-200"
+                : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+            }`}
+            onClick={() => handleTabChange("projects")}
+          >
+            Projects
+          </button>
+        </div>
 
-            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-              {/* Navigation */}
-              <div className="w-full lg:w-44 xl:w-48 bg-white rounded-lg border border-gray-200 overflow-hidden p-2 sm:p-3 flex-shrink-0">
-                <button
-                  className={`w-full px-3 py-2.5 text-xs sm:text-sm text-left transition-colors rounded-lg ${
-                    activeTab === "locations"
-                      ? "text-gray-900 font-medium border border-gray-300 rounded-2xl bg-gray-200"
-                      : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-                  }`}
-                  onClick={() => handleTabChange("locations")}
-                >
-                  Locations
-                </button>
-                <button
-                  className={`w-full px-3 py-2.5 text-xs sm:text-sm text-left transition-colors rounded-lg ${
-                    activeTab === "trades"
-                      ? "text-gray-900 font-medium border border-gray-300 rounded-2xl bg-gray-200"
-                      : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-                  }`}
-                  onClick={() => handleTabChange("trades")}
-                >
-                  Trades
-                </button>
-                <button
-                  className={`w-full px-3 py-2.5 text-xs sm:text-sm text-left transition-colors rounded-lg ${
-                    activeTab === "projects"
-                      ? "text-gray-900 font-medium border border-gray-300 rounded-2xl bg-gray-200"
-                      : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-                  }`}
-                  onClick={() => handleTabChange("projects")}
-                >
-                  Projects
-                </button>
-              </div>
-
-              {/* Content Area */}
-              <div className="flex-1 min-w-0">
-                <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 lg:p-6">
-                  {/* Locations Tab */}
-                  {activeTab === "locations" && (
-                    <>
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-                        <div className="flex-1 min-w-0">
-                          <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
-                            Work Locations
-                          </h2>
-                          <p className="text-xs sm:text-sm text-gray-500">
-                            Define different locations where employees work.
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                          {selectedLocationIds.length > 0 && (
-                            <Button
-                              variant="destructive"
-                              onClick={() => setShowBulkDeleteConfirm(true)}
-                              className="gap-2"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete Selected ({selectedLocationIds.length})
-                            </Button>
-                          )}
-                          <Button
-                            onClick={() => setShowAddLocation(true)}
-                            className="bg-orange-400 hover:bg-orange-500"
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add New Location
-                          </Button>
-                        </div>
-                      </div>
-                      <DataTable
-                        headers={["Location Name"]}
-                        data={locations}
-                        isLoading={isLoadingLocations}
-                        isError={isErrorLocations}
-                        onRetry={refetchLocations}
-                        onEdit={(location) => {
-                          setSelectedItem(location);
-                          setShowEditLocation(true);
-                        }}
-                        onDelete={(location) => {
-                          setSelectedItem(location);
-                          setShowDeleteLocation(true);
-                        }}
-                        onEditBudget={() => {}}
-                        onEditRate={() => {}}
-                        renderRow={(location) => (
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-gray-400" />
-                              {location.location_name}
-                            </div>
-                          </td>
-                        )}
-                        sessionData={sessionData}
-                        activeTab={activeTab}
-                        selectedIds={selectedLocationIds}
-                        onSelectAll={handleSelectAllLocations}
-                        onToggleSelect={toggleLocationSelect}
-                      />
-                    </>
-                  )}
-
-                  {/* Trades Tab */}
-                  {activeTab === "trades" && (
-                    <>
-                      <div className="flex justify-between items-center mb-6">
-                        <div>
-                          <h2 className="text-lg font-semibold text-gray-900">
-                            Trade/Job Role & Daily Rates
-                          </h2>
-                          <p className="text-sm text-gray-500">
-                            Define different roles and set daily rates for each.
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          {selectedTradeIds.length > 0 && (
-                            <Button
-                              variant="destructive"
-                              onClick={() => setShowBulkDeleteConfirm(true)}
-                              className="gap-2"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete Selected ({selectedTradeIds.length})
-                            </Button>
-                          )}
-                          <Button
-                            onClick={() => setShowAddTrade(true)}
-                            className="bg-orange-400 hover:bg-orange-500"
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add New Trade
-                          </Button>
-                        </div>
-                      </div>
-                      <DataTable
-                        headers={[
-                          "Role/Trade",
-                          "Location Name",
-                          `${
-                            sessionData?.user?.salary_calculation ===
-                            "monthly rate"
-                              ? "Monthly"
-                              : "Daily"
-                          } Rate (${sessionData?.user?.currency})`,
-                        ]}
-                        data={trades}
-                        isLoading={isLoadingTrades}
-                        isError={isErrorTrades}
-                        onRetry={refetchTrades}
-                        onEdit={(trade) => {
-                          setSelectedItem(trade);
-                          setShowEditTrade(true);
-                        }}
-                        onDelete={(trade) => {
-                          setSelectedItem(trade);
-                          setShowDeleteTrade(true);
-                        }}
-                        onEditRate={(trade) => {
-                          setSelectedItem(trade);
-                          setShowEditTradeRate(true);
-                        }}
-                        onEditBudget={() => {}}
-                        sessionData={sessionData}
-                        activeTab={activeTab}
-                        selectedIds={selectedTradeIds}
-                        onSelectAll={handleSelectAllTrades}
-                        onToggleSelect={toggleTradeSelect}
-                        renderRow={(trade: NewTrade) => (
-                          <>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <div className="h-6 w-6 bg-gray-100 rounded-full flex items-center justify-center text-xs">
-                                  {/* {trade.icon} */}
-                                </div>
-                                {trade.trade_name}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">{trade.location_name}</td>
-                            <td className="px-4 py-3">
-                              {currencyShort}
-                              {sessionData?.user?.salary_calculation ===
-                              "monthly rate" ? (
-                                <ConvertedAmount
-                                  amount={trade.monthly_planned_cost || 0}
-                                  currency={sessionData.user.currency}
-                                />
-                              ) : (
-                                <ConvertedAmount
-                                  amount={trade.daily_planned_cost || 0}
-                                  currency={sessionData.user.currency}
-                                />
-                              )}
-                            </td>
-                          </>
-                        )}
-                      />
-                    </>
-                  )}
-
-                  {/* Projects Tab */}
-                  {activeTab === "projects" && (
-                    <>
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-                        <div className="flex-1 min-w-0">
-                          <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
-                            Company Projects
-                          </h2>
-                          <p className="text-xs sm:text-sm text-gray-500">
-                            Set up projects and assign locations.
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                          {selectedProjectIds.length > 0 && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => setShowBulkDeleteConfirm(true)}
-                              className="gap-1.5 text-xs sm:text-sm flex-1 sm:flex-initial"
-                            >
-                              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                              <span className="hidden sm:inline">
-                                Delete Selected
-                              </span>
-                              <span className="sm:hidden">Delete</span> (
-                              {selectedProjectIds.length})
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 relative text-xs sm:text-sm flex-1 sm:flex-initial whitespace-nowrap"
-                            onClick={() => setShowExpiredProjects(true)}
-                          >
-                            <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            <span className="hidden sm:inline">
-                              Expired Projects
-                            </span>
-                            <span className="sm:hidden">Expired</span> (
-                            {getExpiredProjects().length})
-                            {getExpiredProjects().length > 0 && (
-                              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                                {getExpiredProjects().length}
-                              </span>
-                            )}
-                          </Button>
-                          <Button
-                            onClick={() => setShowAddProject(true)}
-                            size="sm"
-                            className="bg-orange-400 hover:bg-orange-500 gap-1.5 text-xs sm:text-sm flex-1 sm:flex-initial"
-                          >
-                            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            <span className="hidden sm:inline">
-                              Add New Project
-                            </span>
-                            <span className="sm:hidden">Add</span>
-                          </Button>
-                        </div>
-                      </div>
-                      <DataTable
-                        headers={[
-                          "Project Name",
-                          "Location Name",
-                          "Start Date",
-                          "End Date",
-                          "Budget",
-                        ]}
-                        data={projects}
-                        isLoading={isLoadingProjects}
-                        isError={isErrorProjects}
-                        onRetry={refetchProjects}
-                        onEdit={(project) => {
-                          setSelectedItem(project);
-                          setShowEditProject(true);
-                        }}
-                        onDelete={(project) => {
-                          setSelectedItem(project);
-                          setShowDeleteProject(true);
-                        }}
-                        onEditBudget={(project) => {
-                          setSelectedItem(project);
-                          setShowEditBudget(true);
-                        }}
-                        onEditRate={() => {}}
-                        sessionData={sessionData}
-                        activeTab={activeTab}
-                        selectedIds={selectedProjectIds}
-                        onSelectAll={handleSelectAllProjects}
-                        onToggleSelect={toggleProjectSelect}
-                        renderRow={(project: NewProject) => (
-                          <>
-                            <td className="px-2 py-3">
-                              <div className="text-sm font-medium text-gray-900 break-words leading-snug">
-                                {project.project_name}
-                              </div>
-                            </td>
-                            <td className="px-2 py-3">
-                              <div className="text-sm text-gray-700 break-words leading-snug">
-                                {project.location_name}
-                              </div>
-                            </td>
-                            <td className="px-2 py-3">
-                              <div className="text-sm text-gray-700 whitespace-nowrap">
-                                {formatDateForDisplay(project.start_date || "")}
-                              </div>
-                            </td>
-                            <td className="px-2 py-3">
-                              <div className="text-sm text-gray-700 whitespace-nowrap">
-                                {formatDateForDisplay(project.end_date || "")}
-                              </div>
-                            </td>
-                            <td className="px-2 py-3">
-                              <div className="text-sm font-medium text-gray-900 break-words leading-snug">
-                                <ConvertedAmount
-                                  amount={project.budget || 0}
-                                  currency={sessionData.user.currency}
-                                />
-                              </div>
-                            </td>
-                          </>
-                        )}
-                      />
-                    </>
-                  )}
+        {/* Content Area */}
+        <div className="flex-1 min-w-0">
+          <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 lg:p-6">
+            {/* Locations Tab */}
+            {activeTab === "locations" && (
+              <>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
+                      Work Locations
+                    </h2>
+                    <p className="text-xs sm:text-sm text-gray-500">
+                      Define different locations where employees work.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                    {selectedLocationIds.length > 0 && (
+                      <Button
+                        variant="destructive"
+                        onClick={() => setShowBulkDeleteConfirm(true)}
+                        className="gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete Selected ({selectedLocationIds.length})
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => setShowAddLocation(true)}
+                      className="bg-orange-400 hover:bg-orange-500"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add New Location
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </div>
+                <DataTable
+                  headers={["Location Name"]}
+                  data={locations}
+                  isLoading={isLoadingLocations}
+                  isError={isErrorLocations}
+                  onRetry={refetchLocations}
+                  onEdit={(location) => {
+                    setSelectedItem(location);
+                    setShowEditLocation(true);
+                  }}
+                  onDelete={(location) => {
+                    setSelectedItem(location);
+                    setShowDeleteLocation(true);
+                  }}
+                  onEditBudget={() => {}}
+                  onEditRate={() => {}}
+                  renderRow={(location) => (
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-gray-400" />
+                        {location.location_name}
+                      </div>
+                    </td>
+                  )}
+                  sessionData={sessionData}
+                  activeTab={activeTab}
+                  selectedIds={selectedLocationIds}
+                  onSelectAll={handleSelectAllLocations}
+                  onToggleSelect={toggleLocationSelect}
+                />
+              </>
+            )}
+
+            {/* Trades Tab */}
+            {activeTab === "trades" && (
+              <>
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Trade/Job Role & Daily Rates
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      Define different roles and set daily rates for each.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {selectedTradeIds.length > 0 && (
+                      <Button
+                        variant="destructive"
+                        onClick={() => setShowBulkDeleteConfirm(true)}
+                        className="gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete Selected ({selectedTradeIds.length})
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => setShowAddTrade(true)}
+                      className="bg-orange-400 hover:bg-orange-500"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add New Trade
+                    </Button>
+                  </div>
+                </div>
+                <DataTable
+                  headers={[
+                    "Role/Trade",
+                    "Location Name",
+                    `${
+                      sessionData?.user?.salary_calculation === "monthly rate"
+                        ? "Monthly"
+                        : "Daily"
+                    } Rate (${sessionData?.user?.currency})`,
+                  ]}
+                  data={trades}
+                  isLoading={isLoadingTrades}
+                  isError={isErrorTrades}
+                  onRetry={refetchTrades}
+                  onEdit={(trade) => {
+                    setSelectedItem(trade);
+                    setShowEditTrade(true);
+                  }}
+                  onDelete={(trade) => {
+                    setSelectedItem(trade);
+                    setShowDeleteTrade(true);
+                  }}
+                  onEditRate={(trade) => {
+                    setSelectedItem(trade);
+                    setShowEditTradeRate(true);
+                  }}
+                  onEditBudget={() => {}}
+                  sessionData={sessionData}
+                  activeTab={activeTab}
+                  selectedIds={selectedTradeIds}
+                  onSelectAll={handleSelectAllTrades}
+                  onToggleSelect={toggleTradeSelect}
+                  renderRow={(trade: NewTrade) => (
+                    <>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-6 w-6 bg-gray-100 rounded-full flex items-center justify-center text-xs">
+                            {/* {trade.icon} */}
+                          </div>
+                          {trade.trade_name}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">{trade.location_name}</td>
+                      <td className="px-4 py-3">
+                        {currencyShort}
+                        {sessionData?.user?.salary_calculation ===
+                        "monthly rate" ? (
+                          <ConvertedAmount
+                            amount={trade.monthly_planned_cost || 0}
+                            currency={sessionData.user.currency}
+                          />
+                        ) : (
+                          <ConvertedAmount
+                            amount={trade.daily_planned_cost || 0}
+                            currency={sessionData.user.currency}
+                          />
+                        )}
+                      </td>
+                    </>
+                  )}
+                />
+              </>
+            )}
+
+            {/* Projects Tab */}
+            {activeTab === "projects" && (
+              <>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
+                      Company Projects
+                    </h2>
+                    <p className="text-xs sm:text-sm text-gray-500">
+                      Set up projects and assign locations.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                    {selectedProjectIds.length > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setShowBulkDeleteConfirm(true)}
+                        className="gap-1.5 text-xs sm:text-sm flex-1 sm:flex-initial"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">
+                          Delete Selected
+                        </span>
+                        <span className="sm:hidden">Delete</span> (
+                        {selectedProjectIds.length})
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 relative text-xs sm:text-sm flex-1 sm:flex-initial whitespace-nowrap"
+                      onClick={() => setShowExpiredProjects(true)}
+                    >
+                      <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">Expired Projects</span>
+                      <span className="sm:hidden">Expired</span> (
+                      {getExpiredProjects().length})
+                      {getExpiredProjects().length > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          {getExpiredProjects().length}
+                        </span>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() => setShowAddProject(true)}
+                      size="sm"
+                      className="bg-orange-400 hover:bg-orange-500 gap-1.5 text-xs sm:text-sm flex-1 sm:flex-initial"
+                    >
+                      <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">Add New Project</span>
+                      <span className="sm:hidden">Add</span>
+                    </Button>
+                  </div>
+                </div>
+                <DataTable
+                  headers={[
+                    "Project Name",
+                    "Location Name",
+                    "Start Date",
+                    "End Date",
+                    "Budget",
+                  ]}
+                  data={projects}
+                  isLoading={isLoadingProjects}
+                  isError={isErrorProjects}
+                  onRetry={refetchProjects}
+                  onEdit={(project) => {
+                    setSelectedItem(project);
+                    setShowEditProject(true);
+                  }}
+                  onDelete={(project) => {
+                    setSelectedItem(project);
+                    setShowDeleteProject(true);
+                  }}
+                  onEditBudget={(project) => {
+                    setSelectedItem(project);
+                    setShowEditBudget(true);
+                  }}
+                  onEditRate={() => {}}
+                  sessionData={sessionData}
+                  activeTab={activeTab}
+                  selectedIds={selectedProjectIds}
+                  onSelectAll={handleSelectAllProjects}
+                  onToggleSelect={toggleProjectSelect}
+                  renderRow={(project: NewProject) => (
+                    <>
+                      <td className="px-2 py-3">
+                        <div className="text-sm font-medium text-gray-900 break-words leading-snug">
+                          {project.project_name}
+                        </div>
+                      </td>
+                      <td className="px-2 py-3">
+                        <div className="text-sm text-gray-700 break-words leading-snug">
+                          {project.location_name}
+                        </div>
+                      </td>
+                      <td className="px-2 py-3">
+                        <div className="text-sm text-gray-700 whitespace-nowrap">
+                          {formatDateForDisplay(project.start_date || "")}
+                        </div>
+                      </td>
+                      <td className="px-2 py-3">
+                        <div className="text-sm text-gray-700 whitespace-nowrap">
+                          {formatDateForDisplay(project.end_date || "")}
+                        </div>
+                      </td>
+                      <td className="px-2 py-3">
+                        <div className="text-sm font-medium text-gray-900 break-words leading-snug">
+                          <ConvertedAmount
+                            amount={project.budget || 0}
+                            currency={sessionData.user.currency}
+                          />
+                        </div>
+                      </td>
+                    </>
+                  )}
+                />
+              </>
+            )}
           </div>
-        </main>
+        </div>
       </div>
 
       {/* Add Location Modal */}

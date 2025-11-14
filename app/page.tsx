@@ -795,7 +795,11 @@ export default function Home() {
                       : "bg-gray-800 hover:bg-gray-900"
                   }`}
                 >
-                  {plan.buttonText}
+                  {plan.buttonText == "Start Free Trial" ? (
+                    <Link href="/sign-in">{plan.buttonText}</Link>
+                  ) : (
+                    plan.buttonText
+                  )}
                 </Button>
               </div>
             </motion.div>

@@ -198,146 +198,138 @@ export default function ManageUsers() {
   }
 
   return (
-    <div className="flex h-screen bg-white">
-      <Sidebar user={currentUser} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader />
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Manage Users</h1>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="gap-2 h-10 rounded-full"
-                onClick={handleRefreshData}
-                disabled={isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
-                />
-                {isFetching ? "Refreshing..." : "Refresh"}
-              </Button>
-              <Button
-                className="gap-2 h-10 rounded-full"
-                onClick={() => setShowAddUser(true)}
-              >
-                <Plus className="h-4 w-4" />
-                Add User
-              </Button>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg border mb-6 flex flex-col md:flex-row gap-4">
-            <Input
-              placeholder="Search users..."
-              value={filters.search}
-              onChange={(e) => handleFilterChange("search", e.target.value)}
-              className="flex-1"
+    <>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Manage Users</h1>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="gap-2 h-10 rounded-full"
+            onClick={handleRefreshData}
+            disabled={isFetching}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
             />
-            <Select
-              value={filters.role || "all"}
-              onValueChange={(value) => handleFilterChange("role", value)}
-            >
-              <SelectTrigger className="w-[180px]">
-                <span>{filters.role || "Role"}</span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="hr_manager">HR Manager</SelectItem>
-                <SelectItem value="employee">Employee</SelectItem>
-                <SelectItem value="departure_manager">
-                  Department Manager
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            {(filters.role || filters.search) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setFilters({ role: "", search: "" })}
-                className="text-sm"
-              >
-                Clear Filters
-              </Button>
-            )}
-          </div>
+            {isFetching ? "Refreshing..." : "Refresh"}
+          </Button>
+          <Button
+            className="gap-2 h-10 rounded-full"
+            onClick={() => setShowAddUser(true)}
+          >
+            <Plus className="h-4 w-4" />
+            Add User
+          </Button>
+        </div>
+      </div>
 
-          <div className="bg-white rounded-lg border">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th
-                    className="text-left pయ
+      <div className="bg-white p-4 rounded-lg border mb-6 flex flex-col md:flex-row gap-4">
+        <Input
+          placeholder="Search users..."
+          value={filters.search}
+          onChange={(e) => handleFilterChange("search", e.target.value)}
+          className="flex-1"
+        />
+        <Select
+          value={filters.role || "all"}
+          onValueChange={(value) => handleFilterChange("role", value)}
+        >
+          <SelectTrigger className="w-[180px]">
+            <span>{filters.role || "Role"}</span>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="hr_manager">HR Manager</SelectItem>
+            <SelectItem value="employee">Employee</SelectItem>
+            <SelectItem value="departure_manager">
+              Department Manager
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        {(filters.role || filters.search) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setFilters({ role: "", search: "" })}
+            className="text-sm"
+          >
+            Clear Filters
+          </Button>
+        )}
+      </div>
+
+      <div className="bg-white rounded-lg border">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th
+                className="text-left pయ
                   p-4 font-medium text-sm text-gray-500"
-                  >
-                    User
-                  </th>
-                  <th className="text-left p-4 font-medium text-sm text-gray-500">
-                    Role
-                  </th>
-                  <th className="text-left p-4 font-medium text-sm text-gray-500">
-                    Status
-                  </th>
-                  <th className="text-left p-4 font-medium text-sm text-gray-500">
-                    Actions
-                  </th>
+              >
+                User
+              </th>
+              <th className="text-left p-4 font-medium text-sm text-gray-500">
+                Role
+              </th>
+              <th className="text-left p-4 font-medium text-sm text-gray-500">
+                Status
+              </th>
+              <th className="text-left p-4 font-medium text-sm text-gray-500">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.map((user: any) => {
+              const userRole =
+                Array.isArray(user.role) && user.role.length > 0
+                  ? user.role[0].replace(/^{|}$/g, "")
+                  : "N/A";
+              return (
+                <tr key={user.id} className="border-b hover:bg-gray-50">
+                  <td className="p-4 flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={user.avatar || "/placeholder.svg"}
+                        alt={user.username}
+                      />
+                      <AvatarFallback>
+                        {user.username?.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{user.username}</span>
+                  </td>
+                  <td className="p-4">{userRole}</td>
+                  <td className="p-4">{user.role_request_approval || "N/A"}</td>
+                  <td className="p-4 flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleApproveUser(user.id, userRole)}
+                      title="Approve Role"
+                    >
+                      <Check className="h-4 w-4 text-green-500" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteUser(user.id)}
+                      title="Reject Role"
+                    >
+                      <X className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user: any) => {
-                  const userRole =
-                    Array.isArray(user.role) && user.role.length > 0
-                      ? user.role[0].replace(/^{|}$/g, "")
-                      : "N/A";
-                  return (
-                    <tr key={user.id} className="border-b hover:bg-gray-50">
-                      <td className="p-4 flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage
-                            src={user.avatar || "/placeholder.svg"}
-                            alt={user.username}
-                          />
-                          <AvatarFallback>
-                            {user.username?.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium">{user.username}</span>
-                      </td>
-                      <td className="p-4">{userRole}</td>
-                      <td className="p-4">
-                        {user.role_request_approval || "N/A"}
-                      </td>
-                      <td className="p-4 flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleApproveUser(user.id, userRole)}
-                          title="Approve Role"
-                        >
-                          <Check className="h-4 w-4 text-green-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteUser(user.id)}
-                          title="Reject Role"
-                        >
-                          <X className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {filteredUsers.length === 0 && (
-              <div className="p-4 text-center text-gray-500">
-                No pending users found.
-              </div>
-            )}
+              );
+            })}
+          </tbody>
+        </table>
+        {filteredUsers.length === 0 && (
+          <div className="p-4 text-center text-gray-500">
+            No pending users found.
           </div>
-        </main>
+        )}
       </div>
 
       <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
@@ -396,6 +388,6 @@ export default function ManageUsers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

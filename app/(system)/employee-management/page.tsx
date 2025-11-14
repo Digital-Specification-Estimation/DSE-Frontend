@@ -315,7 +315,7 @@ export default function EmployeeManagement() {
 
       // Send to backend bulk upload endpoint
       const response = await fetch(
-        "https://dse-backend-uv5d.onrender.com/employee/bulk-upload",
+        "http://localhost:4000/employee/bulk-upload",
         {
           method: "POST",
           body: formData,
@@ -624,9 +624,7 @@ export default function EmployeeManagement() {
     const fetchCompanies = async () => {
       setIsLoadingCompanies(true);
       try {
-        const response = await fetch(
-          "https://dse-backend-uv5d.onrender.com/company/companies"
-        );
+        const response = await fetch("http://localhost:4000/company/companies");
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
@@ -1062,386 +1060,369 @@ export default function EmployeeManagement() {
   };
 
   return (
-    <div className="flex h-screen bg-white">
-      <Sidebar user={user} />
+    <>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Employee Management</h1>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader />
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Employee Management</h1>
-
-            <div className="flex gap-2">
-              {(permissions.generate_reports || permissions.full_access) && (
-                <Button
-                  variant="outline"
-                  className="gap-2 h-12 rounded-full"
-                  onClick={() => setCsvUploadModal(true)}
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload CSV
-                </Button>
-              )}
-              {(permissions.manage_employees || permissions.full_access) && (
-                <Button
-                  variant="outline"
-                  className="gap-2 h-12 rounded-full relative"
-                  onClick={() => setShowExpiredContracts(true)}
-                >
-                  <AlertTriangle className="h-4 w-4" />
-                  Expired Contracts
-                  {getExpiredEmployees().length > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {getExpiredEmployees().length}
-                    </span>
-                  )}
-                </Button>
-              )}
-              {(permissions.manage_employees || permissions.full_access) && (
-                <Button
-                  onClick={() => setShowAddEmployee(true)}
-                  className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add New Employee
-                </Button>
-              )}
-              <Button
-                onClick={refreshAllData}
-                variant="outline"
-                className="gap-2 h-12 rounded-full"
-                disabled={
-                  isEmployeesFetching || isTradesLoading || isLoadingCompanies
-                }
-              >
-                {isEmployeesFetching ||
-                isTradesLoading ||
-                isLoadingCompanies ? (
-                  <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-                Refresh
-              </Button>
-              {(permissions.full_access || permissions.manage_employees) &&
-                selectedIds.length > 0 && (
-                  <Button
-                    variant="destructive"
-                    className="gap-2 h-12 rounded-full"
-                    onClick={() => setShowDeleteConfirm(true)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete Selected ({selectedIds.length})
-                  </Button>
-                )}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border">
-            {/* Filters */}
-            <div className="p-4 flex gap-4 rounded-lg items-center">
-              <div className="relative w-64 ml-auto">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search username..."
-                  className="pl-10 h-9 w-full rounded-full"
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, search: e.target.value }))
-                  }
-                  value={filters.search}
-                />
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {sortOrder
-                  ? `Sorting usernames ${sortOrder === "asc" ? "A-Z" : "Z-A"}`
-                  : "Click 'Username' to sort alphabetically"}
-              </div>
-            </div>
-
-            {/* Table */}
-            <div className="overflow-x-auto">
-              {isEmployeesLoading ? (
-                <div className="p-8 text-center">
-                  <div className="inline-block animate-spin h-8 w-8 border-4 border-current border-t-transparent rounded-full mb-4"></div>
-                  <p>Loading employees...</p>
-                </div>
-              ) : employeesError ? (
-                <div className="p-8 text-center text-red-500">
-                  <p className="mb-2">Error loading employees.</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => refetchEmployees()}
-                  >
-                    Try Again
-                  </Button>
-                </div>
-              ) : filteredEmployees.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  <p>No employees found matching your filters.</p>
-                  {filters.trade ||
-                  filters.project ||
-                  filters.dailyRate ||
-                  filters.search ? (
-                    <Button
-                      variant="link"
-                      onClick={() =>
-                        setFilters({
-                          trade: "",
-                          project: "",
-                          dailyRate: "",
-                          search: "",
-                        })
-                      }
-                    >
-                      Clear filters
-                    </Button>
-                  ) : null}
-                </div>
-              ) : (
-                <table className="w-full text-[12px]">
-                  <thead>
-                    <tr className="border-t border-b text-sm text-muted-foreground">
-                      <th className="w-10 px-4 py-3 text-left">
-                        {(permissions.full_access ||
-                          permissions.manage_employees) && (
-                          <input
-                            type="checkbox"
-                            checked={allSelected}
-                            onChange={handleSelectAll}
-                          />
-                        )}
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left text-[14px] cursor-pointer flex items-center gap-1"
-                        onClick={toggleSort}
-                      >
-                        Username
-                        {sortOrder === "asc" && (
-                          <ChevronUp className="h-4 w-4" />
-                        )}
-                        {sortOrder === "desc" && (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </th>
-                      <th className="px-4 py-3 text-left text-[14px]">
-                        Trade Position
-                      </th>
-                      <th className="px-4 py-3 text-left text-[14px]">
-                        {isMonthlyRate ? "Monthly Rate" : "Daily Rate"}
-                      </th>
-                      <th className="px-4 py-3 text-left text-[14px]">
-                        Contract Finish Date
-                      </th>
-                      <th className="px-4 py-3 text-left text-[14px]">
-                        Days Projection
-                      </th>
-                      <th className="px-4 py-3 text-left text-[14px]">
-                        Budget Baseline
-                      </th>
-                      <th className="px-4 py-3 text-left text-[14px]">
-                        Company
-                      </th>
-                      <th className="w-10 px-4 py-3 text-left">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-[14px]">
-                    {paginatedEmployees.map((employee: any) => (
-                      <tr
-                        key={employee.id}
-                        className={`border-b hover:bg-gray-50 ${
-                          employee._isOptimistic ? "opacity-70" : ""
-                        } ${employee._isUpdating ? "bg-yellow-50" : ""}`}
-                      >
-                        <td className="px-4 py-3">
-                          {(permissions.full_access ||
-                            permissions.manage_employees) && (
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.includes(employee.id)}
-                              onChange={() => toggleSelect(employee.id)}
-                            />
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">
-                              {employee.username}
-                              {employee._isOptimistic && (
-                                <span className="ml-1 text-[9px] text-orange-500">
-                                  (Adding...)
-                                </span>
-                              )}
-                              {employee._isUpdating && (
-                                <span className="ml-1 text-[9px] text-orange-500">
-                                  (Updating...)
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          {employee.trade_position?.trade_name || "N/A"}
-                        </td>
-                        <td className="px-4 py-3">
-                          {
-                            <ConvertedAmount
-                              amount={
-                                employee[getRateFieldName()] ||
-                                employee.daily_rate
-                              }
-                              currency={sessionData.user.currency}
-                              showCurrency={true}
-                              sessionData={sessionData}
-                            />
-                          }
-                        </td>
-                        <td className="px-4 py-3">
-                          {formatDate(employee.contract_finish_date)}
-                        </td>
-                        <td className="px-4 py-3">
-                          {employee.days_projection || "N/A"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <ConvertedAmount
-                            amount={employee.budget_baseline}
-                            currency={sessionData.user.currency}
-                            showCurrency={true}
-                            sessionData={sessionData}
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          {employee.company?.company_name || "N/A"}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {(permissions.manage_employees ||
-                              permissions.full_access) &&
-                              !employee._isOptimistic &&
-                              !employee._isUpdating && (
-                                <>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => handleEditEmployee(employee)}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-red-500 hover:text-red-600"
-                                    onClick={() =>
-                                      handleDeleteEmployee(employee)
-                                    }
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-          {isEmployeesFetching && !isEmployeesLoading && (
-            <div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg p-3 flex items-center gap-2 border z-10">
-              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-              <span className="text-sm">Refreshing data...</span>
-            </div>
+        <div className="flex gap-2">
+          {(permissions.generate_reports || permissions.full_access) && (
+            <Button
+              variant="outline"
+              className="gap-2 h-12 rounded-full"
+              onClick={() => setCsvUploadModal(true)}
+            >
+              <Upload className="h-4 w-4" />
+              Upload CSV
+            </Button>
           )}
-          {/* Pagination Controls */}
-          <div className="flex items-center justify-between mt-4 px-4 py-3 border-t">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-muted-foreground">
-                {startIndex + 1}-{endIndex} of {totalItems} employees
-              </span>
-              <Select
-                value={itemsPerPage.toString()}
-                onValueChange={handleItemsPerPageChange}
-              >
-                <SelectTrigger className="h-8 w-[70px]">
-                  <SelectValue placeholder={itemsPerPage} />
-                </SelectTrigger>
-                <SelectContent side="top">
-                  {[5, 10, 20, 50, 100].map((size) => (
-                    <SelectItem key={size} value={size.toString()}>
-                      {size}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="text-sm text-muted-foreground">per page</span>
-            </div>
-            <div className="flex items-center space-x-2">
+          {(permissions.manage_employees || permissions.full_access) && (
+            <Button
+              variant="outline"
+              className="gap-2 h-12 rounded-full relative"
+              onClick={() => setShowExpiredContracts(true)}
+            >
+              <AlertTriangle className="h-4 w-4" />
+              Expired Contracts
+              {getExpiredEmployees().length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {getExpiredEmployees().length}
+                </span>
+              )}
+            </Button>
+          )}
+          {(permissions.manage_employees || permissions.full_access) && (
+            <Button
+              onClick={() => setShowAddEmployee(true)}
+              className="bg-orange-400 hover:bg-orange-500 gap-2 h-12 rounded-full"
+            >
+              <Plus className="h-4 w-4" />
+              Add New Employee
+            </Button>
+          )}
+          <Button
+            onClick={refreshAllData}
+            variant="outline"
+            className="gap-2 h-12 rounded-full"
+            disabled={
+              isEmployeesFetching || isTradesLoading || isLoadingCompanies
+            }
+          >
+            {isEmployeesFetching || isTradesLoading || isLoadingCompanies ? (
+              <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Refresh
+          </Button>
+          {(permissions.full_access || permissions.manage_employees) &&
+            selectedIds.length > 0 && (
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
+                variant="destructive"
+                className="gap-2 h-12 rounded-full"
+                onClick={() => setShowDeleteConfirm(true)}
               >
-                <ChevronLeft className="h-4 w-4" />
-                <span className="sr-only">Previous</span>
+                <Trash2 className="h-4 w-4" />
+                Delete Selected ({selectedIds.length})
               </Button>
-              <div className="flex items-center space-x-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  // Calculate page numbers to show (current page in the middle when possible)
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
+            )}
+        </div>
+      </div>
 
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "default" : "outline"}
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => handlePageChange(pageNum)}
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
-                {totalPages > 5 && currentPage < totalPages - 2 && (
-                  <span className="px-2">...</span>
-                )}
-                {totalPages > 5 && currentPage < totalPages - 1 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => handlePageChange(totalPages)}
-                  >
-                    {totalPages}
-                  </Button>
-                )}
-              </div>
+      <div className="bg-white rounded-lg border">
+        {/* Filters */}
+        <div className="p-4 flex gap-4 rounded-lg items-center">
+          <div className="relative w-64 ml-auto">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search username..."
+              className="pl-10 h-9 w-full rounded-full"
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, search: e.target.value }))
+              }
+              value={filters.search}
+            />
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {sortOrder
+              ? `Sorting usernames ${sortOrder === "asc" ? "A-Z" : "Z-A"}`
+              : "Click 'Username' to sort alphabetically"}
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          {isEmployeesLoading ? (
+            <div className="p-8 text-center">
+              <div className="inline-block animate-spin h-8 w-8 border-4 border-current border-t-transparent rounded-full mb-4"></div>
+              <p>Loading employees...</p>
+            </div>
+          ) : employeesError ? (
+            <div className="p-8 text-center text-red-500">
+              <p className="mb-2">Error loading employees.</p>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
+                onClick={() => refetchEmployees()}
               >
-                <ChevronRight className="h-4 w-4" />
-                <span className="sr-only">Next</span>
+                Try Again
               </Button>
             </div>
+          ) : filteredEmployees.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              <p>No employees found matching your filters.</p>
+              {filters.trade ||
+              filters.project ||
+              filters.dailyRate ||
+              filters.search ? (
+                <Button
+                  variant="link"
+                  onClick={() =>
+                    setFilters({
+                      trade: "",
+                      project: "",
+                      dailyRate: "",
+                      search: "",
+                    })
+                  }
+                >
+                  Clear filters
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="border-t border-b text-sm text-muted-foreground">
+                  <th className="w-10 px-4 py-3 text-left">
+                    {(permissions.full_access ||
+                      permissions.manage_employees) && (
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={handleSelectAll}
+                      />
+                    )}
+                  </th>
+                  <th
+                    className="px-4 py-3 text-left text-[14px] cursor-pointer flex items-center gap-1"
+                    onClick={toggleSort}
+                  >
+                    Username
+                    {sortOrder === "asc" && <ChevronUp className="h-4 w-4" />}
+                    {sortOrder === "desc" && (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </th>
+                  <th className="px-4 py-3 text-left text-[14px]">
+                    Trade Position
+                  </th>
+                  <th className="px-4 py-3 text-left text-[14px]">
+                    {isMonthlyRate ? "Monthly Rate" : "Daily Rate"}
+                  </th>
+                  <th className="px-4 py-3 text-left text-[14px]">
+                    Contract Finish Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-[14px]">
+                    Days Projection
+                  </th>
+                  <th className="px-4 py-3 text-left text-[14px]">
+                    Budget Baseline
+                  </th>
+                  <th className="px-4 py-3 text-left text-[14px]">Company</th>
+                  <th className="w-10 px-4 py-3 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-[14px]">
+                {paginatedEmployees.map((employee: any) => (
+                  <tr
+                    key={employee.id}
+                    className={`border-b hover:bg-gray-50 ${
+                      employee._isOptimistic ? "opacity-70" : ""
+                    } ${employee._isUpdating ? "bg-yellow-50" : ""}`}
+                  >
+                    <td className="px-4 py-3">
+                      {(permissions.full_access ||
+                        permissions.manage_employees) && (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(employee.id)}
+                          onChange={() => toggleSelect(employee.id)}
+                        />
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {employee.username}
+                          {employee._isOptimistic && (
+                            <span className="ml-1 text-[9px] text-orange-500">
+                              (Adding...)
+                            </span>
+                          )}
+                          {employee._isUpdating && (
+                            <span className="ml-1 text-[9px] text-orange-500">
+                              (Updating...)
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {employee.trade_position?.trade_name || "N/A"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {
+                        <ConvertedAmount
+                          amount={
+                            employee[getRateFieldName()] || employee.daily_rate
+                          }
+                          currency={sessionData.user.currency}
+                          showCurrency={true}
+                          sessionData={sessionData}
+                        />
+                      }
+                    </td>
+                    <td className="px-4 py-3">
+                      {formatDate(employee.contract_finish_date)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {employee.days_projection || "N/A"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <ConvertedAmount
+                        amount={employee.budget_baseline}
+                        currency={sessionData.user.currency}
+                        showCurrency={true}
+                        sessionData={sessionData}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      {employee.company?.company_name || "N/A"}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {(permissions.manage_employees ||
+                          permissions.full_access) &&
+                          !employee._isOptimistic &&
+                          !employee._isUpdating && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleEditEmployee(employee)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-500 hover:text-red-600"
+                                onClick={() => handleDeleteEmployee(employee)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+      {isEmployeesFetching && !isEmployeesLoading && (
+        <div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg p-3 flex items-center gap-2 border z-10">
+          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+          <span className="text-sm">Refreshing data...</span>
+        </div>
+      )}
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-between mt-4 px-4 py-3 border-t">
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-muted-foreground">
+            {startIndex + 1}-{endIndex} of {totalItems} employees
+          </span>
+          <Select
+            value={itemsPerPage.toString()}
+            onValueChange={handleItemsPerPageChange}
+          >
+            <SelectTrigger className="h-8 w-[70px]">
+              <SelectValue placeholder={itemsPerPage} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {[5, 10, 20, 50, 100].map((size) => (
+                <SelectItem key={size} value={size.toString()}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground">per page</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="sr-only">Previous</span>
+          </Button>
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              // Calculate page numbers to show (current page in the middle when possible)
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => handlePageChange(pageNum)}
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+            {totalPages > 5 && currentPage < totalPages - 2 && (
+              <span className="px-2">...</span>
+            )}
+            {totalPages > 5 && currentPage < totalPages - 1 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => handlePageChange(totalPages)}
+              >
+                {totalPages}
+              </Button>
+            )}
           </div>
-        </main>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+            <span className="sr-only">Next</span>
+          </Button>
+        </div>
       </div>
       {csvUploadModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -2300,6 +2281,6 @@ export default function EmployeeManagement() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

@@ -2,7 +2,7 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
-const API_BASE_URL = "https://dse-backend-uv5d.onrender.com";
+const API_BASE_URL = "http://localhost:4000";
 
 // Enable debug logging in development
 const debug = process.env.NODE_ENV === "development";
