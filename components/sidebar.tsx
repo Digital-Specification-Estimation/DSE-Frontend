@@ -188,6 +188,7 @@ export function Sidebar({ user }: SidebarProps) {
     if (!item.required) return true;
     return userPermissions[item.required] === true;
   });
+  console.log("session data user", sessionData?.user);
   return (
     <div className="w-[280px] min-h-screen bg-[#FAFAFA] flex flex-col border-r border-gray-200">
       {/* Logo */}
@@ -224,7 +225,10 @@ export function Sidebar({ user }: SidebarProps) {
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-md relative">
+          <Link
+            href="/profile"
+            className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-md relative"
+          >
             {isFetching && (
               <div className="absolute top-1 right-1">
                 <RefreshCw className="h-3 w-3 text-gray-400 animate-spin" />
@@ -232,9 +236,12 @@ export function Sidebar({ user }: SidebarProps) {
             )}
             <Avatar className="h-10 w-10">
               <img
-                src="johndoe.jpeg"
+                src={
+                  "http://localhost:4000/" + sessionData?.user?.image_url ||
+                  "johndoe.jpeg"
+                }
                 alt={userData.username}
-                className="h-10 w-10 rounded-full"
+                className="h-10 w-10 object-cover rounded-full"
               />
             </Avatar>
             <div className="flex flex-col min-w-0">
@@ -245,7 +252,7 @@ export function Sidebar({ user }: SidebarProps) {
                 {userData.current_role}
               </span>
             </div>
-          </div>
+          </Link>
         )}
       </div>
       {/* Menu */}

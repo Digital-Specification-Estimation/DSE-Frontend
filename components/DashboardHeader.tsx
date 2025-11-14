@@ -215,7 +215,7 @@ const DashboardHeader = () => {
   };
 
   return (
-    <div className="flex relative  z-20 max-[1000px]:w-full items-center justify-between p-4 bg-white border-b">
+    <div className="flex relative  z-20 max-[1000px]:w-full items-center justify-between p-[10px] bg-white border-b">
       {/* Search Bar */}
       <div className="relative w-1/3 max-w-md" ref={searchRef}>
         <div className="relative">
@@ -296,15 +296,28 @@ const DashboardHeader = () => {
             {/* Profile Button */}
             <button
               onClick={() => router.push("/profile")}
-              className="p-2 rounded-full border-[1px] border-gray-200 flex flex-row items-center justify-center space-x-[10px] bg-gray-100 hover:bg-gray-200 transition-colors relative"
+              className="p-[5px] pr-[20px] rounded-full border-[1px] border-gray-200 flex flex-row items-center justify-center space-x-[10px] bg-gray-100 hover:bg-gray-200 transition-colors relative"
               aria-label="User profile"
             >
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-sm">
-                {sessionData?.user?.username?.charAt(0).toUpperCase() || "U"}
+              {sessionData?.user?.image_url ? (
+                <img
+                  src={"http://localhost:4000/" + sessionData.user.image_url}
+                  alt={sessionData.user.username || "User"}
+                  className="w-[40px] h-[40px] rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-[50px] h-[50px] rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-sm">
+                  {sessionData?.user?.username?.charAt(0).toUpperCase() || "U"}
+                </div>
+              )}
+              <div className="flex flex-col items-start ">
+                <span className="ml-2 hidden text-[14px] md:inline">
+                  {sessionData?.user?.username || "User"}
+                </span>
+                <span className="ml-2 hidden text-gray-500 text-[12px] md:inline">
+                  {sessionData?.user?.email || "User"}
+                </span>
               </div>
-              <span className="ml-2 hidden text-[14px] md:inline">
-                {sessionData?.user?.email || "User"}
-              </span>
             </button>
 
             <AnimatePresence>
