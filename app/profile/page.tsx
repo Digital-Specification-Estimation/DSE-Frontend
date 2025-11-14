@@ -2,6 +2,7 @@
 "use client";
 
 import { useSessionQuery } from "@/lib/redux/authSlice";
+import { useUpdateUserMutation } from "@/lib/redux/userSlice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -42,8 +43,9 @@ export default function ProfilePage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+  const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
   const [formData, setFormData] = useState({
-    name: sessionData?.user?.username || "",
+    username: sessionData?.user?.username || "",
     email: sessionData?.user?.email || "",
   });
 
@@ -52,10 +54,30 @@ export default function ProfilePage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement profile update logic
-    setIsEditing(false);
+    if (!sessionData?.user?.id) return;
+    console.log("user to be submitted", sessionData.user);
+    try {
+      await updateUser({
+        id: sessionData.user.id,
+        username: formData.username,
+      }).unwrap();
+
+      toast({
+        title: "Success",
+        description: "Your profile has been updated successfully.",
+      });
+      setIsEditing(false);
+      refetchSession(); // Refresh session data
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -74,6 +96,7 @@ export default function ProfilePage() {
                     <Button
                       variant="outline"
                       onClick={() => setIsEditing(true)}
+                      disabled={isUpdating}
                     >
                       Edit Profile
                     </Button>
@@ -99,11 +122,11 @@ export default function ProfilePage() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
+                      <Label htmlFor="username">Full Name</Label>
                       {isEditing ? (
                         <Input
-                          id="name"
-                          name="name"
+                          id="username"
+                          name="username"
                           value={formData.username}
                           onChange={handleChange}
                         />
@@ -131,14 +154,16 @@ export default function ProfilePage() {
                           setIsEditing(false);
                           // Reset form on cancel
                           setFormData({
-                            name: sessionData?.user?.username || "",
+                            username: sessionData?.user?.username || "",
                             email: sessionData?.user?.email || "",
                           });
                         }}
                       >
                         Cancel
                       </Button>
-                      <Button type="submit">Save Changes</Button>
+                      <Button type="submit" disabled={!isEditing || isUpdating}>
+                        {isUpdating ? "Saving..." : "Save Changes"}
+                      </Button>
                     </div>
                   )}
                 </form>
