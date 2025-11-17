@@ -1061,10 +1061,10 @@ export default function EmployeeManagement() {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between max-sm:flex-col max-sm:space-y-[20px] max-sm:items-start items-center mb-6">
         <h1 className="text-2xl font-bold">Employee Management</h1>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 max-sm:grid  max-sm:grid-cols-2">
           {(permissions.generate_reports || permissions.full_access) && (
             <Button
               variant="outline"
@@ -1747,7 +1747,7 @@ export default function EmployeeManagement() {
 
       {/* Edit Employee Dialog */}
       <Dialog open={showEditEmployee} onOpenChange={setShowEditEmployee}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-sm:w-[350px]  max-sm:overflow-y-auto max-sm:h-[600px] max-sm:rounded-[5px]">
           <DialogHeader>
             <DialogTitle>Edit Employee</DialogTitle>
           </DialogHeader>
