@@ -813,8 +813,8 @@ export default function PayrollPage() {
         </div>
       </div>
       <main className=" space-y-6">
-        <div className=" pb-4">
-          <div className="grid grid-cols-5 gap-4 mb-4">
+        <div className=" pb-4 max-sm:pb-0">
+          <div className="grid grid-cols-5 max-sm:grid-cols-1 gap-4 mb-4">
             <div className="bg-white border rounded-lg p-4">
               <div className="text-sm text-gray-500 mb-1">Total Employees</div>
               <div className="text-xl font-bold">
@@ -872,89 +872,103 @@ export default function PayrollPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full border rounded-md">
-            <thead>
-              <tr className="border-t border-b text-[14px] text-gray-500">
-                <th className="px-4 py-3 text-left border-r">Employee Name</th>
-                <th className="px-4 py-3 text-left border-r">Daily Rate</th>
-                <th className="px-4 py-3 text-left border-r">Days Worked</th>
-                <th className="px-4 py-3 text-left border-r">
-                  Budget Baseline
-                </th>
-                <th className="px-4 py-3 text-left border-r">
-                  Total Actual Payroll
-                </th>
-                <th className="px-4 py-3 text-left border-r text-red-600">
-                  Deductions
-                </th>
-                <th className="px-4 py-3 text-left border-r">
-                  Planned vs Actual
-                </th>
-              </tr>
-            </thead>
-            <tbody className="text-[14px]">
-              {currentItems.map((employee: any) => (
-                <tr key={employee.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-3 border-r">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{employee.username}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 border-r">
-                    {
-                      <ConvertedAmount
-                        amount={employee.daily_rate}
-                        currency={(sessionData.user as any)?.currency || "USD"}
-                        sessionData={sessionData}
-                      />
-                    }
-                  </td>
-                  <td className="px-4 py-3 border-r">{employee.days_worked}</td>
-                  <td className="px-4 py-3 border-r">
-                    {
-                      <ConvertedAmount
-                        amount={employee.budget_baseline}
-                        currency={(sessionData.user as any)?.currency || "USD"}
-                        sessionData={sessionData}
-                      />
-                    }
-                  </td>
-                  <td className="px-4 py-3 border-r">
-                    {
-                      <ConvertedAmount
-                        amount={employee.totalActualPayroll}
-                        currency={(sessionData.user as any)?.currency || "USD"}
-                        sessionData={sessionData}
-                      />
-                    }
-                  </td>
-                  <td className="px-4 py-3 border-r text-red-600 font-medium">
-                    {
-                      <ConvertedAmount
-                        amount={employee.totalDeductions || 0}
-                        currency={(sessionData.user as any)?.currency || "USD"}
-                        sessionData={sessionData}
-                      />
-                    }
-                  </td>
-                  <td className="px-4 py-3 border-r">
-                    <Badge
-                      className={
-                        parseFloat(employee.plannedVsActual) > 100
-                          ? "bg-red-50 text-red-700 border-0"
-                          : parseFloat(employee.plannedVsActual) >= 90
-                          ? "bg-green-50 text-green-700 border-0"
-                          : "bg-yellow-50 text-yellow-700 border-0"
-                      }
-                    >
-                      {employee.plannedVsActual}
-                    </Badge>
-                  </td>
+        <div className="sm:overflow-x-auto">
+          <div className="overflow-x-auto">
+            <table className="w-full border rounded-md">
+              <thead>
+                <tr className="border-t border-b text-[14px] text-gray-500">
+                  <th className="px-4 py-3 text-left border-r">
+                    Employee Name
+                  </th>
+                  <th className="px-4 py-3 text-left border-r">Daily Rate</th>
+                  <th className="px-4 py-3 text-left border-r">Days Worked</th>
+                  <th className="px-4 py-3 text-left border-r">
+                    Budget Baseline
+                  </th>
+                  <th className="px-4 py-3 text-left border-r">
+                    Total Actual Payroll
+                  </th>
+                  <th className="px-4 py-3 text-left border-r text-red-600">
+                    Deductions
+                  </th>
+                  <th className="px-4 py-3 text-left border-r">
+                    Planned vs Actual
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="text-[14px]">
+                {currentItems.map((employee: any) => (
+                  <tr key={employee.id} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-3 border-r">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{employee.username}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 border-r">
+                      {
+                        <ConvertedAmount
+                          amount={employee.daily_rate}
+                          currency={
+                            (sessionData.user as any)?.currency || "USD"
+                          }
+                          sessionData={sessionData}
+                        />
+                      }
+                    </td>
+                    <td className="px-4 py-3 border-r">
+                      {employee.days_worked}
+                    </td>
+                    <td className="px-4 py-3 border-r">
+                      {
+                        <ConvertedAmount
+                          amount={employee.budget_baseline}
+                          currency={
+                            (sessionData.user as any)?.currency || "USD"
+                          }
+                          sessionData={sessionData}
+                        />
+                      }
+                    </td>
+                    <td className="px-4 py-3 border-r">
+                      {
+                        <ConvertedAmount
+                          amount={employee.totalActualPayroll}
+                          currency={
+                            (sessionData.user as any)?.currency || "USD"
+                          }
+                          sessionData={sessionData}
+                        />
+                      }
+                    </td>
+                    <td className="px-4 py-3 border-r text-red-600 font-medium">
+                      {
+                        <ConvertedAmount
+                          amount={employee.totalDeductions || 0}
+                          currency={
+                            (sessionData.user as any)?.currency || "USD"
+                          }
+                          sessionData={sessionData}
+                        />
+                      }
+                    </td>
+                    <td className="px-4 py-3 border-r">
+                      <Badge
+                        className={
+                          parseFloat(employee.plannedVsActual) > 100
+                            ? "bg-red-50 text-red-700 border-0"
+                            : parseFloat(employee.plannedVsActual) >= 90
+                            ? "bg-green-50 text-green-700 border-0"
+                            : "bg-yellow-50 text-yellow-700 border-0"
+                        }
+                      >
+                        {employee.plannedVsActual}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {/* Pagination Controls */}
           <div className="flex flex-col sm:flex-row items-center justify-between mt-4 space-y-4 sm:space-y-0">
