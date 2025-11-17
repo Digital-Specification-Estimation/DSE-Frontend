@@ -85,11 +85,12 @@ export default function SignUp() {
     const { name, value } = e.target;
     setCompanyData({
       ...companyData,
-      [name]: (name === "standard_work_hours" ||
+      [name]:
+        name === "standard_work_hours" ||
         name === "weekly_work_limit" ||
-        name === "overtime_rate")
-        ? value
-        : value,
+        name === "overtime_rate"
+          ? value
+          : value,
     });
   };
 
@@ -220,13 +221,15 @@ export default function SignUp() {
     // Check if company with the same name already exists
     const companyExists = companiesFetched.some(
       (company: any) =>
-        company.company_name.toLowerCase() === companyData.company_name.toLowerCase()
+        company.company_name.toLowerCase() ===
+        companyData.company_name.toLowerCase()
     );
 
     if (companyExists) {
       toast({
         title: "Company exists",
-        description: "A company with this name already exists. Please choose a different name or select the existing company.",
+        description:
+          "A company with this name already exists. Please choose a different name or select the existing company.",
         variant: "destructive",
       });
       return;
@@ -258,14 +261,17 @@ export default function SignUp() {
               <div className="flex justify-center mb-4">
                 <Logo className="h-12 w-auto" />
               </div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Create an Account</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Create an Account
+              </h1>
               <p className="text-gray-600">Join us to get started</p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
+            <div className="bg-white rounded-xl shadow-lg p-8 max-sm:p-4 border border-gray-100">
               {isCreatingNewCompany && (
                 <div className="mb-6 p-4 bg-blue-50 text-blue-700 rounded-lg text-sm">
-                  <strong>Note:</strong> You are creating a new company. You will automatically become the admin of this company.
+                  <strong>Note:</strong> You are creating a new company. You
+                  will automatically become the admin of this company.
                 </div>
               )}
 
@@ -278,7 +284,10 @@ export default function SignUp() {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label htmlFor="company_id" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="company_id"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Company
                   </label>
                   <div className="flex gap-2">
@@ -328,12 +337,16 @@ export default function SignUp() {
                         <div className="space-y-4 py-4">
                           <div className="bg-blue-50 p-3 rounded-md">
                             <p className="text-blue-700 text-sm">
-                              <strong>Important:</strong> You will become the admin
-                              of this company with full administrative privileges.
+                              <strong>Important:</strong> You will become the
+                              admin of this company with full administrative
+                              privileges.
                             </p>
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="company_name" className="text-right">
+                            <Label
+                              htmlFor="company_name"
+                              className="text-right"
+                            >
                               Company Name
                             </Label>
                             <Input
@@ -346,7 +359,10 @@ export default function SignUp() {
                             />
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="business_type" className="text-right">
+                            <Label
+                              htmlFor="business_type"
+                              className="text-right"
+                            >
                               Business Type
                             </Label>
                             <Input
@@ -393,7 +409,10 @@ export default function SignUp() {
                             />
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="overtime_rate" className="text-right">
+                            <Label
+                              htmlFor="overtime_rate"
+                              className="text-right"
+                            >
                               Overtime Rate
                             </Label>
                             <Input
@@ -437,7 +456,10 @@ export default function SignUp() {
                 </div>
 
                 <div>
-                  <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="username"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     {isCreatingNewCompany ? "Admin Name" : "Full Name"}
                   </label>
                   <div className="relative">
@@ -463,7 +485,10 @@ export default function SignUp() {
                 </div>
 
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Email
                   </label>
                   <div className="relative">
@@ -486,7 +511,10 @@ export default function SignUp() {
 
                 {!isCreatingNewCompany && (
                   <div>
-                    <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="role"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Role
                     </label>
                     <div className="relative">
@@ -504,7 +532,9 @@ export default function SignUp() {
                         disabled={isLoading}
                       >
                         <option value="HR_MANAGER">HR Manager</option>
-                        <option value="DEPARTURE_MANAGER">Department Manager</option>
+                        <option value="DEPARTURE_MANAGER">
+                          Department Manager
+                        </option>
                         <option value="EMPLOYEE">Employee</option>
                       </select>
                       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -512,7 +542,8 @@ export default function SignUp() {
                       </div>
                     </div>
                     <p className="mt-1 text-xs text-gray-500">
-                      Your role request will need approval from the company admin
+                      Your role request will need approval from the company
+                      admin
                     </p>
                   </div>
                 )}
@@ -521,17 +552,23 @@ export default function SignUp() {
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center">
                       <ShieldCheck className="h-5 w-5 text-orange-500 mr-2" />
-                      <span className="text-sm font-medium text-gray-700">Admin</span>
+                      <span className="text-sm font-medium text-gray-700">
+                        Admin
+                      </span>
                     </div>
                     <p className="mt-1 text-xs text-gray-500">
-                      You will be the admin of this company with full administrative privileges
+                      You will be the admin of this company with full
+                      administrative privileges
                     </p>
                   </div>
                 )}
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="password"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       Password
                     </label>
                   </div>
@@ -590,7 +627,8 @@ export default function SignUp() {
                           e.preventDefault();
                           toast({
                             title: "Terms & Privacy",
-                            description: "Terms and Privacy Policy will be available soon.",
+                            description:
+                              "Terms and Privacy Policy will be available soon.",
                           });
                         }}
                         className="font-medium text-orange-600 hover:text-orange-500"
@@ -617,7 +655,7 @@ export default function SignUp() {
                 </button>
               </form>
 
-              <div className="text-center text-sm">
+              <div className="text-sm text-gray-600 text-center mt-[20px]">
                 Already have an account?{" "}
                 <Link href="/sign-in" className="text-primary font-medium">
                   Sign In
