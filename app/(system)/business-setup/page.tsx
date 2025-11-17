@@ -623,9 +623,9 @@ function DataTable({
     selectedIds && selectedIds.length === data.length && data.length > 0;
 
   return (
-    <div className="shadow-sm border border-gray-200 rounded-lg">
-      <table className="w-full table-fixed">
-        <thead className="bg-gray-50">
+    <div className="shadow-sm border max-sm:w-full max-sm:overflow-x-auto border-gray-200 rounded-lg">
+      <table className="w-full max-sm:overflow-x-auto sm:table-fixed">
+        <thead className="bg-gray-50 max-sm:overflow-x-auto max-sm:w-full">
           <tr className="border-b text-sm text-gray-600 font-medium">
             <th className="w-10 px-2 py-3 text-left">
               {onSelectAll && (
@@ -644,21 +644,30 @@ function DataTable({
 
               // Projects tab column widths
               if (activeTab === "projects") {
-                if (header === "Project Name") columnClass += " w-[28%]";
-                else if (header === "Location Name") columnClass += " w-[22%]";
-                else if (header === "Start Date") columnClass += " w-[16%]";
-                else if (header === "End Date") columnClass += " w-[16%]";
-                else if (header === "Budget") columnClass += " w-[18%]";
-                else columnClass += " flex-1";
+                if (header === "Project Name")
+                  columnClass += " w-[28%] max-sm:w-fit";
+                else if (header === "Location Name")
+                  columnClass += " w-[22%] max-sm:w-fit";
+                else if (header === "Start Date")
+                  columnClass += " w-[16%] max-sm:w-fit";
+                else if (header === "End Date")
+                  columnClass += " w-[16%] max-sm:w-fit";
+                else if (header === "Budget")
+                  columnClass += " w-[18%] max-sm:w-fit";
+                else columnClass += " flex-1 max-sm:w-fit";
               }
               // Trades tab column widths - Location Name gets more space
               else if (activeTab === "trades") {
-                if (header === "Role/Trade") columnClass += " w-[25%]";
+                if (header === "Role/Trade")
+                  columnClass += " w-[25%] max-sm:w-fit";
                 else if (header === "Location Name")
-                  columnClass += " w-[35%]"; // Wider for full visibility
-                else if (header === "Daily Rate") columnClass += " w-[20%]";
-                else if (header === "Monthly Rate") columnClass += " w-[20%]";
-                else columnClass += " flex-1";
+                  columnClass += " w-[35%] max-sm:w-fit";
+                // Wider for full visibility
+                else if (header === "Daily Rate")
+                  columnClass += " w-[20%] max-sm:w-fit";
+                else if (header === "Monthly Rate")
+                  columnClass += " w-[20%] max-sm:w-fit";
+                else columnClass += " flex-1 max-sm:w-fit";
               }
               // Default for other tabs
               else {
@@ -2099,7 +2108,7 @@ export default function BusinessSetup() {
   }
 
   return (
-    <div className="w-full mx-auto py-4 px-3 sm:py-6 sm:px-4 lg:py-8 lg:px-6 max-w-[1400px]">
+    <div className="w-full mx-auto py-4 max-sm:py-[10px] px-3 sm:py-6 sm:px-4 max-sm:px-2 lg:py-8 lg:px-6 max-w-[1400px]">
       <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
         <h1 className="text-lg sm:text-xl lg:text-[22px] font-semibold text-gray-900">
           Business Setup
@@ -2212,7 +2221,7 @@ export default function BusinessSetup() {
             {/* Trades Tab */}
             {activeTab === "trades" && (
               <>
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex justify-between max-sm:items-end max-sm:flex-col items-center mb-6">
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900">
                       Trade/Job Role & Daily Rates

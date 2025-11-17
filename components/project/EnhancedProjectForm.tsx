@@ -151,12 +151,16 @@ export default function EnhancedProjectForm({
         project_name: editingProject.project_name || "",
         location_name: editingProject.location_name || "",
         budget: editingProject.budget || 0,
-        start_date: editingProject.start_date && !isNaN(new Date(editingProject.start_date).getTime())
-          ? new Date(editingProject.start_date).toISOString().split("T")[0]
-          : "",
-        end_date: editingProject.end_date && !isNaN(new Date(editingProject.end_date).getTime())
-          ? new Date(editingProject.end_date).toISOString().split("T")[0]
-          : "",
+        start_date:
+          editingProject.start_date &&
+          !isNaN(new Date(editingProject.start_date).getTime())
+            ? new Date(editingProject.start_date).toISOString().split("T")[0]
+            : "",
+        end_date:
+          editingProject.end_date &&
+          !isNaN(new Date(editingProject.end_date).getTime())
+            ? new Date(editingProject.end_date).toISOString().split("T")[0]
+            : "",
         selectedTrades:
           editingProject.trade_positions?.map((tp: any) => ({
             tradeId: tp.id,
@@ -641,7 +645,7 @@ export default function EnhancedProjectForm({
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 overflow-auto pr-4">
+        <ScrollArea className="flex-1 overflow-auto pr-4 max-sm:pr-2">
           <div className="space-y-6 pb-4">
             {/* Basic Project Information */}
             <Card>
@@ -649,7 +653,7 @@ export default function EnhancedProjectForm({
                 <CardTitle className="text-lg">Project Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="project_name">Project Name</Label>
                     <Input
@@ -686,7 +690,7 @@ export default function EnhancedProjectForm({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 max-sm:grid-cols-1 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="budget">Budget (USD)</Label>
                     <Input
@@ -731,9 +735,9 @@ export default function EnhancedProjectForm({
             {/* Trade Assignment Section */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center max-sm:flex-col max-sm:space-y-[10px] max-sm:items-start justify-between">
                   <CardTitle className="text-lg">Trade Assignments</CardTitle>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center max-sm:flex-col max-sm:space-y-[10px] gap-2">
                     <Badge variant="secondary">
                       {formData.selectedTrades.length} trades selected
                     </Badge>
@@ -755,10 +759,10 @@ export default function EnhancedProjectForm({
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 ">
                 {/* Add Trade Button */}
                 {getAvailableTrades().length > 0 && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2  max-sm:space-y-[10px] max-sm:flex max-sm:flex-col max-sm:items-start">
                     <Select onValueChange={addTradeToProject}>
                       <SelectTrigger className="w-64">
                         <SelectValue placeholder="Select trade to add" />
