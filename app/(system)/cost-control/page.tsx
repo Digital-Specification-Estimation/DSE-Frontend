@@ -1248,7 +1248,7 @@ const ProfitLossStatement = ({
       {/* Project Information Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex items-center max-sm:flex-col max-sm:space-y-[20px]  justify-between">
             <span>Project Information</span>
             <Button
               onClick={exportToExcel}
@@ -1289,7 +1289,7 @@ const ProfitLossStatement = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+          <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 p-4 bg-gray-50 rounded-lg">
             <div>
               <strong>Project Name:</strong>{" "}
               {selectedProject?.project_name || selectedProject?.name || "N/A"}
@@ -1317,8 +1317,8 @@ const ProfitLossStatement = ({
       {/* Profit & Loss Statement Table */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center max-sm:flex-col max-sm:space-y-[10px] justify-between">
+            <div className="max-sm:flex max-sm:flex-col max-sm:space-y-[10px]">
               <CardTitle>Profit & Loss Statement</CardTitle>
               <p className="text-sm text-gray-600">
                 DECENT ENGINEERING CONSTRUCTION Ltd - September 2025
@@ -3007,7 +3007,7 @@ export default function CostControlPage() {
   });
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto p-6 max-sm:p-[5px]">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-md border p-6 mb-6">
         <h1 className="text-3xl font-bold text-slate-800 mb-2">
@@ -3651,8 +3651,8 @@ export default function CostControlPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-4">
+                    <div className="space-y-4 max-sm:space-y-2 max-sm:flex max-sm:flex-col">
+                      <div className="flex max-sm:flex-col items-center gap-4">
                         <Button
                           variant="outline"
                           onClick={() => downloadCsvTemplate("boq")}
@@ -3995,8 +3995,8 @@ export default function CostControlPage() {
                       {/* Labor Expense Fetch Section */}
                       <div className="border-t pt-4">
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
+                          <div className="flex items-center max-sm:space-y-[10px] max-sm:flex-col max-sm:flex justify-between mb-3">
+                            <div className="">
                               <h4 className="font-medium text-slate-800">
                                 🔄 Auto-Fetch Labor Expenses
                               </h4>
@@ -4374,7 +4374,7 @@ export default function CostControlPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="flex items-center gap-4">
+                      <div className="flex max-sm:flex-col  items-center gap-4">
                         <Button
                           variant="outline"
                           onClick={() => downloadCsvTemplate("expenses")}
