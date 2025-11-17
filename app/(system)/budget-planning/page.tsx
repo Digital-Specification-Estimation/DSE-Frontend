@@ -1300,8 +1300,8 @@ export default function BudgetPlanning() {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2">
+      <div className="flex max-sm:items-start max-sm:flex-col max-sm:space-y-[20px] justify-between items-center mb-6">
+        <div className="flex items-center  gap-2">
           <h1 className="text-2xl font-bold">
             Budget Planning & Cost Comparison
           </h1>
@@ -1777,8 +1777,8 @@ export default function BudgetPlanning() {
             </Card>
           </div>
 
-          <div className="bg-white rounded-lg border p-6 mb-6">
-            <div className="flex justify-between items-start mb-4">
+          <div className="bg-white rounded-lg max-sm:hidden border p-6 mb-6">
+            <div className="flex justify-between  items-start mb-4">
               <div>
                 <h3 className="font-medium mb-1">Cost Comparison</h3>
                 <p className="text-sm text-muted-foreground">
