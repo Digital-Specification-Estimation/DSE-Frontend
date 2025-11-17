@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { RefreshCw, Plus, Check, X } from "lucide-react";
+import { RefreshCw, Plus, Check, X, Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -185,14 +185,9 @@ export default function ManageUsers() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-white">
-        <Sidebar user={currentUser} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardHeader />
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-gray-500">Loading users...</p>
-          </div>
-        </div>
+      <div className="flex flex-col items-center gap-2">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <p className="text-sm text-gray-500">Loading users...</p>
       </div>
     );
   }

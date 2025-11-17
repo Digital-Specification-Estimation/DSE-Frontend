@@ -38,19 +38,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  MoreHorizontal, 
-  Edit, 
-  Trash2, 
-  Users, 
+import {
+  Plus,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Users,
   Calendar,
   DollarSign,
   MapPin,
   Loader2,
-  Eye
+  Eye,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionQuery } from "@/lib/redux/authSlice";
@@ -72,8 +72,8 @@ export default function ProjectManagement() {
   const [deleteProject] = useDeleteProjectMutation();
 
   // Debug: Log projects data
-  console.log('Project Management - Projects data:', projects);
-  console.log('Project Management - Projects loading:', isLoading);
+  console.log("Project Management - Projects data:", projects);
+  console.log("Project Management - Projects loading:", isLoading);
 
   // State
   const [showCreateProject, setShowCreateProject] = useState(false);
@@ -86,24 +86,29 @@ export default function ProjectManagement() {
 
   // Filter projects
   const filteredProjects = projects.filter((project: any) => {
-    const matchesSearch = project.project_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.location_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || getProjectStatus(project) === statusFilter;
-    const matchesLocation = locationFilter === "all" || project.location_name === locationFilter;
-    
+    const matchesSearch =
+      project.project_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.location_name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "all" || getProjectStatus(project) === statusFilter;
+    const matchesLocation =
+      locationFilter === "all" || project.location_name === locationFilter;
+
     return matchesSearch && matchesStatus && matchesLocation;
   });
 
   // Get unique locations for filter
-  const uniqueLocations = [...new Set(projects.map((p: any) => p.location_name))];
+  const uniqueLocations = [
+    ...new Set(projects.map((p: any) => p.location_name)),
+  ];
 
   // Helper functions
   const getProjectStatus = (project: any) => {
     const now = new Date();
     const startDate = new Date(project.start_date);
     const endDate = new Date(project.end_date);
-    
+
     if (now < startDate) return "upcoming";
     if (now > endDate) return "completed";
     return "active";
@@ -111,17 +116,21 @@ export default function ProjectManagement() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active": return "bg-green-100 text-green-800";
-      case "upcoming": return "bg-blue-100 text-blue-800";
-      case "completed": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "upcoming":
+        return "bg-blue-100 text-blue-800";
+      case "completed":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
     }).format(amount || 0);
   };
 
@@ -170,17 +179,9 @@ export default function ProjectManagement() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-[#FAFAFA]">
-        <Sidebar user={user} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardHeader />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-              <p className="text-sm text-gray-500">Loading projects...</p>
-            </div>
-          </div>
-        </div>
+      <div className="flex flex-col items-center gap-2">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <p className="text-sm text-gray-500">Loading projects...</p>
       </div>
     );
   }
@@ -191,7 +192,7 @@ export default function ProjectManagement() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardHeader />
-        
+
         <main className="flex-1 overflow-auto">
           <div className="max-w-[1400px] mx-auto py-8 px-6">
             {/* Header */}
@@ -217,46 +218,66 @@ export default function ProjectManagement() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Total Projects
+                  </CardTitle>
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{projects.length}</div>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Active Projects
+                  </CardTitle>
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {projects.filter((p: any) => getProjectStatus(p) === "active").length}
+                    {
+                      projects.filter(
+                        (p: any) => getProjectStatus(p) === "active"
+                      ).length
+                    }
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Budget</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Total Budget
+                  </CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {formatCurrency(projects.reduce((sum: number, p: any) => sum + (p.budget || 0), 0))}
+                    {formatCurrency(
+                      projects.reduce(
+                        (sum: number, p: any) => sum + (p.budget || 0),
+                        0
+                      )
+                    )}
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Total Employees
+                  </CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {projects.reduce((sum: number, p: any) => sum + getProjectEmployeeCount(p), 0)}
+                    {projects.reduce(
+                      (sum: number, p: any) => sum + getProjectEmployeeCount(p),
+                      0
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -277,7 +298,7 @@ export default function ProjectManagement() {
                       />
                     </div>
                   </div>
-                  
+
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="Status" />
@@ -290,7 +311,10 @@ export default function ProjectManagement() {
                     </SelectContent>
                   </Select>
 
-                  <Select value={locationFilter} onValueChange={setLocationFilter}>
+                  <Select
+                    value={locationFilter}
+                    onValueChange={setLocationFilter}
+                  >
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="Location" />
                     </SelectTrigger>
@@ -316,21 +340,27 @@ export default function ProjectManagement() {
                 {filteredProjects.length === 0 ? (
                   <div className="text-center py-12">
                     <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No projects found</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      No projects found
+                    </h3>
                     <p className="text-gray-500 mb-4">
-                      {searchTerm || statusFilter !== "all" || locationFilter !== "all"
+                      {searchTerm ||
+                      statusFilter !== "all" ||
+                      locationFilter !== "all"
                         ? "Try adjusting your filters"
                         : "Get started by creating your first project"}
                     </p>
-                    {!searchTerm && statusFilter === "all" && locationFilter === "all" && (
-                      <Button
-                        onClick={() => setShowCreateProject(true)}
-                        className="bg-orange-500 hover:bg-orange-600"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create Project
-                      </Button>
-                    )}
+                    {!searchTerm &&
+                      statusFilter === "all" &&
+                      locationFilter === "all" && (
+                        <Button
+                          onClick={() => setShowCreateProject(true)}
+                          className="bg-orange-500 hover:bg-orange-600"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Project
+                        </Button>
+                      )}
                   </div>
                 ) : (
                   <Table>
@@ -359,7 +389,11 @@ export default function ProjectManagement() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge className={getStatusColor(getProjectStatus(project))}>
+                            <Badge
+                              className={getStatusColor(
+                                getProjectStatus(project)
+                              )}
+                            >
                               {getProjectStatus(project)}
                             </Badge>
                           </TableCell>
@@ -380,9 +414,18 @@ export default function ProjectManagement() {
                           </TableCell>
                           <TableCell>
                             <div className="text-sm">
-                              <div>{format(new Date(project.start_date), 'MMM dd, yyyy')}</div>
+                              <div>
+                                {format(
+                                  new Date(project.start_date),
+                                  "MMM dd, yyyy"
+                                )}
+                              </div>
                               <div className="text-gray-500">
-                                to {format(new Date(project.end_date), 'MMM dd, yyyy')}
+                                to{" "}
+                                {format(
+                                  new Date(project.end_date),
+                                  "MMM dd, yyyy"
+                                )}
                               </div>
                             </div>
                           </TableCell>
@@ -394,11 +437,13 @@ export default function ProjectManagement() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEditProject(project)}>
+                                <DropdownMenuItem
+                                  onClick={() => handleEditProject(project)}
+                                >
                                   <Edit className="w-4 h-4 mr-2" />
                                   Edit
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={() => handleDeleteProject(project)}
                                   className="text-red-600"
                                 >
@@ -448,8 +493,9 @@ export default function ProjectManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Project</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{selectedProject?.project_name}"? 
-              This action cannot be undone and will remove all associated trade assignments.
+              Are you sure you want to delete "{selectedProject?.project_name}"?
+              This action cannot be undone and will remove all associated trade
+              assignments.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

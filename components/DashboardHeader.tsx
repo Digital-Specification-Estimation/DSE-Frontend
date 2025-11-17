@@ -215,9 +215,9 @@ const DashboardHeader = () => {
   };
 
   return (
-    <div className="flex relative  z-20 max-[1000px]:w-full items-center justify-between p-[10px] bg-white border-b">
+    <div className="flex relative  z-20 max-[1000px]:w-full items-center justify-between p-[10px] pl-[40px] max-sm:pl-[10px] bg-white border-b">
       {/* Search Bar */}
-      <div className="relative w-1/3 max-w-md" ref={searchRef}>
+      <div className="relative w-1/3 max-sm:w-[200px] max-w-md" ref={searchRef}>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <FiSearch className="h-5 w-5 text-gray-400" />
@@ -242,7 +242,7 @@ const DashboardHeader = () => {
               }
             }}
           />
-          <div className="absolute inset-y-0 right-0  flex items-center pr-3">
+          <div className="absolute inset-y-0 right-0 max-sm:hidden flex items-center pr-3">
             <kbd className="inline-flex items-center  px-2.5 py-1.5 border-gray-500 border-b-[3px] text-xs font-medium rounded-md border border-gray-200 bg-white text-gray-500 shadow-sm hover:bg-gray-50 transition-colors duration-150 pointer-events-none">
               {navigator.platform.includes("Mac") ? "⌘" : "Ctrl+"}K
             </kbd>
@@ -296,7 +296,7 @@ const DashboardHeader = () => {
             {/* Profile Button */}
             <button
               onClick={() => router.push("/profile")}
-              className="p-[5px] pr-[20px] rounded-full border-[1px] border-gray-200 flex flex-row items-center justify-center space-x-[10px] bg-gray-100 hover:bg-gray-200 transition-colors relative"
+              className="p-[5px] pr-[20px] max-sm:pr-[5px] rounded-full border-[1px] border-gray-200 flex flex-row items-center justify-center sm:space-x-[10px] bg-gray-100 hover:bg-gray-200 transition-colors relative"
               aria-label="User profile"
             >
               {sessionData?.user?.image_url ? (

@@ -55,7 +55,7 @@ export default function UnifiedDashboard({ user }: UnifiedDashboardProps) {
 
   // Determine current view based on pathname
   useEffect(() => {
-    const path = pathname.split('/').pop() || 'dashboard';
+    const path = pathname.split("/").pop() || "dashboard";
     setCurrentView(path);
   }, [pathname]);
 
@@ -69,52 +69,104 @@ export default function UnifiedDashboard({ user }: UnifiedDashboardProps) {
   const renderCurrentView = () => {
     switch (currentView) {
       case "dashboard":
-        return <MainDashboard userPermissions={userPermissions} sessionData={sessionData} />;
+        return (
+          <MainDashboard
+            userPermissions={userPermissions}
+            sessionData={sessionData}
+          />
+        );
       case "business-setup":
         if (userPermissions.full_access) {
-          return <BusinessSetup userPermissions={userPermissions} sessionData={sessionData} />;
+          return (
+            <BusinessSetup
+              userPermissions={userPermissions}
+              sessionData={sessionData}
+            />
+          );
         }
-        return <div className="p-6 text-center">Access denied. You don't have permission to view this section.</div>;
+        return (
+          <div className="p-6 text-center">
+            Access denied. You don't have permission to view this section.
+          </div>
+        );
       case "budget-planning":
         if (userPermissions.view_reports) {
-          return <BudgetPlanning userPermissions={userPermissions} sessionData={sessionData} />;
+          return (
+            <BudgetPlanning
+              userPermissions={userPermissions}
+              sessionData={sessionData}
+            />
+          );
         }
-        return <div className="p-6 text-center">Access denied. You don't have permission to view this section.</div>;
+        return (
+          <div className="p-6 text-center">
+            Access denied. You don't have permission to view this section.
+          </div>
+        );
       case "employee-management":
         if (userPermissions.manage_employees) {
-          return <EmployeeManagement userPermissions={userPermissions} sessionData={sessionData} />;
+          return (
+            <EmployeeManagement
+              userPermissions={userPermissions}
+              sessionData={sessionData}
+            />
+          );
         }
-        return <div className="p-6 text-center">Access denied. You don't have permission to view this section.</div>;
+        return (
+          <div className="p-6 text-center">
+            Access denied. You don't have permission to view this section.
+          </div>
+        );
       case "attendance-payroll":
         if (userPermissions.manage_payroll) {
-          return <AttendancePayroll userPermissions={userPermissions} sessionData={sessionData} />;
+          return (
+            <AttendancePayroll
+              userPermissions={userPermissions}
+              sessionData={sessionData}
+            />
+          );
         }
-        return <div className="p-6 text-center">Access denied. You don't have permission to view this section.</div>;
+        return (
+          <div className="p-6 text-center">
+            Access denied. You don't have permission to view this section.
+          </div>
+        );
       case "user-management":
         if (userPermissions.full_access) {
-          return <UserManagement userPermissions={userPermissions} sessionData={sessionData} />;
+          return (
+            <UserManagement
+              userPermissions={userPermissions}
+              sessionData={sessionData}
+            />
+          );
         }
-        return <div className="p-6 text-center">Access denied. You don't have permission to view this section.</div>;
+        return (
+          <div className="p-6 text-center">
+            Access denied. You don't have permission to view this section.
+          </div>
+        );
       case "settings":
-        return <Settings userPermissions={userPermissions} sessionData={sessionData} />;
+        return (
+          <Settings
+            userPermissions={userPermissions}
+            sessionData={sessionData}
+          />
+        );
       default:
-        return <MainDashboard userPermissions={userPermissions} sessionData={sessionData} />;
+        return (
+          <MainDashboard
+            userPermissions={userPermissions}
+            sessionData={sessionData}
+          />
+        );
     }
   };
 
   if (isSessionLoading) {
     return (
-      <div className="flex h-screen bg-gray-50">
-        <Sidebar user={user} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardHeader />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-              <p className="text-sm text-gray-500">Loading dashboard...</p>
-            </div>
-          </div>
-        </div>
+      <div className="flex flex-col items-center gap-2">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+        <p className="text-sm text-gray-500">Loading dashboard...</p>
       </div>
     );
   }
@@ -124,11 +176,8 @@ export default function UnifiedDashboard({ user }: UnifiedDashboardProps) {
       <Sidebar user={user} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardHeader />
-        <main className="flex-1 overflow-y-auto">
-          {renderCurrentView()}
-        </main>
+        <main className="flex-1 overflow-y-auto">{renderCurrentView()}</main>
       </div>
     </div>
   );
 }
-

@@ -361,17 +361,9 @@ export default function Dashboard() {
 
   if (isLoading || isSessionLoading) {
     return (
-      <div className="flex h-screen bg-white">
-        <Sidebar user={user} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardHeader />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-              <p className="text-sm text-gray-500">Loading dashboard data...</p>
-            </div>
-          </div>
-        </div>
+      <div className="flex flex-col items-center gap-2">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <p className="text-sm text-gray-500">Loading dashboard data...</p>
       </div>
     );
   }
@@ -954,10 +946,10 @@ export default function Dashboard() {
                 <th className="text-left p-4 font-medium text-sm text-gray-500">
                   Actual Cost
                 </th>
-                <th className="text-left p-4 font-medium text-sm text-gray-500">
+                <th className="text-left p-4 max-sm:hidden font-medium text-sm text-gray-500">
                   Difference
                 </th>
-                <th className="w-12 p-4"></th>
+                <th className="w-12 p-4 max-sm:hidden"></th>
               </tr>
             </thead>
             <tbody>
@@ -987,7 +979,7 @@ export default function Dashboard() {
                         sessionData={sessionData}
                       />
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 max-sm:p-0 max-sm:hidden">
                       <div className="flex items-center gap-1">
                         <div
                           className={`h-5 w-5 rounded-full flex items-center justify-center ${
