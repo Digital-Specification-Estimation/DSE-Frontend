@@ -681,8 +681,8 @@ export default function Settings() {
 
   return (
     <div className=" mx-auto ">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-[22px] font-semibold text-gray-900">
+      <div className="flex items-center max-sm:flex-col max-sm:space-y-[20px] justify-between mb-8">
+        <h1 className="text-2xl font-semibold text-gray-900">
           Settings & User Management
         </h1>
         <div className="flex items-center gap-3">
@@ -717,7 +717,7 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex max-sm:flex-col gap-6">
         <div className="w-60 bg-white rounded-lg border border-gray-200 overflow-hidden">
           <button
             className={`w-full px-4 py-3 text-sm text-left transition-colors ${
@@ -763,7 +763,7 @@ export default function Settings() {
 
         <div className="flex-1">
           {activeTab === "company" && (
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white rounded-lg border border-gray-200 max-sm:p-[10px] p-6">
               <div className="mb-6">
                 <h2 className="text-lg font-semibold text-gray-900">
                   Company Settings
@@ -774,11 +774,11 @@ export default function Settings() {
               </div>
 
               <div className="space-y-6">
-                <div className="flex justify-between border-b border-t border-gray-200 items-center h-16">
+                <div className="flex max-sm:flex-col justify-between border-b max-sm:p-[10px] border-t border-gray-200 items-center h-16 max-sm:h-full">
                   <h3 className="text-sm font-medium text-gray-700 mb-4">
                     Company Profile
                   </h3>
-                  <div className="flex items-center gap-4">
+                  <div className="flex max-sm:flex-col items-center gap-4">
                     <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center border overflow-hidden">
                       {companyLogo ? (
                         <img
@@ -810,12 +810,12 @@ export default function Settings() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex h-20 justify-between items-center border-b-2 border-gray-300">
+                  <div className="flex max-sm:flex-col max-sm:p-[10px] max-sm:h-full h-20 max-sm:items-start justify-between items-center border-b-2 border-gray-300">
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                       Company Name{" "}
                       <span className="text-red-500 ml-0.5">*</span>
                     </label>
-                    <div className="relative">
+                    <div className="relative w-full">
                       <input
                         type="text"
                         value={companySettings.companyName}
@@ -825,17 +825,17 @@ export default function Settings() {
                             companyName: e.target.value,
                           })
                         }
-                        className="w-[400px] px-3 h-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-[400px] max-sm:w-full px-3 h-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
                   </div>
 
-                  <div className="flex h-20 justify-between items-center border-b-2 border-gray-300">
+                  <div className="flex max-sm:flex-col max-sm:p-[10px] max-sm:h-full h-20 max-sm:items-start justify-between items-center border-b-2 border-gray-300">
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                       Business Type{" "}
                       <span className="text-red-500 ml-0.5">*</span>
                     </label>
-                    <div className="relative">
+                    <div className="relative w-full">
                       <input
                         type="text"
                         value={companySettings.businessType}
@@ -845,7 +845,7 @@ export default function Settings() {
                             businessType: e.target.value,
                           })
                         }
-                        className="w-[400px] px-3 h-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-[400px] max-sm:w-full px-3 h-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
                   </div>
@@ -891,13 +891,13 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center border-b-2 border-gray-300 h-16">
+                  <div className="flex max-sm:flex-col max-sm:p-[10px] max-sm:items-start max-sm:h-full justify-between items-center border-b-2 border-gray-300 h-16">
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                       Standard Work Hours{" "}
                       <span className="text-red-500 ml-0.5">*</span>
                     </label>
-                    <div className="flex items-center gap-2 w-[400px]">
-                      <div className="relative w-[120px] flex gap-3">
+                    <div className="flex items-center gap-2 max-sm:w-full w-[400px]">
+                      <div className="relative w-[120px] max-sm:w-full flex gap-3">
                         <input
                           type="number"
                           value={companySettings.workHours}
@@ -907,17 +907,17 @@ export default function Settings() {
                               workHours: e.target.value,
                             })
                           }
-                          className="w-[196px] pl-3 pr-10 h-10 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          className="w-[196px] max-sm:w-full pl-3 pr-10 h-10 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                         />
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center border-b-2 border-gray-300 h-16">
+                  <div className="flex max-sm:flex-col max-sm:p-[10px] max-sm:items-start max-sm:h-full justify-between items-center border-b-2 border-gray-300 h-16">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Weekly Work Limit
                     </label>
-                    <div className="flex justify-between items-center gap-2 border border-gray-300 rounded-md text-sm w-[400px] pr-3">
+                    <div className="flex justify-between items-center gap-2 border border-gray-300 rounded-md text-sm max-sm:w-full w-[400px] pr-3">
                       <input
                         type="text"
                         value={companySettings.weeklyWorkLimit}
@@ -927,18 +927,18 @@ export default function Settings() {
                             weeklyWorkLimit: e.target.value,
                           })
                         }
-                        className="w-[120px] px-3 h-10 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-[120px] max-sm:w-full px-3 h-10 focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                       <span className="text-sm text-gray-500">hours</span>
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center border-b-2 border-gray-300 h-16">
+                  <div className="flex max-sm:flex-col max-sm:p-[10px] max-sm:items-start max-sm:h-full justify-between items-center border-b-2 border-gray-300 h-16">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Overtime Rate
                     </label>
-                    <div className="flex items-center gap-2 border border-gray-300 rounded-md text-sm w-[400px] pr-3">
-                      <div className="w-[200px] flex items-center px-3 h-10 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    <div className="flex items-center gap-2 border border-gray-300 rounded-md text-sm max-sm:w-full w-[400px] pr-3">
+                      <div className="w-[200px] max-sm:w-full flex items-center px-3 h-10 focus:outline-none focus:ring-2 focus:ring-orange-500">
                         {companySettings.overtimeRate}
                       </div>
                     </div>
@@ -988,7 +988,7 @@ export default function Settings() {
               ) : (
                 <div className="space-y-6">
                   <div className="border-b border-gray-200">
-                    <nav className="-mb-px flex space-x-8">
+                    <nav className="-mb-px max-sm:w-full max-sm:overflow-x-auto flex space-x-8">
                       {[
                         "admin",
                         "hr_manager",
@@ -1095,12 +1095,12 @@ export default function Settings() {
               </div>
 
               <div className="space-y-6">
-                <div className="flex h-20 justify-between items-center border-b-2 border-gray-300">
+                <div className="flex h-20 max-sm:flex-col max-sm:p-[10px] max-sm:h-full max-sm:items-start  justify-between items-center border-b-2 border-gray-300">
                   <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                     Salary Calculation{" "}
                     <span className="text-red-500 ml-0.5">*</span>
                   </label>
-                  <div className="w-[400px]">
+                  <div className="w-[400px] max-sm:w-full">
                     <Select
                       value={payrollSettings.salary_calculation}
                       onValueChange={(value) =>
@@ -1124,11 +1124,11 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="flex h-20 justify-between items-center border-b-2 border-gray-300">
+                <div className="flex h-20 max-sm:flex-col max-sm:p-[10px] max-sm:h-full max-sm:items-start justify-between items-center border-b-2 border-gray-300">
                   <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                     Currency <span className="text-red-500 ml-0.5">*</span>
                   </label>
-                  <div className="w-[400px]">
+                  <div className="w-[400px] max-sm:w-full">
                     <Select
                       value={payrollSettings.currency}
                       onValueChange={(value) =>
@@ -1158,11 +1158,11 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="flex h-20 justify-between items-center border-b-2 border-gray-300">
+                <div className="flex h-20 max-sm:flex-col max-sm:p-[10px] max-sm:h-full max-sm:items-start justify-between items-center border-b-2 border-gray-300">
                   <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                     Base Currency <span className="text-red-500 ml-0.5">*</span>
                   </label>
-                  <div className="w-[400px]">
+                  <div className="w-[400px] max-sm:w-full">
                     <Select
                       value={payrollSettings.baseCurrency}
                       onValueChange={(value) =>
@@ -1192,12 +1192,12 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="flex h-20 justify-between items-center border-b-2 border-gray-300">
+                <div className="flex h-20 max-sm:flex-col max-sm:p-[10px] max-sm:h-full max-sm:items-start justify-between items-center border-b-2 border-gray-300">
                   <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                     Payslip Format{" "}
                     <span className="text-red-500 ml-0.5">*</span>
                   </label>
-                  <div className="relative">
+                  <div className="relative max-sm:w-full">
                     <input
                       type="text"
                       value={payrollSettings.payslip_format}
@@ -1207,7 +1207,7 @@ export default function Settings() {
                           payslip_format: e.target.value,
                         })
                       }
-                      className="w-[400px] px-3 h-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-[400px] max-sm:w-full px-3 h-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                       readOnly
                     />
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />

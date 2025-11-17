@@ -103,7 +103,7 @@ export default function SystemLayout({
         <div className="flex items-center p-2 md:hidden">
           <button
             onClick={toggleSidebar}
-            className="menu-button p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            className="menu-button p-0 text-gray-600 hover:bg-gray-100 rounded-lg"
             aria-label="Toggle menu"
           >
             <Menu className="h-6 w-6" />

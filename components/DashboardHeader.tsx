@@ -215,7 +215,7 @@ const DashboardHeader = () => {
   };
 
   return (
-    <div className="flex relative  z-20 max-[1000px]:w-full items-center justify-between p-[10px] pl-[40px] max-sm:pl-[10px] bg-white border-b">
+    <div className="flex relative  z-20 max-[1000px]:w-full items-center justify-between p-[10px] max-sm:py-[5px] pl-[40px] max-sm:pl-[10px] bg-white border-b">
       {/* Search Bar */}
       <div className="relative w-1/3 max-sm:w-[200px] max-w-md" ref={searchRef}>
         <div className="relative">
@@ -225,7 +225,7 @@ const DashboardHeader = () => {
           <input
             ref={searchInputRef}
             type="text"
-            className="block w-full pl-10 pr-8 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            className="block w-full pl-10 pr-8 py-2  border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="Search routes..."
             value={searchQuery}
             onChange={(e) => {
