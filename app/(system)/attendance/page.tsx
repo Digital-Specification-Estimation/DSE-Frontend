@@ -1321,7 +1321,7 @@ export default function AttendancePayroll() {
               <div className="px-4 pb-4"></div>
 
               <div className=" sm:overflow-x-auto">
-                <div className="sm:hidden overflow-x-auto">
+                <div className=" overflow-x-auto">
                   <table className="w-full border rounded-md">
                     <thead>
                       <tr className="border-t border-b text-[12px] text-gray-500">

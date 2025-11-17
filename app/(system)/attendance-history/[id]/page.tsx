@@ -73,7 +73,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import jsPDF from "jspdf";
-import { useCreateDeductionMutation, useGetDeductionsQuery, useDeleteDeductionMutation } from "@/lib/redux/deductionSlice";
+import {
+  useCreateDeductionMutation,
+  useGetDeductionsQuery,
+  useDeleteDeductionMutation,
+} from "@/lib/redux/deductionSlice";
 
 export default function AttendanceHistory() {
   const params = useParams();
@@ -105,9 +109,12 @@ export default function AttendanceHistory() {
   });
 
   // Redux hooks for deductions
-  const { data: deductions = [], refetch: refetchDeductions } = useGetDeductionsQuery({ employeeId });
-  const [createDeduction, { isLoading: isCreatingDeduction }] = useCreateDeductionMutation();
-  const [deleteDeduction, { isLoading: isDeletingDeduction }] = useDeleteDeductionMutation();
+  const { data: deductions = [], refetch: refetchDeductions } =
+    useGetDeductionsQuery({ employeeId });
+  const [createDeduction, { isLoading: isCreatingDeduction }] =
+    useCreateDeductionMutation();
+  const [deleteDeduction, { isLoading: isDeletingDeduction }] =
+    useDeleteDeductionMutation();
 
   // Memoize query parameters to prevent unnecessary refetches
   const queryParams = useMemo(() => {
@@ -121,10 +128,10 @@ export default function AttendanceHistory() {
 
   // RTK Query hooks
   const { data: sessionData, isLoading: isLoadingSession } = useSessionQuery();
-  const { 
-    data: employee, 
+  const {
+    data: employee,
     isLoading: isLoadingEmployee,
-    refetch: refetchEmployee 
+    refetch: refetchEmployee,
   } = useGetEmployeeQuery(employeeId);
   const {
     data: attendanceData,
@@ -142,11 +149,11 @@ export default function AttendanceHistory() {
 
   // Get actual payroll data for this employee - try company payroll instead
   const companyId = (sessionData?.user as any)?.company_id;
-  const { 
-    data: payrollData, 
+  const {
+    data: payrollData,
     refetch: refetchPayroll,
     error: payrollError,
-    isLoading: isLoadingPayroll 
+    isLoading: isLoadingPayroll,
   } = useCalculateEmployeePayrollQuery({
     employeeId,
     startDate: dateRange.startDate,
@@ -154,14 +161,12 @@ export default function AttendanceHistory() {
   });
 
   // Also try company payroll as backup
-  const { 
-    data: companyPayrollData,
-    error: companyPayrollError 
-  } = useCalculateEmployeePayrollQuery({
-    companyId,
-    startDate: dateRange.startDate,
-    endDate: dateRange.endDate,
-  });
+  const { data: companyPayrollData, error: companyPayrollError } =
+    useCalculateEmployeePayrollQuery({
+      companyId,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    });
 
   // Debug payroll query
   console.log("Payroll query debug:", {
@@ -170,7 +175,7 @@ export default function AttendanceHistory() {
     endDate: dateRange.endDate,
     payrollData,
     payrollError,
-    isLoadingPayroll
+    isLoadingPayroll,
   });
   const [updateAttendance] = useEditAttendanceMutation();
   const userfetched = sessionData?.user;
@@ -246,7 +251,7 @@ export default function AttendanceHistory() {
       monthly_rate: employee.monthly_rate,
       contract_start_date: employee.contract_start_date,
       contract_finish_date: employee.contract_finish_date,
-      payrollData: payrollData
+      payrollData: payrollData,
     });
 
     const userCurrency = (sessionData?.user as any)?.currency || "RWF";
@@ -274,12 +279,12 @@ export default function AttendanceHistory() {
       filteredAttendanceRecords: payslipAttendance.length,
       attendanceRecords: attendanceData.map((r: any) => ({
         date: r.date,
-        status: r.status
+        status: r.status,
       })),
       filteredRecords: payslipAttendance.map((r: any) => ({
         date: r.date,
-        status: r.status
-      }))
+        status: r.status,
+      })),
     });
 
     const workingDays = payslipAttendance.filter(
@@ -299,44 +304,55 @@ export default function AttendanceHistory() {
     // Use actual payroll data if available, otherwise fallback to employee rates
     let dailyRate = 0;
     let baseSalary = 0;
-    
+
     if (payrollData && payrollData.length > 0) {
       // Find Jean Baptiste's payroll data
-      const employeePayroll = payrollData.find((p: any) => 
-        p.employeeName?.toLowerCase().includes('jean') || 
-        p.username?.toLowerCase().includes('jean') ||
-        p.employee_id === employee.id
+      const employeePayroll = payrollData.find(
+        (p: any) =>
+          p.employeeName?.toLowerCase().includes("jean") ||
+          p.username?.toLowerCase().includes("jean") ||
+          p.employee_id === employee.id
       );
-      
+
       if (employeePayroll) {
-        dailyRate = employeePayroll.dailyRate || employeePayroll.daily_rate || 0;
-        baseSalary = employeePayroll.totalActual || employeePayroll.total_actual || (dailyRate * workingDays);
-        
+        dailyRate =
+          employeePayroll.dailyRate || employeePayroll.daily_rate || 0;
+        baseSalary =
+          employeePayroll.totalActual ||
+          employeePayroll.total_actual ||
+          dailyRate * workingDays;
+
         console.log("Using payroll data:", {
           employeePayroll,
           dailyRate,
           baseSalary,
-          workingDays
+          workingDays,
         });
       } else {
-        console.warn("Employee not found in payroll data, using fallback calculation");
+        console.warn(
+          "Employee not found in payroll data, using fallback calculation"
+        );
         // Fallback to employee rates with enhanced parsing
         const parseRate = (rate: any): number => {
-          console.log("Parsing rate:", { rate, type: typeof rate, constructor: rate?.constructor?.name });
-          
+          console.log("Parsing rate:", {
+            rate,
+            type: typeof rate,
+            constructor: rate?.constructor?.name,
+          });
+
           if (rate === null || rate === undefined) return 0;
-          if (typeof rate === 'number') return rate;
-          if (typeof rate === 'string') return parseFloat(rate) || 0;
-          if (typeof rate === 'object') {
+          if (typeof rate === "number") return rate;
+          if (typeof rate === "string") return parseFloat(rate) || 0;
+          if (typeof rate === "object") {
             // Handle Prisma Decimal objects
-            if (rate.toNumber && typeof rate.toNumber === 'function') {
+            if (rate.toNumber && typeof rate.toNumber === "function") {
               const result = rate.toNumber();
               console.log("Decimal.toNumber():", result);
               return result;
             }
             // Handle objects with d property (Prisma Decimal internal structure)
             if (rate.d && Array.isArray(rate.d)) {
-              const result = parseFloat(rate.d.join('')) || 0;
+              const result = parseFloat(rate.d.join("")) || 0;
               console.log("Decimal.d array:", rate.d, "parsed:", result);
               return result;
             }
@@ -352,7 +368,12 @@ export default function AttendanceHistory() {
               const numMatch = jsonStr.match(/[\d.]+/);
               if (numMatch) {
                 const result = parseFloat(numMatch[0]);
-                console.log("JSON regex match:", numMatch[0], "parsed:", result);
+                console.log(
+                  "JSON regex match:",
+                  numMatch[0],
+                  "parsed:",
+                  result
+                );
                 return result;
               }
             } catch (e) {
@@ -365,16 +386,18 @@ export default function AttendanceHistory() {
           }
           return 0;
         };
-        
+
         dailyRate = parseRate(employee.daily_rate);
         const monthlyRate = parseRate(employee.monthly_rate);
-        
+
         if (salaryCalculation === "monthly rate" && monthlyRate > 0) {
           baseSalary = monthlyRate;
         } else if (dailyRate > 0) {
           baseSalary = dailyRate * workingDays;
         } else {
-          console.error(`Cannot calculate salary for ${employee.username}: no valid rates found`);
+          console.error(
+            `Cannot calculate salary for ${employee.username}: no valid rates found`
+          );
           baseSalary = 0;
         }
       }
@@ -382,28 +405,42 @@ export default function AttendanceHistory() {
       console.warn("No payroll data available, using employee rates");
       // Fallback to employee rates
       const parseRate = (rate: any): number => {
-        console.log("Parsing rate (fallback):", { rate, type: typeof rate, constructor: rate?.constructor?.name });
-        
+        console.log("Parsing rate (fallback):", {
+          rate,
+          type: typeof rate,
+          constructor: rate?.constructor?.name,
+        });
+
         if (rate === null || rate === undefined) return 0;
-        if (typeof rate === 'number') return rate;
-        if (typeof rate === 'string') return parseFloat(rate) || 0;
-        if (typeof rate === 'object') {
+        if (typeof rate === "number") return rate;
+        if (typeof rate === "string") return parseFloat(rate) || 0;
+        if (typeof rate === "object") {
           // Handle Prisma Decimal objects
-          if (rate.toNumber && typeof rate.toNumber === 'function') {
+          if (rate.toNumber && typeof rate.toNumber === "function") {
             const result = rate.toNumber();
             console.log("Decimal.toNumber() (fallback):", result);
             return result;
           }
           // Handle objects with d property (Prisma Decimal internal structure)
           if (rate.d && Array.isArray(rate.d)) {
-            const result = parseFloat(rate.d.join('')) || 0;
-            console.log("Decimal.d array (fallback):", rate.d, "parsed:", result);
+            const result = parseFloat(rate.d.join("")) || 0;
+            console.log(
+              "Decimal.d array (fallback):",
+              rate.d,
+              "parsed:",
+              result
+            );
             return result;
           }
           // Handle objects with value property
           if (rate.value !== undefined) {
             const result = parseFloat(String(rate.value)) || 0;
-            console.log("Object.value (fallback):", rate.value, "parsed:", result);
+            console.log(
+              "Object.value (fallback):",
+              rate.value,
+              "parsed:",
+              result
+            );
             return result;
           }
           // Try JSON.stringify then parse
@@ -412,7 +449,12 @@ export default function AttendanceHistory() {
             const numMatch = jsonStr.match(/[\d.]+/);
             if (numMatch) {
               const result = parseFloat(numMatch[0]);
-              console.log("JSON regex match (fallback):", numMatch[0], "parsed:", result);
+              console.log(
+                "JSON regex match (fallback):",
+                numMatch[0],
+                "parsed:",
+                result
+              );
               return result;
             }
           } catch (e) {
@@ -420,25 +462,44 @@ export default function AttendanceHistory() {
           }
           // Try to convert object to string then parse
           const result = parseFloat(String(rate)) || 0;
-          console.log("String conversion (fallback):", String(rate), "parsed:", result);
+          console.log(
+            "String conversion (fallback):",
+            String(rate),
+            "parsed:",
+            result
+          );
           return result;
         }
         return 0;
       };
-      
+
       dailyRate = parseRate(employee.daily_rate);
       const monthlyRate = parseRate(employee.monthly_rate);
-      
-      console.log("After parsing rates:", { dailyRate, monthlyRate, salaryCalculation, workingDays });
-      
+
+      console.log("After parsing rates:", {
+        dailyRate,
+        monthlyRate,
+        salaryCalculation,
+        workingDays,
+      });
+
       if (salaryCalculation === "monthly rate" && monthlyRate > 0) {
         baseSalary = monthlyRate;
         console.log("Using monthly rate:", baseSalary);
       } else if (dailyRate > 0) {
         baseSalary = dailyRate * workingDays;
-        console.log("Using daily rate calculation:", dailyRate, "*", workingDays, "=", baseSalary);
+        console.log(
+          "Using daily rate calculation:",
+          dailyRate,
+          "*",
+          workingDays,
+          "=",
+          baseSalary
+        );
       } else {
-        console.error(`Cannot calculate salary for ${employee.username}: dailyRate=${dailyRate}, monthlyRate=${monthlyRate}`);
+        console.error(
+          `Cannot calculate salary for ${employee.username}: dailyRate=${dailyRate}, monthlyRate=${monthlyRate}`
+        );
         baseSalary = 0;
       }
     }
@@ -450,7 +511,7 @@ export default function AttendanceHistory() {
     // Calculate manual deductions
     const manualDeductions = deductions.reduce((total, deduction: any) => {
       if (!deduction.date) return total;
-      
+
       try {
         const deductionDate = parseISO(deduction.date);
         if (
@@ -479,7 +540,7 @@ export default function AttendanceHistory() {
       totalDeductions,
       netSalary,
       dailyRate,
-      salaryCalculation
+      salaryCalculation,
     });
 
     return {
@@ -565,10 +626,10 @@ export default function AttendanceHistory() {
   const removeDeduction = async (deductionId: string) => {
     try {
       await deleteDeduction(deductionId).unwrap();
-      
+
       // Refetch deductions to update the list
       refetchDeductions();
-      
+
       toast({
         title: "Success",
         description: "Deduction removed successfully",
@@ -585,9 +646,10 @@ export default function AttendanceHistory() {
 
   const formatCurrency = (amount: number) => {
     // Handle NaN, undefined, or null values
-    const validAmount = isNaN(amount) || amount === null || amount === undefined ? 0 : amount;
+    const validAmount =
+      isNaN(amount) || amount === null || amount === undefined ? 0 : amount;
     const currency = (sessionData?.user as any)?.currency || "RWF";
-    
+
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currency === "RWF" ? "RWF" : "USD",
@@ -604,12 +666,12 @@ export default function AttendanceHistory() {
         title: "Refreshing Data",
         description: "Fetching latest employee salary information...",
       });
-      
+
       await refetchEmployee();
-      
+
       // Small delay to ensure data is updated
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       toast({
         title: "Generating Payslip",
         description: "Creating PDF with latest salary data...",
@@ -617,7 +679,7 @@ export default function AttendanceHistory() {
     } catch (error) {
       console.error("Error refreshing employee data:", error);
       toast({
-        title: "Warning", 
+        title: "Warning",
         description: "Could not refresh employee data. Using cached data.",
         variant: "destructive",
       });
@@ -627,7 +689,8 @@ export default function AttendanceHistory() {
     if (!payslipData) {
       toast({
         title: "Error",
-        description: "No payslip data available. Please ensure employee has salary rates set.",
+        description:
+          "No payslip data available. Please ensure employee has salary rates set.",
         variant: "destructive",
       });
       return;
@@ -779,7 +842,9 @@ export default function AttendanceHistory() {
       doc.setFont("helvetica", "normal");
       contractDeductions.forEach((deduction: any) => {
         addText(
-          `• ${deduction.type || 'Deduction'}: ${deduction.reason || 'No reason provided'}`,
+          `• ${deduction.type || "Deduction"}: ${
+            deduction.reason || "No reason provided"
+          }`,
           margin + 10,
           yPosition
         );
@@ -797,11 +862,7 @@ export default function AttendanceHistory() {
               yPosition
             );
           } catch (error) {
-            addText(
-              `  Date: ${deduction.date}`,
-              margin + 15,
-              yPosition
-            );
+            addText(`  Date: ${deduction.date}`, margin + 15, yPosition);
           }
         }
         yPosition += 10;
@@ -925,7 +986,8 @@ export default function AttendanceHistory() {
     if (!isDateWithinProjectRange(selectedDate)) {
       toast({
         title: "Invalid Date",
-        description: "Selected date must be within the employee's contract period.",
+        description:
+          "Selected date must be within the employee's contract period.",
         variant: "destructive",
       });
       return;
@@ -969,9 +1031,10 @@ export default function AttendanceHistory() {
     setSelectedAttendance(attendance);
     setSelectedStatus(attendance.status);
     // Initialize selected date with the attendance date
-    const attendanceDate = typeof attendance.date === "string" 
-      ? parseISO(attendance.date) 
-      : attendance.date;
+    const attendanceDate =
+      typeof attendance.date === "string"
+        ? parseISO(attendance.date)
+        : attendance.date;
     setSelectedDate(attendanceDate);
     setIsEditModalOpen(true);
   };
@@ -984,7 +1047,7 @@ export default function AttendanceHistory() {
   // Date validation function
   const isDateWithinProjectRange = (date: Date): boolean => {
     if (!employee) return false;
-    
+
     const contractStartDate = employee.contract_start_date
       ? parseISO(employee.contract_start_date)
       : null;
@@ -994,493 +1057,471 @@ export default function AttendanceHistory() {
 
     if (contractStartDate && date < contractStartDate) return false;
     if (contractEndDate && date > contractEndDate) return false;
-    
+
     return true;
   };
 
   // Get project date range for calendar
   const getProjectDateRange = () => {
     if (!employee) return { from: undefined, to: undefined };
-    
+
     const from = employee.contract_start_date
       ? parseISO(employee.contract_start_date)
       : undefined;
     const to = employee.contract_finish_date
       ? parseISO(employee.contract_finish_date)
       : undefined;
-      
+
     return { from, to };
   };
 
   // Loading state
   if (isLoadingEmployee || isLoadingAttendance || isLoadingSession) {
     return (
-      <div className="flex h-screen bg-white">
-        <Sidebar user={user} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardHeader user={user} />
-          <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
-            <div className="max-w-6xl mx-auto">
-              <div className="flex items-center gap-4 mb-6">
-                <Skeleton className="h-9 w-9 rounded-md" />
-                <Skeleton className="h-8 w-48" />
-              </div>
+      <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-4 mb-6">
+            <Skeleton className="h-9 w-9 rounded-md" />
+            <Skeleton className="h-8 w-48" />
+          </div>
 
-              <div className="grid gap-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <Skeleton
-                      key={`skeleton-${i}`}
-                      className="h-28 rounded-xl"
-                    />
-                  ))}
-                </div>
-
-                <div className="flex space-x-4 mb-6">
-                  {["All", "Present", "Late", "Absent"].map((tab) => (
-                    <Skeleton key={tab} className="h-10 w-20 rounded-md" />
-                  ))}
-                </div>
-
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton
-                      key={`skeleton-${i}`}
-                      className="h-16 w-full rounded-lg"
-                    />
-                  ))}
-                </div>
-              </div>
+          <div className="grid gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={`skeleton-${i}`} className="h-28 rounded-xl" />
+              ))}
             </div>
-          </main>
+
+            <div className="flex space-x-4 mb-6">
+              {["All", "Present", "Late", "Absent"].map((tab) => (
+                <Skeleton key={tab} className="h-10 w-20 rounded-md" />
+              ))}
+            </div>
+
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton
+                  key={`skeleton-${i}`}
+                  className="h-16 w-full rounded-lg"
+                />
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   // Error state
   if (!employee) {
     return (
-      <div className="flex h-screen bg-white">
-        <Sidebar user={user} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardHeader user={user} />
-          <main className="flex-1 overflow-y-auto p-6 bg-white">
-            <div className="max-w-6xl mx-auto h-full flex items-center justify-center">
-              <div className="text-center p-8 bg-white rounded-2xl shadow-sm border border-gray-100 max-w-md w-full">
-                <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                  Employee Not Found
-                </h2>
-                <p className="text-gray-500 mb-6">
-                  The requested employee record could not be found or you don't
-                  have permission to view it.
-                </p>
-                <Button onClick={() => router.back()} className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Attendance
-                </Button>
-              </div>
-            </div>
-          </main>
+      <main className="flex-1 overflow-y-auto p-6 bg-white">
+        <div className="max-w-6xl mx-auto h-full flex items-center justify-center">
+          <div className="text-center p-8 bg-white rounded-2xl shadow-sm border border-gray-100 max-w-md w-full">
+            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Employee Not Found
+            </h2>
+            <p className="text-gray-500 mb-6">
+              The requested employee record could not be found or you don't have
+              permission to view it.
+            </p>
+            <Button onClick={() => router.back()} className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Attendance
+            </Button>
+          </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   // Main render
   return (
-    <div className="flex h-screen bg-white">
-      <Sidebar user={user} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader user={user} />
-        <main className="flex-1 overflow-y-auto p-6 bg-white">
-          <div className="max-w-6xl mx-auto">
-            {/* Header with back button */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => router.back()}
-                  className="rounded-lg border-gray-200 hover:bg-gray-50"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span className="sr-only">Back</span>
-                </Button>
-                <div>
-                  <h1 className="text-2xl font-semibold text-gray-900">
-                    {employee.username}'s Attendance
-                  </h1>
-                  <p className="text-sm text-gray-500">
-                    Track and manage attendance records
-                  </p>
-                </div>
+    <>
+      <main className="flex-1 overflow-y-auto p-6 max-sm:p-2 bg-white">
+        <div className="w-full">
+          {/* Header with back button */}
+          <div className="flex items-center max-sm:flex-col max-sm:space-y-[20px] max-sm:items-start justify-between mb-6">
+            <div className="flex items-center  gap-4">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => router.back()}
+                className="rounded-lg border-gray-200 hover:bg-gray-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="sr-only">Back</span>
+              </Button>
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">
+                  {employee.username}'s Attendance
+                </h1>
+                <p className="text-sm text-gray-500">
+                  Track and manage attendance records
+                </p>
               </div>
+            </div>
 
-              {/* Payslip and Deduction Actions */}
-              <div className="flex items-center gap-3">
+            {/* Payslip and Deduction Actions */}
+            <div className="flex max-sm:flex-col max-sm:w-full items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setIsDeductionModalOpen(true)}
+                className="gap-2 max-sm:w-full"
+              >
+                <Minus className="h-4 w-4" />
+                Manage Deductions
+              </Button>
+              <div className="flex max-sm:flex-col max-sm:w-full gap-2">
                 <Button
+                  onClick={async () => {
+                    await refetchEmployee();
+                    await refetchPayroll();
+                    toast({
+                      title: "Data Refreshed",
+                      description:
+                        "Employee and payroll data has been refreshed",
+                    });
+                  }}
                   variant="outline"
-                  onClick={() => setIsDeductionModalOpen(true)}
                   className="gap-2"
                 >
-                  <Minus className="h-4 w-4" />
-                  Manage Deductions
+                  <Loader2 className="h-4 w-4" />
+                  Refresh Data
                 </Button>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={async () => {
-                      await refetchEmployee();
-                      await refetchPayroll();
-                      toast({
-                        title: "Data Refreshed",
-                        description: "Employee and payroll data has been refreshed",
-                      });
-                    }}
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <Loader2 className="h-4 w-4" />
-                    Refresh Data
-                  </Button>
-                  <Button
-                    onClick={generatePayslipPDF}
-                    className="gap-2 bg-orange-500 hover:bg-orange-600"
-                    disabled={!payslipData}
-                  >
-                    <Receipt className="h-4 w-4" />
-                    Generate Payslip PDF
-                  </Button>
-                </div>
+                <Button
+                  onClick={generatePayslipPDF}
+                  className="gap-2 bg-orange-500 hover:bg-orange-600"
+                  disabled={!payslipData}
+                >
+                  <Receipt className="h-4 w-4" />
+                  Generate Payslip PDF
+                </Button>
               </div>
             </div>
+          </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <StatCard
-                title="Total Days"
-                value={stats?.totalDays || 0}
-                icon={<Calendar className="h-4 w-4 text-gray-500" />}
-                color="bg-blue-50 text-blue-700"
-              />
-              <StatCard
-                title="Present"
-                value={stats?.presentDays || 0}
-                icon={<CheckCircle2 className="h-4 w-4 text-green-500" />}
-                color="bg-green-50 text-green-700"
-              />
-              <StatCard
-                title="Late Arrivals"
-                value={stats?.lateDays || 0}
-                icon={<Clock3 className="h-4 w-4 text-amber-500" />}
-                color="bg-amber-50 text-amber-700"
-              />
-              <StatCard
-                title="Absent"
-                value={stats?.absentDays || 0}
-                icon={<AlertCircle className="h-4 w-4 text-red-500" />}
-                color="bg-red-50 text-red-700"
-              />
-            </div>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <StatCard
+              title="Total Days"
+              value={stats?.totalDays || 0}
+              icon={<Calendar className="h-4 w-4 text-gray-500" />}
+              color="bg-blue-50 text-blue-700"
+            />
+            <StatCard
+              title="Present"
+              value={stats?.presentDays || 0}
+              icon={<CheckCircle2 className="h-4 w-4 text-green-500" />}
+              color="bg-green-50 text-green-700"
+            />
+            <StatCard
+              title="Late Arrivals"
+              value={stats?.lateDays || 0}
+              icon={<Clock3 className="h-4 w-4 text-amber-500" />}
+              color="bg-amber-50 text-amber-700"
+            />
+            <StatCard
+              title="Absent"
+              value={stats?.absentDays || 0}
+              icon={<AlertCircle className="h-4 w-4 text-red-500" />}
+              color="bg-red-50 text-red-700"
+            />
+          </div>
 
-            <Card className="overflow-hidden border border-gray-200">
-              <div className="p-6 pb-0">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-medium">Attendance Records</h3>
-                    <p className="text-sm text-gray-500">
-                      Showing records for the last 90 days
-                    </p>
-                  </div>
-                  <Tabs
-                    value={activeTab}
-                    onValueChange={setActiveTab}
-                    className="w-full sm:w-auto"
-                  >
-                    <TabsList className="grid w-full grid-cols-5">
-                      <TabsTrigger value="all" className="text-xs">
-                        All
-                      </TabsTrigger>
-                      <TabsTrigger value="present" className="text-xs">
-                        Present
-                      </TabsTrigger>
-                      <TabsTrigger value="late" className="text-xs">
-                        Late
-                      </TabsTrigger>
-                      <TabsTrigger value="absent" className="text-xs">
-                        Absent
-                      </TabsTrigger>
-                      <TabsTrigger value="withReasons" className="text-xs">
-                        With Reasons
-                      </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="all" className="space-y-8">
-                      {Object.keys(groupedAttendance).length > 0 ? (
-                        <div className="space-y-8">
-                          {Object.entries(groupedAttendance)
-                            .sort(
-                              ([a], [b]) =>
-                                new Date(b).getTime() - new Date(a).getTime()
-                            )
-                            .map(([monthYear, records]) => (
-                              <div
-                                key={`month-${monthYear}`}
-                                className="space-y-3"
-                              >
-                                <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">
-                                  {monthYear}
-                                </h4>
-                                <div className="space-y-2">
-                                  {(records as any[]).map((record) => (
-                                    <div
-                                      key={`record-${
-                                        record._id || record.date
-                                      }`}
-                                      className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border ${
-                                        isToday(record.date)
-                                          ? "border-blue-200 bg-blue-50"
-                                          : "border-gray-100 hover:bg-gray-50"
-                                      } transition-colors`}
-                                    >
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-3">
-                                          <div
-                                            className={`flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center ${
+          <Card className="overflow-hidden border border-gray-200">
+            <div className="p-6 pb-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-medium">Attendance Records</h3>
+                  <p className="text-sm text-gray-500">
+                    Showing records for the last 90 days
+                  </p>
+                </div>
+                <Tabs
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  className="w-full sm:w-auto"
+                >
+                  <TabsList className="sm:grid w-full overflow-x-auto sm:grid-cols-5 max-sm:flex max-sm:flex-row ">
+                    <TabsTrigger value="all" className="text-xs">
+                      All
+                    </TabsTrigger>
+                    <TabsTrigger value="present" className="text-xs">
+                      Present
+                    </TabsTrigger>
+                    <TabsTrigger value="late" className="text-xs">
+                      Late
+                    </TabsTrigger>
+                    <TabsTrigger value="absent" className="text-xs">
+                      Absent
+                    </TabsTrigger>
+                    <TabsTrigger value="withReasons" className="text-xs">
+                      With Reasons
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="all" className="space-y-8">
+                    {Object.keys(groupedAttendance).length > 0 ? (
+                      <div className="space-y-8">
+                        {Object.entries(groupedAttendance)
+                          .sort(
+                            ([a], [b]) =>
+                              new Date(b).getTime() - new Date(a).getTime()
+                          )
+                          .map(([monthYear, records]) => (
+                            <div
+                              key={`month-${monthYear}`}
+                              className="space-y-3"
+                            >
+                              <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">
+                                {monthYear}
+                              </h4>
+                              <div className="space-y-2">
+                                {(records as any[]).map((record) => (
+                                  <div
+                                    key={`record-${record._id || record.date}`}
+                                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border ${
+                                      isToday(record.date)
+                                        ? "border-blue-200 bg-blue-50"
+                                        : "border-gray-100 hover:bg-gray-50"
+                                    } transition-colors`}
+                                  >
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-3">
+                                        <div
+                                          className={`flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center ${
+                                            isToday(record.date)
+                                              ? "bg-blue-100 text-blue-600"
+                                              : "bg-gray-100 text-gray-600"
+                                          }`}
+                                        >
+                                          <Calendar className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                          <p
+                                            className={`font-medium ${
                                               isToday(record.date)
-                                                ? "bg-blue-100 text-blue-600"
-                                                : "bg-gray-100 text-gray-600"
+                                                ? "text-blue-800"
+                                                : "text-gray-900"
                                             }`}
                                           >
-                                            <Calendar className="h-5 w-5" />
-                                          </div>
-                                          <div>
-                                            <p
-                                              className={`font-medium ${
-                                                isToday(record.date)
-                                                  ? "text-blue-800"
-                                                  : "text-gray-900"
-                                              }`}
-                                            >
-                                              {format(
-                                                record.date,
-                                                "EEEE, MMMM d, yyyy"
-                                              )}
-                                              {isToday(record.date) && (
-                                                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                  Today
-                                                </span>
-                                              )}
-                                            </p>
-                                            {record.notes && (
-                                              <p className="text-sm text-gray-500 mt-1">
-                                                {record.notes}
-                                              </p>
+                                            {format(
+                                              record.date,
+                                              "EEEE, MMMM d, yyyy"
                                             )}
-                                          </div>
+                                            {isToday(record.date) && (
+                                              <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                Today
+                                              </span>
+                                            )}
+                                          </p>
+                                          {record.notes && (
+                                            <p className="text-sm text-gray-500 mt-1">
+                                              {record.notes}
+                                            </p>
+                                          )}
                                         </div>
                                       </div>
-                                      <div className="mt-3 sm:mt-0 flex items-center gap-4">
-                                        {record.hoursWorked && (
-                                          <TooltipProvider>
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <div className="flex items-center text-sm text-gray-500">
-                                                  <Clock className="h-4 w-4 mr-1.5 text-gray-400" />
-                                                  {record.hoursWorked} hours
-                                                </div>
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                <p>Hours worked</p>
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
-                                        )}
-                                        {getStatusBadge(record.status)}
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => openEditModal(record)}
-                                        >
-                                          Edit
-                                        </Button>
-                                      </div>
                                     </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      ) : (
-                        <div className="py-12 text-center">
-                          <div className="mx-auto h-24 w-24 text-gray-300 mb-4">
-                            <User className="h-full w-full opacity-40" />
-                          </div>
-                          <h3 className="text-lg font-medium text-gray-900 mb-1">
-                            No attendance records
-                          </h3>
-                          <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                            {activeTab === "all"
-                              ? "No attendance records found for this employee."
-                              : `No ${activeTab.toLowerCase()} records found for this employee.`}
-                          </p>
-                          <Button
-                            variant="outline"
-                            onClick={() => setActiveTab("all")}
-                          >
-                            View all records
-                          </Button>
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="present" className="space-y-8">
-                      {filteredAttendance.some(
-                        (r: any) => r.status?.toLowerCase() === "present"
-                      ) ? (
-                        <div className="space-y-8">
-                          {/* Present records content */}
-                        </div>
-                      ) : (
-                        <div className="py-12 text-center">
-                          <div className="mx-auto h-24 w-24 text-gray-300 mb-4">
-                            <User className="h-full w-full opacity-40" />
-                          </div>
-                          <h3 className="text-lg font-medium text-gray-900 mb-1">
-                            No present records
-                          </h3>
-                          <p className="text-gray-500">
-                            No present records found for this employee.
-                          </p>
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="late" className="space-y-8">
-                      {filteredAttendance.some(
-                        (r: any) => r.status?.toLowerCase() === "late"
-                      ) ? (
-                        <div className="space-y-8">
-                          {/* Late records content */}
-                        </div>
-                      ) : (
-                        <div className="py-12 text-center">
-                          <div className="mx-auto h-24 w-24 text-gray-300 mb-4">
-                            <User className="h-full w-full opacity-40" />
-                          </div>
-                          <h3 className="text-lg font-medium text-gray-900 mb-1">
-                            No late records
-                          </h3>
-                          <p className="text-gray-500">
-                            No late records found for this employee.
-                          </p>
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="absent" className="space-y-8">
-                      {filteredAttendance.some(
-                        (r: any) => r.status?.toLowerCase() === "absent"
-                      ) ? (
-                        <div className="space-y-8">
-                          {/* Absent records content */}
-                        </div>
-                      ) : (
-                        <div className="py-12 text-center">
-                          <div className="mx-auto h-24 w-24 text-gray-300 mb-4">
-                            <User className="h-full w-full opacity-40" />
-                          </div>
-                          <h3 className="text-lg font-medium text-gray-900 mb-1">
-                            No absent records
-                          </h3>
-                          <p className="text-gray-500">
-                            No absent records found for this employee.
-                          </p>
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="withReasons" className="space-y-4">
-                      {isLoadingAttendance ? (
-                        <div className="space-y-4">
-                          {[1, 2, 3].map((i) => (
-                            <Skeleton
-                              key={`skeleton-${i}`}
-                              className="h-20 w-full"
-                            />
-                          ))}
-                        </div>
-                      ) : attendancesWithReasons?.length > 0 ? (
-                        <div className="space-y-4">
-                          {attendancesWithReasons.map((record: any) => (
-                            <Card
-                              key={`attendance-${record._id}-${record.date}`}
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <p className="font-medium">
-                                      {format(
-                                        parseISO(record.date),
-                                        "EEEE, MMMM d, yyyy"
+                                    <div className="mt-3 sm:mt-0 flex items-center gap-4">
+                                      {record.hoursWorked && (
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div className="flex items-center text-sm text-gray-500">
+                                                <Clock className="h-4 w-4 mr-1.5 text-gray-400" />
+                                                {record.hoursWorked} hours
+                                              </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>Hours worked</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
                                       )}
-                                    </p>
-                                    <div className="flex items-center text-sm text-muted-foreground mt-1">
-                                      <Clock3 className="h-4 w-4 mr-1" />
-                                      <span>Status: {record.status}</span>
+                                      {getStatusBadge(record.status)}
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => openEditModal(record)}
+                                      >
+                                        Edit
+                                      </Button>
                                     </div>
-                                    {record.reason && (
-                                      <div className="mt-2">
-                                        <p className="text-sm font-medium">
-                                          Reason:
-                                        </p>
-                                        <p className="text-sm text-muted-foreground line-clamp-2">
-                                          {record.reason}
-                                        </p>
-                                      </div>
-                                    )}
                                   </div>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleViewReason(record)}
-                                  >
-                                    View Details
-                                  </Button>
-                                </div>
-                              </CardContent>
-                            </Card>
+                                ))}
+                              </div>
+                            </div>
                           ))}
+                      </div>
+                    ) : (
+                      <div className="py-12 text-center">
+                        <div className="mx-auto h-24 w-24 text-gray-300 mb-4">
+                          <User className="h-full w-full opacity-40" />
                         </div>
-                      ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <p>
-                            No attendance records with reasons found for the
-                            selected period.
-                          </p>
+                        <h3 className="text-lg font-medium text-gray-900 mb-1">
+                          No attendance records
+                        </h3>
+                        <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                          {activeTab === "all"
+                            ? "No attendance records found for this employee."
+                            : `No ${activeTab.toLowerCase()} records found for this employee.`}
+                        </p>
+                        <Button
+                          variant="outline"
+                          onClick={() => setActiveTab("all")}
+                        >
+                          View all records
+                        </Button>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="present" className="space-y-8">
+                    {filteredAttendance.some(
+                      (r: any) => r.status?.toLowerCase() === "present"
+                    ) ? (
+                      <div className="space-y-8">
+                        {/* Present records content */}
+                      </div>
+                    ) : (
+                      <div className="py-12 text-center">
+                        <div className="mx-auto h-24 w-24 text-gray-300 mb-4">
+                          <User className="h-full w-full opacity-40" />
                         </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-1">
+                          No present records
+                        </h3>
+                        <p className="text-gray-500">
+                          No present records found for this employee.
+                        </p>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="late" className="space-y-8">
+                    {filteredAttendance.some(
+                      (r: any) => r.status?.toLowerCase() === "late"
+                    ) ? (
+                      <div className="space-y-8">
+                        {/* Late records content */}
+                      </div>
+                    ) : (
+                      <div className="py-12 text-center">
+                        <div className="mx-auto h-24 w-24 text-gray-300 mb-4">
+                          <User className="h-full w-full opacity-40" />
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-1">
+                          No late records
+                        </h3>
+                        <p className="text-gray-500">
+                          No late records found for this employee.
+                        </p>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="absent" className="space-y-8">
+                    {filteredAttendance.some(
+                      (r: any) => r.status?.toLowerCase() === "absent"
+                    ) ? (
+                      <div className="space-y-8">
+                        {/* Absent records content */}
+                      </div>
+                    ) : (
+                      <div className="py-12 text-center">
+                        <div className="mx-auto h-24 w-24 text-gray-300 mb-4">
+                          <User className="h-full w-full opacity-40" />
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-1">
+                          No absent records
+                        </h3>
+                        <p className="text-gray-500">
+                          No absent records found for this employee.
+                        </p>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="withReasons" className="space-y-4">
+                    {isLoadingAttendance ? (
+                      <div className="space-y-4">
+                        {[1, 2, 3].map((i) => (
+                          <Skeleton
+                            key={`skeleton-${i}`}
+                            className="h-20 w-full"
+                          />
+                        ))}
+                      </div>
+                    ) : attendancesWithReasons?.length > 0 ? (
+                      <div className="space-y-4">
+                        {attendancesWithReasons.map((record: any) => (
+                          <Card key={`attendance-${record._id}-${record.date}`}>
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium">
+                                    {format(
+                                      parseISO(record.date),
+                                      "EEEE, MMMM d, yyyy"
+                                    )}
+                                  </p>
+                                  <div className="flex items-center text-sm text-muted-foreground mt-1">
+                                    <Clock3 className="h-4 w-4 mr-1" />
+                                    <span>Status: {record.status}</span>
+                                  </div>
+                                  {record.reason && (
+                                    <div className="mt-2">
+                                      <p className="text-sm font-medium">
+                                        Reason:
+                                      </p>
+                                      <p className="text-sm text-muted-foreground line-clamp-2">
+                                        {record.reason}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewReason(record)}
+                                >
+                                  View Details
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>
+                          No attendance records with reasons found for the
+                          selected period.
+                        </p>
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </div>
+            </div>
 
-              <Separator className="mt-6" />
+            <Separator className="mt-6" />
 
-              <div className="p-6 pt-4">{/* Existing content */}</div>
+            <div className="p-6 pt-4">{/* Existing content */}</div>
 
-              {Object.keys(groupedAttendance).length > 0 && (
-                <CardFooter className="bg-gray-50 px-6 py-4 border-t border-gray-100">
-                  <p className="text-xs text-gray-500">
-                    Showing {filteredAttendance.length} records • Last updated{" "}
-                    {new Date().toLocaleTimeString()}
-                  </p>
-                </CardFooter>
-              )}
-            </Card>
-          </div>
-        </main>
-      </div>
+            {Object.keys(groupedAttendance).length > 0 && (
+              <CardFooter className="bg-gray-50 px-6 py-4 border-t border-gray-100">
+                <p className="text-xs text-gray-500">
+                  Showing {filteredAttendance.length} records • Last updated{" "}
+                  {new Date().toLocaleTimeString()}
+                </p>
+              </CardFooter>
+            )}
+          </Card>
+        </div>
+      </main>
 
       {/* Edit Attendance Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
@@ -1685,8 +1726,8 @@ export default function AttendanceHistory() {
                   />
                 </div>
 
-                <Button 
-                  onClick={addDeduction} 
+                <Button
+                  onClick={addDeduction}
                   className="w-full gap-2"
                   disabled={isCreatingDeduction}
                 >
@@ -1766,7 +1807,7 @@ export default function AttendanceHistory() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
 
