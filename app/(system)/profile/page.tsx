@@ -164,170 +164,167 @@ export default function ProfilePage() {
   };
   console.log("user", sessionData.user);
   return (
-    <div className="flex h-screen bg-white">
-      <Sidebar user={user} />
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader />
-        <div className="container  overflow-y-auto mx-auto px-4 py-8">
-          <div className="max-w-3xl mx-auto">
-            <Card>
-              <CardHeader className="border-b">
-                <div className="flex items-center justify-between">
-                  <CardTitle>Personal Information</CardTitle>
-                  {!isEditing && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsEditing(true)}
-                      disabled={isUpdating}
-                    >
-                      Edit Profile
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center mb-8">
-                  <Avatar className="h-24 w-24 mb-4">
-                    <AvatarImage
-                      src={
-                        "http://localhost:4000/" +
-                          sessionData?.user?.image_url || ""
-                      }
-                      className="object-cover"
-                    />
-                    <AvatarFallback>
-                      {sessionData?.user?.username?.charAt(0).toUpperCase() ||
-                        "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  {isEditing && (
-                    <div>
-                      <input
-                        type="file"
-                        id="profile-picture"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleFileChange}
-                        disabled={isUpdating || isUpdatingPicture}
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mb-4"
-                        asChild
-                      >
-                        <label htmlFor="profile-picture">
-                          {selectedFile
-                            ? "Change Selected Photo"
-                            : "Change Photo"}
-                        </label>
-                      </Button>
-                      {selectedFile && (
-                        <p className="text-xs text-muted-foreground text-center">
-                          {selectedFile.name} (
-                          {(selectedFile.size / 1024).toFixed(1)} KB)
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="username">Full Name</Label>
-                      {isEditing ? (
-                        <Input
-                          id="username"
-                          name="username"
-                          value={formData.username}
-                          onChange={handleChange}
-                        />
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          {sessionData?.user?.username || "Not provided"}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {sessionData?.user?.email || "No email available"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {isEditing && (
-                    <div className="flex justify-end space-x-4 pt-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setIsEditing(false);
-                          // Reset form on cancel
-                          setFormData({
-                            username: sessionData?.user?.username || "",
-                            email: sessionData?.user?.email || "",
-                          });
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={!isEditing || isUpdating}>
-                        {isUpdating ? "Saving..." : "Save Changes"}
-                      </Button>
-                    </div>
-                  )}
-                </form>
-              </CardContent>
-            </Card>
-
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Account Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h3 className="font-medium">Change Password</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Set a new password for your account
-                    </p>
-                  </div>
+    <>
+      <div className="container  overflow-y-auto mx-auto px-4 max-sm:px-2 py-8 max-sm:py-4">
+        <div className="max-w-3xl mx-auto">
+          <Card>
+            <CardHeader className="border-b">
+              <div className="flex items-center  justify-between">
+                <CardTitle className="text-[17px]">
+                  Personal Information
+                </CardTitle>
+                {!isEditing && (
                   <Button
                     variant="outline"
-                    onClick={() => setIsChangePasswordOpen(true)}
-                    // disabled={
-                    // isChangingPasswordState ||
-                    // isVerifying ||
-                    // !verificationCode || !newPassword || !confirmPassword
-                    // }
+                    onClick={() => setIsEditing(true)}
+                    disabled={isUpdating}
                   >
-                    {isChangingPasswordState || isVerifying
-                      ? "Processing..."
-                      : "Update Password"}
+                    Edit Profile
                   </Button>
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center mb-8">
+                <Avatar className="h-24 w-24 mb-4">
+                  <AvatarImage
+                    src={
+                      "http://localhost:4000/" + sessionData?.user?.image_url ||
+                      ""
+                    }
+                    className="object-cover"
+                  />
+                  <AvatarFallback>
+                    {sessionData?.user?.username?.charAt(0).toUpperCase() ||
+                      "U"}
+                  </AvatarFallback>
+                </Avatar>
+                {isEditing && (
                   <div>
-                    <h3 className="font-medium">Delete Account</h3>
+                    <input
+                      type="file"
+                      id="profile-picture"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFileChange}
+                      disabled={isUpdating || isUpdatingPicture}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mb-4"
+                      asChild
+                    >
+                      <label htmlFor="profile-picture">
+                        {selectedFile
+                          ? "Change Selected Photo"
+                          : "Change Photo"}
+                      </label>
+                    </Button>
+                    {selectedFile && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        {selectedFile.name} (
+                        {(selectedFile.size / 1024).toFixed(1)} KB)
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Full Name</Label>
+                    {isEditing ? (
+                      <Input
+                        id="username"
+                        name="username"
+                        value={formData.username}
+                        onChange={handleChange}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {sessionData?.user?.username || "Not provided"}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
                     <p className="text-sm text-muted-foreground">
-                      Permanently delete your account and all associated data
+                      {sessionData?.user?.email || "No email available"}
                     </p>
                   </div>
-                  <Button
-                    variant="destructive"
-                    onClick={() => setIsDeleteDialogOpen(true)}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? "Deleting..." : "Delete Account"}
-                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+
+                {isEditing && (
+                  <div className="flex justify-end space-x-4 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsEditing(false);
+                        // Reset form on cancel
+                        setFormData({
+                          username: sessionData?.user?.username || "",
+                          email: sessionData?.user?.email || "",
+                        });
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={!isEditing || isUpdating}>
+                      {isUpdating ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
+                )}
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Account Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center max-sm:flex-col max-sm:justify-center max-sm:items-start max-sm:space-y-[15px] justify-between p-4 border rounded-lg">
+                <div>
+                  <h3 className="font-medium">Change Password</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Set a new password for your account
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsChangePasswordOpen(true)}
+                  // disabled={
+                  // isChangingPasswordState ||
+                  // isVerifying ||
+                  // !verificationCode || !newPassword || !confirmPassword
+                  // }
+                >
+                  {isChangingPasswordState || isVerifying
+                    ? "Processing..."
+                    : "Update Password"}
+                </Button>
+              </div>
+              <div className="flex items-center max-sm:flex-col max-sm:justify-center max-sm:items-start max-sm:space-y-[15px] justify-between p-4 border rounded-lg">
+                <div>
+                  <h3 className="font-medium">Delete Account</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Permanently delete your account and all associated data
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Deleting..." : "Delete Account"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -681,6 +678,6 @@ export default function ProfilePage() {
           </AlertDialogHeader>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
