@@ -1110,7 +1110,7 @@ export default function AttendancePayroll() {
   const router = useRouter();
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between max-sm:flex-col max-sm:space-y-[20px] max-sm:items-start items-center mb-6">
         <h1 className="text-2xl font-bold">Attendance & Payroll Management</h1>
 
         <div className="flex gap-2">
@@ -1134,8 +1134,8 @@ export default function AttendancePayroll() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border flex justify-between items-center h-20 mb-5 pl-2">
-        <div className="flex h-10 items-center rounded-lg ">
+      <div className="bg-white max-sm:pb-[10px] max-sm:border-none  rounded-lg max-sm:rounded-none border max-sm:items-start flex justify-between items-center max-sm:h-fit h-20 mb-5 pl-2">
+        <div className="flex h-10 max-sm:flex-col max-sm:space-y-[10px] max-sm:p-2 max-sm:justify-start items-center rounded-lg ">
           {[
             { id: "attendance", label: "Attendance" },
             { id: "leave", label: "Leave Tracking" },
@@ -1158,7 +1158,7 @@ export default function AttendancePayroll() {
           ))}
         </div>
 
-        <div className="p-4 flex items-center gap-1">
+        <div className="p-4 max-sm:p-2 flex max-sm:flex-col max-sm:space-y-[10px] max-sm:items-start  items-center sm:gap-1">
           <div className="relative w-52">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -1191,7 +1191,7 @@ export default function AttendancePayroll() {
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-full h-14 w-14 flex items-center justify-center"
+            className="rounded-full h-14 w-14 max-sm:hidden flex items-center justify-center"
             onClick={handleRefreshData}
             disabled={isLoading}
           >
@@ -1208,7 +1208,7 @@ export default function AttendancePayroll() {
             Filter employees by trade, project, daily rate, or remaining
             contract days
           </div>
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-5 max-sm:grid-cols-1 gap-4">
             <Select
               value={filters.trade}
               onValueChange={(value) =>
@@ -1320,435 +1320,439 @@ export default function AttendancePayroll() {
             <>
               <div className="px-4 pb-4"></div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full border rounded-md">
-                  <thead>
-                    <tr className="border-t border-b text-[12px] text-gray-500">
-                      <th className="px-4 py-3 text-left border-r">
-                        Employee Name
-                      </th>
-                      <th className="px-4 py-3 text-left border-r">
-                        Position/Trade
-                      </th>
-                      <th className="px-4 py-3 text-left border-r">
-                        Assigned Project
-                      </th>
-                      <th className="px-4 py-3 text-left border-r">
-                        Contract Start Date
-                      </th>
-                      <th className="px-4 py-3 text-left border-r">
-                        Contract Finish Date
-                      </th>
-                      <th className="px-4 py-3 text-left border-r">
-                        Remaining Days
-                      </th>
-                      {(permissions.full_access ||
-                        permissions.approve_attendance ||
-                        permissions.mark_attendance) && (
+              <div className=" sm:overflow-x-auto">
+                <div className="sm:hidden overflow-x-auto">
+                  <table className="w-full border rounded-md">
+                    <thead>
+                      <tr className="border-t border-b text-[12px] text-gray-500">
                         <th className="px-4 py-3 text-left border-r">
-                          <div className="flex items-center justify-between">
-                            <span>Mark Attendance</span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1 text-xs h-7 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
-                              onClick={() => {
-                                setBulkAttendanceStatus("Present");
-                                setShowMarkAllModal(true);
-                              }}
-                            >
-                              <Users className="h-3 w-3" />
-                              Mark Bulk Attendance
-                            </Button>
-                          </div>
+                          Employee Name
                         </th>
-                      )}
-                      <th className="w-fit px-4 py-3 text-center">
-                        Attendance History
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-[14px]">
-                    {currentItems.map((employee: any) => (
-                      <React.Fragment key={employee.id}>
-                        <tr className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-3 border-r">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">
-                                {employee.username}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 border-r">
-                            {employee.trade_position.trade_name}
-                          </td>
-                          <td className="px-4 py-3 border-r">
-                            {employee.project?.project_name ||
-                              "No Project Assigned"}
-                          </td>
-                          <td className="px-4 py-3 border-r">
-                            {formatDate(employee.created_date)}
-                          </td>
-                          <td className="px-4 py-3 border-r">
-                            {formatDate(employee.contract_finish_date)}
-                          </td>
-                          <td className="px-4 py-3 border-r">
-                            <Badge
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium bg-red-50 text-red-600 border-0`}
-                            >
-                              {employee.remaining_days < 10
-                                ? `${employee.remaining_days}`
-                                : employee.remaining_days}
-                            </Badge>
-                          </td>
-                          {(permissions.full_access ||
-                            permissions.approve_attendance ||
-                            permissions.mark_attendance) && (
-                            <td className="px-4 py-3 border-r">
-                              <Popover
-                                open={openAttendanceDropdown === employee.id}
-                                onOpenChange={(open) => {
-                                  if (open) {
-                                    setOpenAttendanceDropdown(employee.id);
-                                  } else {
-                                    setOpenAttendanceDropdown(null);
-                                  }
+                        <th className="px-4 py-3 text-left border-r">
+                          Position/Trade
+                        </th>
+                        <th className="px-4 py-3 text-left border-r">
+                          Assigned Project
+                        </th>
+                        <th className="px-4 py-3 text-left border-r">
+                          Contract Start Date
+                        </th>
+                        <th className="px-4 py-3 text-left border-r">
+                          Contract Finish Date
+                        </th>
+                        <th className="px-4 py-3 text-left border-r">
+                          Remaining Days
+                        </th>
+                        {(permissions.full_access ||
+                          permissions.approve_attendance ||
+                          permissions.mark_attendance) && (
+                          <th className="px-4 py-3 text-left border-r">
+                            <div className="flex items-center justify-between">
+                              <span>Mark Attendance</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1 text-xs h-7 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+                                onClick={() => {
+                                  setBulkAttendanceStatus("Present");
+                                  setShowMarkAllModal(true);
                                 }}
                               >
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs h-8 bg-transparent"
-                                  >
-                                    Mark Attendance
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  className="w-auto p-0"
-                                  align="start"
-                                >
-                                  <div className="p-4 space-y-2">
-                                    <div className="text-sm font-medium text-muted-foreground mb-2">
-                                      Mark Attendance
-                                    </div>
-                                    <Button
-                                      variant="outline"
-                                      className="w-full justify-center bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-100"
-                                      onClick={() =>
-                                        handleIndividualAttendanceMark(
-                                          employee,
-                                          "Present"
-                                        )
-                                      }
-                                    >
-                                      Present
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      className="w-full justify-center bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 border-orange-100"
-                                      onClick={() =>
-                                        handleIndividualAttendanceMark(
-                                          employee,
-                                          "Late"
-                                        )
-                                      }
-                                    >
-                                      Late
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      className="w-full justify-center bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 border-red-100"
-                                      onClick={() =>
-                                        handleIndividualAttendanceMark(
-                                          employee,
-                                          "Absent"
-                                        )
-                                      }
-                                    >
-                                      Absent
-                                    </Button>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-                            </td>
-                          )}
-                          <td className="px-4 py-3 text-center">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                router.push(
-                                  `/attendance-history/${employee.id}`
-                                )
-                              }
-                              className="text-sm"
-                            >
-                              View History
-                            </Button>
-                          </td>
-                        </tr>
-                        {expandedEmployee === employee.id && (
-                          <tr className="bg-gray-50">
-                            <td colSpan={9} className="px-4 py-4">
-                              <div className="border rounded-md bg-white p-4">
-                                <div className="flex justify-between items-center mb-4">
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="font-medium">
-                                      {currentMonth}
-                                    </h3>
-                                    <div className="flex gap-1">
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6"
-                                        onClick={() => {
-                                          toast({
-                                            title: "Previous Month",
-                                            description:
-                                              "Navigating to previous month",
-                                          });
-                                        }}
-                                      >
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          width="16"
-                                          height="16"
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          strokeWidth="2"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                        >
-                                          <path d="m15 18-6-6 6-6"></path>
-                                          <path d="m15 18-6-6 6-6"></path>
-                                        </svg>
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6"
-                                        onClick={() => {
-                                          toast({
-                                            title: "Next Month",
-                                            description:
-                                              "Navigating to next month",
-                                          });
-                                        }}
-                                      >
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          width="16"
-                                          height="16"
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          strokeWidth="2"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                        >
-                                          <path d="m9 18 6-6-6-6"></path>
-                                          <path d="m9 18 6-6-6-6"></path>
-                                        </svg>
-                                      </Button>
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <Select
-                                      value={attendancePeriod}
-                                      onValueChange={(value) =>
-                                        setAttendancePeriod(value)
-                                      }
-                                    >
-                                      <SelectTrigger className="h-8 w-32">
-                                        <SelectValue placeholder="Show" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="1week">
-                                          1 Week
-                                        </SelectItem>
-                                        <SelectItem value="2weeks">
-                                          2 Weeks
-                                        </SelectItem>
-                                        <SelectItem value="month">
-                                          Full Month
-                                        </SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-7 gap-4">
-                                  {getFilteredAttendance(
-                                    employee.attendance,
-                                    attendancePeriod
-                                  ).map((day: any, index: any) => (
-                                    <div key={index} className="text-center">
-                                      <div className="text-sm font-medium mb-1">
-                                        {day.day < 10 ? `0${day.day}` : day.day}
-                                      </div>
-                                      <div className="text-xs text-muted-foreground mb-2">
-                                        {day.weekday}
-                                      </div>
-                                      <div className="flex flex-col gap-1">
-                                        <Badge
-                                          className={
-                                            day.status === "present"
-                                              ? "bg-green-50 text-green-700 border-0"
-                                              : day.status === "late"
-                                              ? "bg-orange-50 text-orange-500 border-0"
-                                              : "bg-red-50 text-red-700 border-0"
-                                          }
-                                        >
-                                          {day.status}
-                                        </Badge>
-                                        {day.status !== "late" && (
-                                          <Badge
-                                            variant="outline"
-                                            className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
-                                            onClick={() => {
-                                              if (
-                                                permissions.full_access ||
-                                                permissions.approve_attendance ||
-                                                permissions.mark_attendance
-                                              ) {
-                                                updateAttendance({
-                                                  employeeId: employee.id,
-                                                  status: "Late",
-                                                  date: day.date,
-                                                })
-                                                  .unwrap()
-                                                  .then(() => {
-                                                    toast({
-                                                      title:
-                                                        "Attendance Updated",
-                                                      description: `Marked as Late for ${day.day} ${currentMonth}`,
-                                                    });
-                                                    refetch();
-                                                  })
-                                                  .catch((error) => {
-                                                    toast({
-                                                      title: "Error",
-                                                      description:
-                                                        "Failed to update attendance status.",
-                                                      variant: "destructive",
-                                                    });
-                                                  });
-                                              } else {
-                                                toast({
-                                                  title: "Error",
-                                                  description:
-                                                    "You do not have privilege to mark attendance",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                          >
-                                            Late
-                                          </Badge>
-                                        )}
-                                        {day.status !== "absent" && (
-                                          <Badge
-                                            variant="outline"
-                                            className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
-                                            onClick={() => {
-                                              if (
-                                                permissions.full_access ||
-                                                permissions.approve_attendance ||
-                                                permissions.mark_attendance
-                                              ) {
-                                                updateAttendance({
-                                                  employeeId: employee.id,
-                                                  status: "Absent",
-                                                  date: day.date,
-                                                })
-                                                  .unwrap()
-                                                  .then(() => {
-                                                    toast({
-                                                      title:
-                                                        "Attendance Updated",
-                                                      description: `Marked as Absent for ${day.day} ${currentMonth}`,
-                                                    });
-                                                    refetch();
-                                                  })
-                                                  .catch((error) => {
-                                                    toast({
-                                                      title: "Error",
-                                                      description:
-                                                        "Failed to update attendance status.",
-                                                      variant: "destructive",
-                                                    });
-                                                  });
-                                              } else {
-                                                toast({
-                                                  title: "Error",
-                                                  description:
-                                                    "You do not have privilege to mark attendance",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                          >
-                                            Absent
-                                          </Badge>
-                                        )}
-                                        {day.status !== "present" && (
-                                          <Badge
-                                            variant="outline"
-                                            className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
-                                            onClick={() => {
-                                              if (
-                                                permissions.full_access ||
-                                                permissions.approve_attendance ||
-                                                permissions.mark_attendance
-                                              ) {
-                                                updateAttendance({
-                                                  employeeId: employee.id,
-                                                  status: "Present",
-                                                  date: day.date,
-                                                })
-                                                  .unwrap()
-                                                  .then(() => {
-                                                    toast({
-                                                      title:
-                                                        "Attendance Updated",
-                                                      description: `Marked as Present for ${day.day} ${currentMonth}`,
-                                                    });
-                                                    refetch();
-                                                  })
-                                                  .catch((error) => {
-                                                    toast({
-                                                      title: "Error",
-                                                      description:
-                                                        "Failed to update attendance status.",
-                                                      variant: "destructive",
-                                                    });
-                                                  });
-                                              } else {
-                                                toast({
-                                                  title: "Error",
-                                                  description:
-                                                    "You do not have privilege to mark attendance",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                          >
-                                            Present
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
+                                <Users className="h-3 w-3" />
+                                Mark Bulk Attendance
+                              </Button>
+                            </div>
+                          </th>
+                        )}
+                        <th className="w-fit px-4 py-3 text-center">
+                          Attendance History
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-[14px]">
+                      {currentItems.map((employee: any) => (
+                        <React.Fragment key={employee.id}>
+                          <tr className="border-b hover:bg-gray-50">
+                            <td className="px-4 py-3 border-r">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">
+                                  {employee.username}
+                                </span>
                               </div>
                             </td>
+                            <td className="px-4 py-3 border-r">
+                              {employee.trade_position.trade_name}
+                            </td>
+                            <td className="px-4 py-3 border-r">
+                              {employee.project?.project_name ||
+                                "No Project Assigned"}
+                            </td>
+                            <td className="px-4 py-3 border-r">
+                              {formatDate(employee.created_date)}
+                            </td>
+                            <td className="px-4 py-3 border-r">
+                              {formatDate(employee.contract_finish_date)}
+                            </td>
+                            <td className="px-4 py-3 border-r">
+                              <Badge
+                                className={`rounded-full px-2 py-0.5 text-xs font-medium bg-red-50 text-red-600 border-0`}
+                              >
+                                {employee.remaining_days < 10
+                                  ? `${employee.remaining_days}`
+                                  : employee.remaining_days}
+                              </Badge>
+                            </td>
+                            {(permissions.full_access ||
+                              permissions.approve_attendance ||
+                              permissions.mark_attendance) && (
+                              <td className="px-4 py-3 border-r">
+                                <Popover
+                                  open={openAttendanceDropdown === employee.id}
+                                  onOpenChange={(open) => {
+                                    if (open) {
+                                      setOpenAttendanceDropdown(employee.id);
+                                    } else {
+                                      setOpenAttendanceDropdown(null);
+                                    }
+                                  }}
+                                >
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-xs h-8 bg-transparent"
+                                    >
+                                      Mark Attendance
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent
+                                    className="w-auto p-0"
+                                    align="start"
+                                  >
+                                    <div className="p-4 space-y-2">
+                                      <div className="text-sm font-medium text-muted-foreground mb-2">
+                                        Mark Attendance
+                                      </div>
+                                      <Button
+                                        variant="outline"
+                                        className="w-full justify-center bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-100"
+                                        onClick={() =>
+                                          handleIndividualAttendanceMark(
+                                            employee,
+                                            "Present"
+                                          )
+                                        }
+                                      >
+                                        Present
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        className="w-full justify-center bg-orange-50 text-orange-500 hover:bg-orange-100 hover:text-orange-600 border-orange-100"
+                                        onClick={() =>
+                                          handleIndividualAttendanceMark(
+                                            employee,
+                                            "Late"
+                                          )
+                                        }
+                                      >
+                                        Late
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        className="w-full justify-center bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 border-red-100"
+                                        onClick={() =>
+                                          handleIndividualAttendanceMark(
+                                            employee,
+                                            "Absent"
+                                          )
+                                        }
+                                      >
+                                        Absent
+                                      </Button>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              </td>
+                            )}
+                            <td className="px-4 py-3 text-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  router.push(
+                                    `/attendance-history/${employee.id}`
+                                  )
+                                }
+                                className="text-sm"
+                              >
+                                View History
+                              </Button>
+                            </td>
                           </tr>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </tbody>
-                </table>
+                          {expandedEmployee === employee.id && (
+                            <tr className="bg-gray-50">
+                              <td colSpan={9} className="px-4 py-4">
+                                <div className="border rounded-md bg-white p-4">
+                                  <div className="flex justify-between items-center mb-4">
+                                    <div className="flex items-center gap-2">
+                                      <h3 className="font-medium">
+                                        {currentMonth}
+                                      </h3>
+                                      <div className="flex gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6"
+                                          onClick={() => {
+                                            toast({
+                                              title: "Previous Month",
+                                              description:
+                                                "Navigating to previous month",
+                                            });
+                                          }}
+                                        >
+                                          <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                          >
+                                            <path d="m15 18-6-6 6-6"></path>
+                                            <path d="m15 18-6-6 6-6"></path>
+                                          </svg>
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6"
+                                          onClick={() => {
+                                            toast({
+                                              title: "Next Month",
+                                              description:
+                                                "Navigating to next month",
+                                            });
+                                          }}
+                                        >
+                                          <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                          >
+                                            <path d="m9 18 6-6-6-6"></path>
+                                            <path d="m9 18 6-6-6-6"></path>
+                                          </svg>
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <Select
+                                        value={attendancePeriod}
+                                        onValueChange={(value) =>
+                                          setAttendancePeriod(value)
+                                        }
+                                      >
+                                        <SelectTrigger className="h-8 w-32">
+                                          <SelectValue placeholder="Show" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="1week">
+                                            1 Week
+                                          </SelectItem>
+                                          <SelectItem value="2weeks">
+                                            2 Weeks
+                                          </SelectItem>
+                                          <SelectItem value="month">
+                                            Full Month
+                                          </SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-7 gap-4">
+                                    {getFilteredAttendance(
+                                      employee.attendance,
+                                      attendancePeriod
+                                    ).map((day: any, index: any) => (
+                                      <div key={index} className="text-center">
+                                        <div className="text-sm font-medium mb-1">
+                                          {day.day < 10
+                                            ? `0${day.day}`
+                                            : day.day}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground mb-2">
+                                          {day.weekday}
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                          <Badge
+                                            className={
+                                              day.status === "present"
+                                                ? "bg-green-50 text-green-700 border-0"
+                                                : day.status === "late"
+                                                ? "bg-orange-50 text-orange-500 border-0"
+                                                : "bg-red-50 text-red-700 border-0"
+                                            }
+                                          >
+                                            {day.status}
+                                          </Badge>
+                                          {day.status !== "late" && (
+                                            <Badge
+                                              variant="outline"
+                                              className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
+                                              onClick={() => {
+                                                if (
+                                                  permissions.full_access ||
+                                                  permissions.approve_attendance ||
+                                                  permissions.mark_attendance
+                                                ) {
+                                                  updateAttendance({
+                                                    employeeId: employee.id,
+                                                    status: "Late",
+                                                    date: day.date,
+                                                  })
+                                                    .unwrap()
+                                                    .then(() => {
+                                                      toast({
+                                                        title:
+                                                          "Attendance Updated",
+                                                        description: `Marked as Late for ${day.day} ${currentMonth}`,
+                                                      });
+                                                      refetch();
+                                                    })
+                                                    .catch((error) => {
+                                                      toast({
+                                                        title: "Error",
+                                                        description:
+                                                          "Failed to update attendance status.",
+                                                        variant: "destructive",
+                                                      });
+                                                    });
+                                                } else {
+                                                  toast({
+                                                    title: "Error",
+                                                    description:
+                                                      "You do not have privilege to mark attendance",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              }}
+                                            >
+                                              Late
+                                            </Badge>
+                                          )}
+                                          {day.status !== "absent" && (
+                                            <Badge
+                                              variant="outline"
+                                              className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
+                                              onClick={() => {
+                                                if (
+                                                  permissions.full_access ||
+                                                  permissions.approve_attendance ||
+                                                  permissions.mark_attendance
+                                                ) {
+                                                  updateAttendance({
+                                                    employeeId: employee.id,
+                                                    status: "Absent",
+                                                    date: day.date,
+                                                  })
+                                                    .unwrap()
+                                                    .then(() => {
+                                                      toast({
+                                                        title:
+                                                          "Attendance Updated",
+                                                        description: `Marked as Absent for ${day.day} ${currentMonth}`,
+                                                      });
+                                                      refetch();
+                                                    })
+                                                    .catch((error) => {
+                                                      toast({
+                                                        title: "Error",
+                                                        description:
+                                                          "Failed to update attendance status.",
+                                                        variant: "destructive",
+                                                      });
+                                                    });
+                                                } else {
+                                                  toast({
+                                                    title: "Error",
+                                                    description:
+                                                      "You do not have privilege to mark attendance",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              }}
+                                            >
+                                              Absent
+                                            </Badge>
+                                          )}
+                                          {day.status !== "present" && (
+                                            <Badge
+                                              variant="outline"
+                                              className="bg-transparent border-gray-200 text-gray-500 cursor-pointer hover:bg-gray-100"
+                                              onClick={() => {
+                                                if (
+                                                  permissions.full_access ||
+                                                  permissions.approve_attendance ||
+                                                  permissions.mark_attendance
+                                                ) {
+                                                  updateAttendance({
+                                                    employeeId: employee.id,
+                                                    status: "Present",
+                                                    date: day.date,
+                                                  })
+                                                    .unwrap()
+                                                    .then(() => {
+                                                      toast({
+                                                        title:
+                                                          "Attendance Updated",
+                                                        description: `Marked as Present for ${day.day} ${currentMonth}`,
+                                                      });
+                                                      refetch();
+                                                    })
+                                                    .catch((error) => {
+                                                      toast({
+                                                        title: "Error",
+                                                        description:
+                                                          "Failed to update attendance status.",
+                                                        variant: "destructive",
+                                                      });
+                                                    });
+                                                } else {
+                                                  toast({
+                                                    title: "Error",
+                                                    description:
+                                                      "You do not have privilege to mark attendance",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              }}
+                                            >
+                                              Present
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
                 {totalPages > 0 && (
                   <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white border rounded-b-md">
                     <div className="flex items-center space-x-2">
@@ -1779,7 +1783,7 @@ export default function AttendancePayroll() {
                     <div className="flex items-center space-x-1">
                       <Button
                         variant="outline"
-                        className="h-8 w-8 p-0"
+                        className="h-8 w-8 p-0 max-sm:hidden"
                         onClick={() => goToPage(1)}
                         disabled={currentPage === 1}
                       >
@@ -1862,7 +1866,7 @@ export default function AttendancePayroll() {
                       </Button>
                       <Button
                         variant="outline"
-                        className="h-8 w-8 p-0"
+                        className="h-8 w-8 p-0 max-sm:hidden"
                         onClick={() => goToPage(totalPages)}
                         disabled={
                           currentPage === totalPages || totalPages === 0
