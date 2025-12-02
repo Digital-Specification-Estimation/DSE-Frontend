@@ -57,7 +57,7 @@ const verificationSlice = createSlice({
 export const verificationApi = createApi({
   reducerPath: "verificationApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: `http://localhost:4000/verification`,
+    baseUrl: `https://dse-backend-uv5d.onrender.com/verification`,
     credentials: "include",
   }),
   endpoints: (builder) => ({
