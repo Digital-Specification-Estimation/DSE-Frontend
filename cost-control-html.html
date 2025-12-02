@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Cost Control Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .file-input::-webkit-file-upload-button {
+            margin-right: 1rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: 0;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen p-4">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h1 id="projectName" class="text-3xl font-bold text-slate-800 cursor-pointer hover:text-blue-600 mb-2">
+                Construction Project - Site A
+            </h1>
+            <p class="text-slate-600">Track daily expenses and revenues for accurate project management</p>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-slate-600 text-sm font-medium">Total Revenue</span>
+                    <span class="text-green-500">📈</span>
+                </div>
+                <p id="totalRevenue" class="text-2xl font-bold text-green-600">$0.00</p>
+                <p class="text-xs text-slate-500 mt-1">From BOQ progress</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-slate-600 text-sm font-medium">Total Expenses</span>
+                    <span class="text-red-500">📉</span>
+                </div>
+                <p id="totalExpenses" class="text-2xl font-bold text-red-600">$0.00</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-slate-600 text-sm font-medium">Net Profit</span>
+                    <span id="profitIcon">💰</span>
+                </div>
+                <p id="netProfit" class="text-2xl font-bold">$0.00</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-slate-600 text-sm font-medium">Profit Margin</span>
+                    <span class="text-slate-400 text-xs">%</span>
+                </div>
+                <p id="profitMargin" class="text-2xl font-bold">0%</p>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="bg-white rounded-lg shadow-lg mb-6">
+            <div class="flex border-b overflow-x-auto">
+                <button onclick="switchTab('overview')" id="tab-overview" class="flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap text-blue-600 border-b-2 border-blue-600">
+                    Overview
+                </button>
+                <button onclick="switchTab('boq')" id="tab-boq" class="flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap text-slate-600 hover:text-slate-800">
+                    Bill of Quantities
+                </button>
+                <button onclick="switchTab('revenues')" id="tab-revenues" class="flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap text-slate-600 hover:text-slate-800">
+                    Add Revenue
+                </button>
+                <button onclick="switchTab('expenses')" id="tab-expenses" class="flex-1 px-4 py-4 font-medium transition-colors whitespace-nowrap text-slate-600 hover:text-slate-800">
+                    Add Expense
+                </button>
+            </div>
+
+            <div class="p-6">
+                <!-- Overview Tab -->
+                <div id="content-overview" class="space-y-6">
+                    <div id="boqSummary"></div>
+                    <div id="expensesByCategory"></div>
+                    <div id="recentRevenues"></div>
+                    <div id="recentExpenses"></div>
+                </div>
+
+                <!-- BOQ Tab -->
+                <div id="content-boq" class="space-y-6 hidden">
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-dashed border-blue-300 rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">📤</span>
+                                <h3 class="font-semibold text-slate-800 text-lg">Upload BOQ from CSV</h3>
+                            </div>
+                            <button onclick="downloadSampleBoq()" class="text-sm bg-white text-blue-600 px-4 py-2 rounded-lg border border-blue-300 hover:bg-blue-50 transition-colors font-medium">
+                                📥 Download Sample
+                            </button>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-3">CSV format: Item No, Description, Unit, Quantity, Rate</p>
+                        <div class="bg-white rounded-lg p-3 mb-4 text-xs font-mono text-slate-600 border border-blue-200">
+                            <div class="font-semibold text-blue-700 mb-1">Example CSV content:</div>
+                            <div>Item No,Description,Unit,Quantity,Rate</div>
+                            <div>1.1,Concrete foundation work,M3,50,120.00</div>
+                            <div>1.2,Steel reinforcement,TON,5,850.00</div>
+                        </div>
+                        <input type="file" accept=".csv" onchange="handleBoqUpload(event)" class="block w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer cursor-pointer">
+                    </div>
+
+                    <div class="border-t pt-6">
+                        <h3 class="font-semibold text-slate-800 mb-4 text-lg">Add BOQ Item Manually</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Item No.</label>
+                                <input type="text" id="boq-itemNo" placeholder="e.g., 1.1" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Unit</label>
+                                <select id="boq-unit" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="M">Meter (M)</option>
+                                    <option value="M2">Square Meter (M2)</option>
+                                    <option value="M3">Cubic Meter (M3)</option>
+                                    <option value="KG">Kilogram (KG)</option>
+                                    <option value="TON">Ton</option>
+                                    <option value="NO">Number (NO)</option>
+                                    <option value="LS">Lump Sum (LS)</option>
+                                    <option value="HR">Hour (HR)</option>
+                                    <option value="DAY">Day</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Description</label>
+                                <input type="text" id="boq-description" placeholder="e.g., Concrete foundation work" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Total Quantity</label>
+                                <input type="number" step="0.01" id="boq-quantity" placeholder="0.00" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Rate ($)</label>
+                                <input type="number" step="0.01" id="boq-rate" placeholder="0.00" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                        </div>
+                        <button onclick="addBoqItem()" class="w-full mt-4 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                            ➕ Add BOQ Item
+                        </button>
+                    </div>
+
+                    <div id="boqItemsList"></div>
+                </div>
+
+                <!-- Revenue Tab -->
+                <div id="content-revenues" class="space-y-4 hidden">
+                    <div id="revenueForm"></div>
+                </div>
+
+                <!-- Expense Tab -->
+                <div id="content-expenses" class="space-y-6 hidden">
+                    <div class="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-dashed border-red-300 rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">📤</span>
+                                <h3 class="font-semibold text-slate-800 text-lg">Upload Expenses from CSV</h3>
+                            </div>
+                            <button onclick="downloadSampleExpense()" class="text-sm bg-white text-red-600 px-4 py-2 rounded-lg border border-red-300 hover:bg-red-50 transition-colors font-medium">
+                                📥 Download Sample
+                            </button>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-3">CSV format: Date, Description, Category, Quantity, Price, Unit</p>
+                        <div class="bg-white rounded-lg p-3 mb-4 text-xs font-mono text-slate-600 border border-red-200">
+                            <div class="font-semibold text-red-700 mb-1">Example CSV content:</div>
+                            <div>Date,Description,Category,Quantity,Price,Unit</div>
+                            <div>2025-10-01,Steel bars,Materials,10,50.00,TON</div>
+                            <div>2025-10-02,Workers,Labor,4,200.00,DAY</div>
+                        </div>
+                        <input type="file" accept=".csv" onchange="handleExpenseUpload(event)" class="block w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-600 file:text-white hover:file:bg-red-700 file:cursor-pointer cursor-pointer">
+                    </div>
+
+                    <div class="border-t pt-6">
+                        <h3 class="font-semibold text-slate-800 mb-4 text-lg">Add Expense Manually</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Date</label>
+                                <input type="date" id="exp-date" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Category</label>
+                                <select id="exp-category" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="Materials">Materials</option>
+                                    <option value="Labor">Labor</option>
+                                    <option value="Equipment">Equipment</option>
+                                    <option value="Transportation">Transportation</option>
+                                    <option value="Permits">Permits</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Description</label>
+                                <input type="text" id="exp-description" placeholder="e.g., Steel reinforcement bars" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Quantity</label>
+                                    <input type="number" step="0.01" id="exp-quantity" placeholder="0.00" oninput="calculateExpenseAmount()" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Unit</label>
+                                    <select id="exp-unit" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <option value="M">Meter (M)</option>
+                                        <option value="M2">Square Meter (M2)</option>
+                                        <option value="M3">Cubic Meter (M3)</option>
+                                        <option value="KG">Kilogram (KG)</option>
+                                        <option value="TON">Ton</option>
+                                        <option value="NO">Number (NO)</option>
+                                        <option value="LS">Lump Sum (LS)</option>
+                                        <option value="HR">Hour (HR)</option>
+                                        <option value="DAY">Day</option>
+                                        <option value="LOAD">Load</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Unit Price ($)</label>
+                                <input type="number" step="0.01" id="exp-price" placeholder="0.00" oninput="calculateExpenseAmount()" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            <div id="expensePreview" class="hidden bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-red-700 font-medium">Calculated Amount</p>
+                                        <p id="expenseCalcDetails" class="text-xs text-red-600 mt-1"></p>
+                                    </div>
+                                    <p id="expenseAmount" class="text-3xl font-bold text-red-600">$0.00</p>
+                                </div>
+                            </div>
+                            <button onclick="addExpense()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                                ➕ Add Expense
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Storage
+        let state = {
+            expenses: [
+                { id: 1, date: '2025-10-01', description: 'Steel Bars', quantity: 10, unit: 'TON', price: 50, amount: 500, category: 'Materials' },
+                { id: 2, date: '2025-10-02', description: 'Construction Workers', quantity: 4, unit: 'DAY', price: 200, amount: 800, category: 'Labor' }
+            ],
+            revenues: [],
+            boqItems: []
+        };
+
+        // Initialize
+        document.getElementById('exp-date').valueAsDate = new Date();
+        updateUI();
+
+        // Tab Switching
+        function switchTab(tab) {
+            ['overview', 'boq', 'revenues', 'expenses'].forEach(t => {
+                document.getElementById(`content-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+                document.getElementById(`tab-${t}`).classList.add('text-slate-600');
+            });
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+            document.getElementById(`tab-${tab}`).classList.remove('text-slate-600');
+            
+            if (tab === 'revenues') renderRevenueForm();
+        }
+
+        // BOQ Functions
+        function addBoqItem() {
+            const itemNo = document.getElementById('boq-itemNo').value;
+            const description = document.getElementById('boq-description').value;
+            const unit = document.getElementById('boq-unit').value;
+            const quantity = parseFloat(document.getElementById('boq-quantity').value) || 0;
+            const rate = parseFloat(document.getElementById('boq-rate').value) || 0;
+
+            if (!itemNo || !description || !quantity || !rate) {
+                alert('Please fill all fields');
+                return;
+            }
+
+            state.boqItems.push({
+                id: Date.now(),
+                itemNo, description, unit, quantity, rate,
+                completedQty: 0,
+                amount: quantity * rate
+            });
+
+            document.getElementById('boq-itemNo').value = '';
+            document.getElementById('boq-description').value = '';
+            document.getElementById('boq-quantity').value = '';
+            document.getElementById('boq-rate').value = '';
+            
+            updateUI();
+        }
+
+        function deleteBoqItem(id) {
+            state.boqItems = state.boqItems.filter(item => item.id !== id);
+            state.revenues = state.revenues.filter(rev => rev.boqItemId !== id);
+            updateUI();
+        }
+
+        function handleBoqUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split('\n');
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line) {
+                        const parts = line.split(',');
+                        if (parts.length >= 5) {
+                            state.boqItems.push({
+                                id: Date.now() + i,
+                                itemNo: parts[0].trim(),
+                                description: parts[1].trim(),
+                                unit: parts[2].trim(),
+                                quantity: parseFloat(parts[3]) || 0,
+                                rate: parseFloat(parts[4]) || 0,
+                                completedQty: 0,
+                                amount: (parseFloat(parts[3]) || 0) * (parseFloat(parts[4]) || 0)
+                            });
+                        }
+                    }
+                }
+                updateUI();
+            };
+            reader.readAsText(file);
+        }
+
+        function downloadSampleBoq() {
+            const csv = `Item No,Description,Unit,Quantity,Rate
+1.1,Concrete foundation work,M3,50,120.00
+1.2,Steel reinforcement,TON,5,850.00
+2.1,Formwork installation,M2,200,45.00
+2.2,Excavation works,M3,30,25.50
+3.1,Plumbing rough-in,LS,1,2500.00
+3.2,Electrical conduits,M,150,12.75`;
+            downloadCSV(csv, 'sample_boq.csv');
+        }
+
+        // Revenue Functions
+        function renderRevenueForm() {
+            const container = document.getElementById('revenueForm');
+            
+            if (state.boqItems.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
+                        <p class="text-amber-800 font-medium mb-2">No BOQ Items Available</p>
+                        <p class="text-amber-700 text-sm">Please add BOQ items first before recording revenue.</p>
+                        <button onclick="switchTab('boq')" class="mt-4 bg-amber-600 text-white px-6 py-2 rounded-lg hover:bg-amber-700 transition-colors">
+                            Go to BOQ Tab
+                        </button>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <p class="text-blue-800 text-sm">
+                        <strong>Instructions:</strong> Select a BOQ item, specify the work period, and enter the quantity completed. 
+                        Revenue will be calculated automatically based on the BOQ rate.
+                    </p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Select BOQ Item</label>
+                    <select id="rev-boqItem" onchange="updateRevenuePreview()" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                        <option value="">-- Select BOQ Item --</option>
+                        ${state.boqItems.map(item => 
+                            `<option value="${item.id}">${item.itemNo} - ${item.description} (Rate: $${item.rate}/${item.unit})</option>`
+                        ).join('')}
+                    </select>
+                </div>
+                <div id="selectedItemDetails"></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">📅 From Date</label>
+                        <input type="date" id="rev-fromDate" value="${new Date().toISOString().split('T')[0]}" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">📅 To Date</label>
+                        <input type="date" id="rev-toDate" value="${new Date().toISOString().split('T')[0]}" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Quantity of Work Done</label>
+                    <input type="number" step="0.01" id="rev-quantity" placeholder="0.00" oninput="updateRevenuePreview()" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                </div>
+                <div id="revenuePreview"></div>
+                <button onclick="addRevenue()" class="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors">
+                    ➕ Record Revenue
+                </button>`;
+        }
+
+        function updateRevenuePreview() {
+            const boqId = document.getElementById('rev-boqItem')?.value;
+            const quantity = parseFloat(document.getElementById('rev-quantity')?.value) || 0;
+            const item = state.boqItems.find(b => b.id == boqId);
+            
+            const detailsDiv = document.getElementById('selectedItemDetails');
+            const previewDiv = document.getElementById('revenuePreview');
+            
+            if (item) {
+                detailsDiv.innerHTML = `
+                    <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                        <h4 class="font-semibold text-slate-800 mb-2">Selected Item Details</h4>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div><span class="text-slate-600">Total Quantity:</span><span class="ml-2 font-semibold">${item.quantity} ${item.unit}</span></div>
+                            <div><span class="text-slate-600">Completed:</span><span class="ml-2 font-semibold text-green-600">${item.completedQty} ${item.unit}</span></div>
+                            <div><span class="text-slate-600">Rate:</span><span class="ml-2 font-semibold">$${item.rate}/${item.unit}</span></div>
+                            <div><span class="text-slate-600">Remaining:</span><span class="ml-2 font-semibold text-amber-600">${(item.quantity - item.completedQty).toFixed(2)} ${item.unit}</span></div>
+                        </div>
+                    </div>`;
+                
+                if (quantity > 0) {
+                    const amount = quantity * item.rate;
+                    previewDiv.innerHTML = `
+                        <div class="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-green-700 font-medium">Calculated Revenue</p>
+                                    <p class="text-xs text-green-600 mt-1">${quantity} ${item.unit} × $${item.rate}/${item.unit}</p>
+                                </div>
+                                <p class="text-3xl font-bold text-green-600">$${amount.toFixed(2)}</p>
+                            </div>
+                        </div>`;
+                } else {
+                    previewDiv.innerHTML = '';
+                }
+            } else {
+                detailsDiv.innerHTML = '';
+                previewDiv.innerHTML = '';
+            }
+        }
+
+        function addRevenue() {
+            const boqId = parseInt(document.getElementById('rev-boqItem').value);
+            const fromDate = document.getElementById('rev-fromDate').value;
+            const toDate = document.getElementById('rev-toDate').value;
+            const quantity = parseFloat(document.getElementById('rev-quantity').value) || 0;
+            
+            const item = state.boqItems.find(b => b.id === boqId);
+            if (!item || !quantity) {
+                alert('Please select a BOQ item and enter quantity');
+                return;
+            }
+
+            state.revenues.push({
+                id: Date.now(),
+                boqItemId: item.id,
+                boqItemNo: item.itemNo,
+                boqDescription: item.description,
+                fromDate, toDate,
+                quantityDone: quantity,
+                rate: item.rate,
+                unit: item.unit,
+                amount: quantity * item.rate
+            });
+
+            item.completedQty += quantity;
+            
+            document.getElementById('rev-quantity').value = '';
+            updateUI();
+            alert('Revenue recorded successfully!');
+        }
+
+        function deleteRevenue(id) {
+            const revenue = state.revenues.find(r => r.id === id);
+            if (revenue) {
+                const item = state.boqItems.find(b => b.id === revenue.boqItemId);
+                if (item) item.completedQty = Math.max(0, item.completedQty - revenue.quantityDone);
+            }
+            state.revenues = state.revenues.filter(r => r.id !== id);
+            updateUI();
+        }
+
+        // Expense Functions
+        function calculateExpenseAmount() {
+            const quantity = parseFloat(document.getElementById('exp-quantity').value) || 0;
+            const price = parseFloat(document.getElementById('exp-price').value) || 0;
+            const unit = document.getElementById('exp-unit').value;
+            
+            const preview = document.getElementById('expensePreview');
+            if (quantity > 0 && price > 0) {
+                const amount = quantity * price;
+                document.getElementById('expenseCalcDetails').textContent = `${quantity} ${unit} × $${price}/${unit}`;
+                document.getElementById('expenseAmount').textContent = `$${amount.toFixed(2)}`;
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+            }
+        }
+
+        function addExpense() {
+            const date = document.getElementById('exp-date').value;
+            const category = document.getElementById('exp-category').value;
+            const description = document.getElementById('exp-description').value;
+            const quantity = parseFloat(document.getElementById('exp-quantity').value) || 0;
+            const unit = document.getElementById('exp-unit').value;
+            const price = parseFloat(document.getElementById('exp-price').value) || 0;
+
+            if (!description || !quantity || !price) {
+                alert('Please fill all fields');
+                return;
+            }
+
+            state.expenses.push({
+                id: Date.now(),
+                date, description, category, quantity, unit, price,
+                amount: quantity * price
+            });
+
+            document.getElementById('exp-description').value = '';
+            document.getElementById('exp-quantity').value = '';
+            document.getElementById('exp-price').value = '';
+            document.getElementById('expensePreview').classList.add('hidden');
+            
+            updateUI();
+            alert('Expense added successfully!');
+        }
+
+        function deleteExpense(id) {
+            state.expenses = state.expenses.filter(e => e.id !== id);
+            updateUI();
+        }
+
+        function handleExpenseUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split('\n');
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line) {
+                        const parts = line.split(',');
+                        if (parts.length >= 6) {
+                            const quantity = parseFloat(parts[3]) || 0;
+                            const price = parseFloat(parts[4]) || 0;
+                            state.expenses.push({
+                                id: Date.now() + i,
+                                date: parts[0].trim(),
+                                description: parts[1].trim(),
+                                category: parts[2].trim(),
+                                quantity: quantity,
+                                unit: parts[5].trim(),
+                                price: price,
+                                amount: quantity * price
+                            });
+                        }
+                    }
+                }
+                updateUI();
+            };
+            reader.readAsText(file);
+        }
+
+        function downloadSampleExpense() {
+            const csv = `Date,Description,Category,Quantity,Price,Unit
+2025-10-01,Steel reinforcement bars,Materials,10,50.00,TON
+2025-10-02,Construction workers,Labor,4,200.00,DAY
+2025-10-03,Concrete mixer rental,Equipment,1,150.00,DAY
+2025-10-04,Cement bags,Materials,100,8.50,NO
+2025-10-05,Truck transportation,Transportation,3,120.00,LOAD
+2025-10-06,Building permit fee,Permits,1,500.00,LS`;
+            downloadCSV(csv, 'sample_expenses.csv');
+        }
+
+        // Update UI
+        function updateUI() {
+            updateSummary();
+            renderOverview();
+            renderBoqList();
+        }
+
+        function updateSummary() {
+            const totalExp = state.expenses.reduce((sum, e) => sum + e.amount, 0);
+            const totalRev = state.revenues.reduce((sum, r) => sum + r.amount, 0);
+            const netProfit = totalRev - totalExp;
+            const margin = totalRev > 0 ? ((netProfit / totalRev) * 100).toFixed(1) : 0;
+
+            document.getElementById('totalRevenue').textContent = `$${totalRev.toFixed(2)}`;
+            document.getElementById('totalExpenses').textContent = `$${totalExp.toFixed(2)}`;
+            document.getElementById('netProfit').textContent = `$${netProfit.toFixed(2)}`;
+            document.getElementById('netProfit').className = `text-2xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`;
+            document.getElementById('profitMargin').textContent = `${margin}%`;
+            document.getElementById('profitMargin').className = `text-2xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`;
+        }
+
+        function renderOverview() {
+            // BOQ Summary
+            if (state.boqItems.length > 0) {
+                const totalBoq = state.boqItems.reduce((sum, item) => sum + item.amount, 0);
+                const totalRev = state.revenues.reduce((sum, r) => sum + r.amount, 0);
+                const completion = totalBoq > 0 ? ((totalRev / totalBoq) * 100).toFixed(1) : 0;
+                
+                document.getElementById('boqSummary').innerHTML = `
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">BOQ Progress Summary</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-blue-50 rounded-lg p-4">
+                                <p class="text-sm text-slate-600 mb-1">Total BOQ Value</p>
+                                <p class="text-xl font-bold text-slate-800">$${totalBoq.toFixed(2)}</p>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-4">
+                                <p class="text-sm text-slate-600 mb-1">Earned Revenue</p>
+                                <p class="text-xl font-bold text-green-600">$${totalRev.toFixed(2)}</p>
+                            </div>
+                            <div class="bg-amber-50 rounded-lg p-4">
+                                <p class="text-sm text-slate-600 mb-1">Completion %</p>
+                                <p class="text-xl font-bold text-amber-600">${completion}%</p>
+                            </div>
+                        </div>
+                    </div>`;
+            } else {
+                document.getElementById('boqSummary').innerHTML = '';
+            }
+
+            // Expenses by Category
+            const byCategory = {};
+            state.expenses.forEach(exp => {
+                byCategory[exp.category] = (byCategory[exp.category] || 0) + exp.amount;
+            });
+
+            if (Object.keys(byCategory).length > 0) {
+                document.getElementById('expensesByCategory').innerHTML = `
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Expenses by Category</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            ${Object.entries(byCategory).map(([cat, amt]) => `
+                                <div class="bg-slate-50 rounded-lg p-4">
+                                    <p class="text-sm text-slate-600 mb-1">${cat}</p>
+                                    <p class="text-xl font-bold text-slate-800">$${amt.toFixed(2)}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+            }
+
+            // Recent Revenues
+            if (state.revenues.length > 0) {
+                document.getElementById('recentRevenues').innerHTML = `
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Recent Revenue Entries</h3>
+                        <div class="space-y-2">
+                            ${state.revenues.slice(-5).reverse().map(rev => `
+                                <div class="flex items-center justify-between bg-green-50 p-4 rounded-lg border border-green-200">
+                                    <div class="flex-1">
+                                        <p class="font-medium text-slate-800">${rev.boqItemNo} - ${rev.boqDescription}</p>
+                                        <p class="text-sm text-slate-600">${rev.fromDate} to ${rev.toDate} • ${rev.quantityDone} ${rev.unit} @ $${rev.rate.toFixed(2)}/${rev.unit}</p>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <p class="text-lg font-bold text-green-600">+$${rev.amount.toFixed(2)}</p>
+                                        <button onclick="deleteRevenue(${rev.id})" class="text-slate-400 hover:text-red-500">🗑️</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+            }
+
+            // Recent Expenses
+            document.getElementById('recentExpenses').innerHTML = `
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4">Recent Expenses</h3>
+                    <div class="space-y-2">
+                        ${state.expenses.slice(-5).reverse().map(exp => `
+                            <div class="flex items-center justify-between bg-slate-50 p-4 rounded-lg">
+                                <div class="flex-1">
+                                    <p class="font-medium text-slate-800">${exp.description}</p>
+                                    <p class="text-sm text-slate-600">${exp.date} • ${exp.category} • ${exp.quantity} ${exp.unit} @ $${exp.price.toFixed(2)}/${exp.unit}</p>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <p class="text-lg font-bold text-red-600">-$${exp.amount.toFixed(2)}</p>
+                                    <button onclick="deleteExpense(${exp.id})" class="text-slate-400 hover:text-red-500">🗑️</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+        }
+
+        function renderBoqList() {
+            if (state.boqItems.length === 0) {
+                document.getElementById('boqItemsList').innerHTML = '';
+                return;
+            }
+
+            const totalBoq = state.boqItems.reduce((sum, item) => sum + item.amount, 0);
+            const totalRev = state.revenues.reduce((sum, r) => sum + r.amount, 0);
+
+            document.getElementById('boqItemsList').innerHTML = `
+                <div class="border-t pt-6">
+                    <h3 class="font-semibold text-slate-800 mb-4 text-lg">BOQ Items (${state.boqItems.length})</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="px-3 py-3 text-left font-semibold">Item</th>
+                                    <th class="px-3 py-3 text-left font-semibold">Description</th>
+                                    <th class="px-3 py-3 text-center font-semibold">Unit</th>
+                                    <th class="px-3 py-3 text-right font-semibold">Total Qty</th>
+                                    <th class="px-3 py-3 text-right font-semibold">Rate</th>
+                                    <th class="px-3 py-3 text-right font-semibold">Amount</th>
+                                    <th class="px-3 py-3 text-right font-semibold">Completed</th>
+                                    <th class="px-3 py-3 text-right font-semibold">%</th>
+                                    <th class="px-3 py-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${state.boqItems.map(item => {
+                                    const pct = item.quantity > 0 ? ((item.completedQty / item.quantity) * 100).toFixed(0) : 0;
+                                    const color = pct >= 100 ? 'text-green-600' : pct >= 50 ? 'text-amber-600' : 'text-slate-600';
+                                    return `
+                                        <tr class="border-b hover:bg-slate-50">
+                                            <td class="px-3 py-3 font-medium">${item.itemNo}</td>
+                                            <td class="px-3 py-3">${item.description}</td>
+                                            <td class="px-3 py-3 text-center">${item.unit}</td>
+                                            <td class="px-3 py-3 text-right">${item.quantity}</td>
+                                            <td class="px-3 py-3 text-right">$${item.rate.toFixed(2)}</td>
+                                            <td class="px-3 py-3 text-right font-semibold">$${item.amount.toFixed(2)}</td>
+                                            <td class="px-3 py-3 text-right font-bold text-green-600">${item.completedQty.toFixed(2)}</td>
+                                            <td class="px-3 py-3 text-right font-semibold ${color}">${pct}%</td>
+                                            <td class="px-3 py-3"><button onclick="deleteBoqItem(${item.id})" class="text-slate-400 hover:text-red-500">🗑️</button></td>
+                                        </tr>`;
+                                }).join('')}
+                            </tbody>
+                            <tfoot class="bg-slate-50 font-bold">
+                                <tr>
+                                    <td colspan="5" class="px-3 py-3 text-right text-lg">Total:</td>
+                                    <td class="px-3 py-3 text-right text-lg">$${totalBoq.toFixed(2)}</td>
+                                    <td colspan="3" class="px-3 py-3 text-right text-green-600 text-lg">Earned: $${totalRev.toFixed(2)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>`;
+        }
+
+        // Utility
+        function downloadCSV(content, filename) {
+            const blob = new Blob([content], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

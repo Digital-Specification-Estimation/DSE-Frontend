@@ -1,0 +1,11 @@
+employee_name,trade_name,location_name,employee_daily_rate,employee_monthly_rate,employee_contract_start_date,employee_contract_finish_date,employee_budget_baseline,trade_daily_planned_cost,trade_monthly_planned_cost,trade_work_days,trade_planned_salary,project_name,project_budget,project_start_date,project_end_date
+John Doe,Carpenter,Downtown Site,150,4500,2024-01-15,2024-06-15,18000,140,4200,120,16800,Metro Bridge Construction,500000,2024-01-01,2024-12-31
+Jane Smith,Electrician,Downtown Site,180,5400,2024-01-20,2024-07-20,23400,170,5100,130,22100,Metro Bridge Construction,500000,2024-01-01,2024-12-31
+Mike Johnson,Plumber,Downtown Site,160,4800,2024-02-01,2024-08-01,20800,150,4500,130,19500,Metro Bridge Construction,500000,2024-01-01,2024-12-31
+Sarah Williams,Mason,Uptown Location,140,4200,2024-01-10,2024-05-10,12600,130,3900,90,11700,Mall Construction,750000,2024-01-05,2024-11-30
+David Brown,Painter,Uptown Location,120,3600,2024-02-15,2024-06-15,10800,110,3300,90,9900,Mall Construction,750000,2024-01-05,2024-11-30
+Emily Davis,Welder,Industrial Park,200,6000,2024-03-01,2024-09-01,26000,190,5700,130,24700,Factory Expansion,1000000,2024-02-15,2025-02-15
+Robert Miller,Carpenter,Industrial Park,155,4650,2024-03-05,2024-09-05,20150,145,4350,130,18850,Factory Expansion,1000000,2024-02-15,2025-02-15
+Lisa Anderson,Electrician,Riverside Complex,175,5250,2024-01-25,2024-07-25,22750,165,4950,130,21450,Residential Tower,600000,2024-01-15,2024-10-15
+James Wilson,Mason,Riverside Complex,145,4350,2024-02-10,2024-08-10,18850,135,4050,130,17550,Residential Tower,600000,2024-01-15,2024-10-15
+Patricia Moore,Plumber,Riverside Complex,165,4950,2024-02-20,2024-08-20,21450,155,4650,130,20150,Residential Tower,600000,2024-01-15,2024-10-15
