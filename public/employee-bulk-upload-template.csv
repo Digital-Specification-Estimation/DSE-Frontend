@@ -1,0 +1,11 @@
+employee_name,employee_email,trade_name,trade_daily_planned_cost,trade_monthly_planned_cost,employee_daily_rate,employee_monthly_rate,contract_start_date,contract_finish_date,project_name,project_start_date,project_end_date,project_budget,location_name
+John Doe,john.doe@example.com,Mason,150,4500,150,4500,01/01/2024,12/31/2024,Metro Bridge Construction,01/01/2024,12/31/2024,1000000,Downtown Site
+Jane Smith,jane.smith@example.com,Carpenter,140,4200,140,4200,01/15/2024,11/30/2024,Metro Bridge Construction,01/01/2024,12/31/2024,1000000,Downtown Site
+Mike Johnson,mike.j@example.com,Electrician,160,4800,160,4800,02/01/2024,10/31/2024,Mall Construction,02/01/2024,10/31/2024,2000000,Uptown Location
+Sarah Williams,sarah.w@example.com,Plumber,155,4650,155,4650,01/10/2024,12/15/2024,Mall Construction,02/01/2024,10/31/2024,2000000,Uptown Location
+Robert Miller,robert.m@example.com,Welder,170,5100,170,5100,03/01/2024,09/30/2024,Factory Expansion,03/01/2024,09/30/2024,1500000,Industrial Park
+Emily Davis,emily.d@example.com,Painter,130,3900,130,3900,01/20/2024,11/20/2024,Factory Expansion,03/01/2024,09/30/2024,1500000,Industrial Park
+David Brown,david.b@example.com,Foreman,180,5400,180,5400,01/05/2024,12/20/2024,Residential Tower,01/05/2024,12/20/2024,3000000,Riverside Complex
+Lisa Anderson,lisa.a@example.com,Laborer,120,3600,120,3600,02/15/2024,10/15/2024,Residential Tower,01/05/2024,12/20/2024,3000000,Riverside Complex
+James Wilson,james.w@example.com,Supervisor,175,5250,175,5250,01/01/2024,12/31/2024,Metro Bridge Construction,01/01/2024,12/31/2024,1000000,Downtown Site
+Maria Garcia,maria.g@example.com,Technician,145,4350,145,4350,02/01/2024,11/30/2024,Mall Construction,02/01/2024,10/31/2024,2000000,Uptown Location

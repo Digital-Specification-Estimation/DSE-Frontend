@@ -54,11 +54,11 @@ import {
   useEditEmployeeMutation,
   useDeleteEmployeeMutation,
 } from "@/lib/redux/employeeSlice";
-import { employeeSlice } from "@/lib/redux/employeeSlice";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionQuery } from "@/lib/redux/authSlice";
 import { useGetTradesQuery } from "@/lib/redux/tradePositionSlice";
 import { convertCurrency, getExchangeRate } from "@/lib/utils";
+import { generateEmployeeTemplate } from "@/lib/utils/excelTemplate";
 
 export interface NewEmployee {
   username: string;
@@ -315,7 +315,7 @@ export default function EmployeeManagement() {
 
       // Send to backend bulk upload endpoint
       const response = await fetch(
-        "https://dse-backend-uv5d.onrender.com/employee/bulk-upload",
+        "http://localhost:4000/employee/bulk-upload",
         {
           method: "POST",
           body: formData,
@@ -624,9 +624,7 @@ export default function EmployeeManagement() {
     const fetchCompanies = async () => {
       setIsLoadingCompanies(true);
       try {
-        const response = await fetch(
-          "https://dse-backend-uv5d.onrender.com/company/companies"
-        );
+        const response = await fetch("http://localhost:4000/company/companies");
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
@@ -1447,26 +1445,29 @@ export default function EmployeeManagement() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Upload a CSV file with locations, projects, trades, and
-                  employees. The system will automatically create all related
-                  entities. Download the template below.
+                  Upload an Excel file (.xlsx) with locations, projects, trades,
+                  and employees. The system will automatically create all
+                  related entities. Download the template below.
                 </p>
-                <a
-                  href="/master-upload-template.csv"
-                  download="master-upload-template.csv"
-                  className="text-primary underline text-sm"
+                <button
+                  onClick={() => generateEmployeeTemplate()}
+                  className="text-primary underline text-sm hover:text-primary/80"
+                  type="button"
                 >
-                  Download Master CSV Template
-                </a>
+                  Download Excel Template (.xlsx)
+                </button>
               </div>
 
               <div className="border border-dashed rounded-lg p-4">
                 <input
                   type="file"
-                  accept=".csv"
+                  accept=".xlsx,.xls,.csv"
                   onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
                   className="block w-full text-sm text-muted-foreground"
                 />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Accepts: Excel (.xlsx, .xls) or CSV files
+                </p>
               </div>
 
               {csvParseError && (

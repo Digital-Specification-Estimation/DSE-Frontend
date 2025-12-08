@@ -189,8 +189,8 @@ export default function ProfilePage() {
                 <Avatar className="h-24 w-24 mb-4">
                   <AvatarImage
                     src={
-                      "https://dse-backend-uv5d.onrender.com/" +
-                        sessionData?.user?.image_url || ""
+                      "http://localhost:4000/" + sessionData?.user?.image_url ||
+                      ""
                     }
                     className="object-cover"
                   />
