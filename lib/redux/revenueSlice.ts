@@ -20,7 +20,7 @@ export interface RevenueEntry {
 export const revenueApi = createApi({
   reducerPath: "revenueApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:4000/cost-control",
+    baseUrl: `${process.env.NEXT_PUBLIC_API_URL}/cost-control`,
     credentials: "include",
   }),
   tagTypes: ["Revenue"],

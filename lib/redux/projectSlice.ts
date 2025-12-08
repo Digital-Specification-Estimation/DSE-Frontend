@@ -21,9 +21,7 @@ export interface EnhancedProjectData {
 export const projectApi = createApi({
   reducerPath: "projectApi",
   baseQuery: fetchBaseQuery({
-    // baseUrl: "https://dse-backend-production.up.railway.app/project",
-
-    baseUrl: "http://localhost:4000/project",
+    baseUrl: `${process.env.NEXT_PUBLIC_API_URL}/project`,
     credentials: "include",
   }),
   tagTypes: ["Projects"],

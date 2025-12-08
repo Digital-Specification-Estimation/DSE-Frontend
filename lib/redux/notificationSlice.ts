@@ -46,7 +46,7 @@ export default notificationsSlice.reducer;
 export const notificationsApi = createApi({
   reducerPath: "notificationsApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:4000/notifications",
+    baseUrl: `${process.env.NEXT_PUBLIC_API_URL}/notifications`,
     prepareHeaders: (headers) => {
       const token = localStorage.getItem("token");
       if (token) {

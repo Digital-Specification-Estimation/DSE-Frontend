@@ -3,9 +3,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const attendanceApi = createApi({
   reducerPath: "attendanceApi",
   baseQuery: fetchBaseQuery({
-    // baseUrl: "https://dse-backend-production.up.railway.app/location",
-
-    baseUrl: "http://localhost:4000/attendance",
+    baseUrl: `${process.env.NEXT_PUBLIC_API_URL}/attendance`,
     credentials: "include",
   }),
   endpoints: (builder) => ({

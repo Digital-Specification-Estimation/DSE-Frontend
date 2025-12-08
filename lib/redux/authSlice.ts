@@ -96,8 +96,7 @@ const authSlice = createSlice({
 export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: fetchBaseQuery({
-    // baseUrl: "https://dse-backend-production.up.railway.app/auth",
-    baseUrl: "http://localhost:4000/auth",
+    baseUrl: `${process.env.NEXT_PUBLIC_API_URL}/auth`,
     credentials: "include",
   }),
   tagTypes: ["Session"],

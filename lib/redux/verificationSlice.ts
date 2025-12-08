@@ -57,7 +57,7 @@ const verificationSlice = createSlice({
 export const verificationApi = createApi({
   reducerPath: "verificationApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: `http://localhost:4000/verification`,
+    baseUrl: `${process.env.NEXT_PUBLIC_API_URL}/verification`,
     credentials: "include",
   }),
   endpoints: (builder) => ({

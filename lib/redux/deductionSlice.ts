@@ -24,7 +24,7 @@ export interface UpdateDeductionDto extends Partial<CreateDeductionDto> {}
 export const deductionApi = createApi({
   reducerPath: "deductionApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:4000/deductions",
+    baseUrl: `${process.env.NEXT_PUBLIC_API_URL}/deductions`,
     credentials: "include",
   }),
   tagTypes: ["Deductions"],

@@ -44,7 +44,7 @@ export type DeleteUserPayload = {
 export const userApi = createApi({
   reducerPath: "userApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:4000/users",
+    baseUrl: `${process.env.NEXT_PUBLIC_API_URL}/users`,
     credentials: "include",
   }),
   tagTypes: ["Users", "Privileges"],

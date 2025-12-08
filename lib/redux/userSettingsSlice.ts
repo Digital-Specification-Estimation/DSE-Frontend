@@ -18,7 +18,7 @@ interface UserSettings {
 export const userSettingsApi = createApi({
   reducerPath: "userSettingsApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:4000/user-settings",
+    baseUrl: `${process.env.NEXT_PUBLIC_API_URL}/user-settings`,
     prepareHeaders: (headers, { getState }) => {
       const token = localStorage.getItem("token");
       if (token) {

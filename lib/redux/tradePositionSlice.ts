@@ -3,9 +3,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const tradePositionApi = createApi({
   reducerPath: "tradePositionApi",
   baseQuery: fetchBaseQuery({
-    // baseUrl: "https://dse-backend-production.up.railway.app/trade-position",
-
-    baseUrl: "http://localhost:4000/trade-position",
+    baseUrl: `${process.env.NEXT_PUBLIC_API_URL}/trade-position`,
     credentials: "include",
   }),
   endpoints: (builder) => ({
