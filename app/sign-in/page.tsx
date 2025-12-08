@@ -97,41 +97,6 @@ export default function SignIn() {
           router.push("/dashboard");
         }
       }, 1000);
-
-      // Store authToken for session persistence
-      if (data.access_token) {
-        localStorage.setItem("authToken", data.access_token);
-        console.log("authToken stored:", data.access_token);
-      } else {
-        console.warn("No access_token in login response");
-      }
-
-      // // Refetch session to get role_request_approval
-      // const sessionResult = await refetchSession().unwrap();
-      // console.log("Session Refetch Result:", sessionResult);
-
-      // const roleStatus = sessionResult?.user?.role_request_approval;
-      // console.log("Role Status:", roleStatus);
-
-      // if (!sessionResult?.user) {
-      //   throw new Error("Session data missing user information");
-      // }
-
-      toast({
-        title: "Login Successful",
-        description: "Welcome back! You've been logged in successfully.",
-      });
-
-      // Delay redirect to ensure toast is visible
-      setTimeout(() => {
-        if (data.user.role_request_approval !== "APPROVED") {
-          console.log("Redirecting to /pending-role");
-          router.push("/pending-role");
-        } else {
-          console.log("Redirecting to /dashboard");
-          router.push("/dashboard");
-        }
-      }, 1000);
     } catch (err: any) {
       console.error("Login Error:", err, "Stack:", err.stack);
       const errorMessage =
