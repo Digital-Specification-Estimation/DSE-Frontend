@@ -6,14 +6,21 @@ import DashboardHeader from "@/components/DashboardHeader";
 import { useSessionQuery } from "@/lib/redux/authSlice";
 import { Loader2, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 export default function SystemLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+
   // All hooks must be called unconditionally at the top level
-  const { data: sessionData, isLoading } = useSessionQuery(undefined, {
+  const {
+    data: sessionData,
+    isLoading,
+    error,
+  } = useSessionQuery(undefined, {
     refetchOnMountOrArgChange: true,
     refetchOnFocus: true,
     refetchOnReconnect: true,
@@ -64,6 +71,13 @@ export default function SystemLayout({
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
+
+  // Redirect to login if not authenticated (403 error or no session data)
+  useEffect(() => {
+    if (!isLoading && (error || !sessionData?.user)) {
+      router.push("/login");
+    }
+  }, [isLoading, error, sessionData, router]);
 
   // Show loading state if data is being fetched or session is not available
   if (isLoading || !sessionData) {
