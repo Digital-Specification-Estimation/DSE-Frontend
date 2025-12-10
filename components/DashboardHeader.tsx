@@ -304,12 +304,22 @@ const DashboardHeader = () => {
                   src={`${process.env.NEXT_PUBLIC_API_URL}/${sessionData.user.image_url}`}
                   alt={sessionData.user.username || "User"}
                   className="w-[40px] h-[40px] rounded-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                    const fallback = e.currentTarget
+                      .nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = "flex";
+                  }}
                 />
-              ) : (
-                <div className="w-[50px] h-[50px] rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-sm">
-                  {sessionData?.user?.username?.charAt(0).toUpperCase() || "U"}
-                </div>
-              )}
+              ) : null}
+              <div
+                className="w-[40px] h-[40px] rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-sm"
+                style={{
+                  display: sessionData?.user?.image_url ? "none" : "flex",
+                }}
+              >
+                {sessionData?.user?.username?.charAt(0).toUpperCase() || "U"}
+              </div>
               <div className="flex flex-col items-start ">
                 <span className="ml-2 hidden text-[14px] md:inline">
                   {sessionData?.user?.username || "User"}

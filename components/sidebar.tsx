@@ -195,66 +195,6 @@ export function Sidebar({ user }: SidebarProps) {
       <div className="px-6 py-6 flex justify-center">
         <Logo />
       </div>
-      {/* User Info */}
-      <div className="px-4">
-        {isLoading ? (
-          <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-md">
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <div className="flex flex-col min-w-0 flex-1">
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-3 w-16" />
-            </div>
-          </div>
-        ) : isError ? (
-          <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-md border border-red-200">
-            <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-            </div>
-            <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-sm font-medium text-gray-900">
-                Error loading user
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-red-500 p-0 h-auto"
-                onClick={handleRetry}
-              >
-                <RefreshCw className="h-3 w-3 mr-1" /> Retry
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <Link
-            href="/profile"
-            className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-md relative"
-          >
-            {isFetching && (
-              <div className="absolute top-1 right-1">
-                <RefreshCw className="h-3 w-3 text-gray-400 animate-spin" />
-              </div>
-            )}
-            <Avatar className="h-10 w-10">
-              <img
-                src={
-                  `${process.env.NEXT_PUBLIC_API_URL}/${sessionData?.user?.image_url}` ||
-                  "johndoe.jpeg"
-                }
-                alt={userData.username}
-                className="h-10 w-10 object-cover rounded-full"
-              />
-            </Avatar>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-medium text-gray-900 truncate">
-                {userData.username}
-              </span>
-              <span className="text-xs text-gray-500 truncate">
-                {userData.current_role}
-              </span>
-            </div>
-          </Link>
-        )}
-      </div>
       {/* Menu */}
       <nav className="space-y-1 px-4 mt-6">
         {menuItems.map((item) => (
