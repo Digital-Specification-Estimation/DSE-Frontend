@@ -315,7 +315,7 @@ export default function EmployeeManagement() {
 
       // Send to backend bulk upload endpoint
       const response = await fetch(
-        "http://localhost:4000/employee/bulk-upload",
+        `${process.env.NEXT_PUBLIC_API_URL}/employee/bulk-upload`,
         {
           method: "POST",
           body: formData,
@@ -624,7 +624,9 @@ export default function EmployeeManagement() {
     const fetchCompanies = async () => {
       setIsLoadingCompanies(true);
       try {
-        const response = await fetch("http://localhost:4000/company/companies");
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/company/companies`
+        );
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }

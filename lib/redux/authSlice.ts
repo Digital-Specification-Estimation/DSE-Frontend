@@ -98,10 +98,6 @@ export const authApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: `${process.env.NEXT_PUBLIC_API_URL}/auth`,
     credentials: "include",
-    validateStatus: (response, result) => {
-      // Accept 200, 201 (created), and 403 (not authenticated) as valid responses
-      return response.status === 200 || response.status === 201 || response.status === 403;
-    },
   }),
   tagTypes: ["Session"],
   endpoints: (builder) => ({

@@ -189,7 +189,7 @@ export default function ProfilePage() {
                 <Avatar className="h-24 w-24 mb-4">
                   <AvatarImage
                     src={
-                      "http://localhost:4000/" + sessionData?.user?.image_url ||
+                      `${process.env.NEXT_PUBLIC_API_URL}/${sessionData?.user?.image_url}` ||
                       ""
                     }
                     className="object-cover"

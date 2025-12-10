@@ -1893,13 +1893,16 @@ export default function BusinessSetup() {
       projectId: projectId.toString(), // Ensure projectId is a string
     };
     try {
-      const response = await fetch(`http://localhost:4000/project/budget`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/project/budget`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        }
+      );
       refetchProjects();
     } catch (error) {
       console.error("Error updating budget:", error);

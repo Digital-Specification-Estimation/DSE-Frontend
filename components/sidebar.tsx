@@ -237,7 +237,7 @@ export function Sidebar({ user }: SidebarProps) {
             <Avatar className="h-10 w-10">
               <img
                 src={
-                  "http://localhost:4000/" + sessionData?.user?.image_url ||
+                  `${process.env.NEXT_PUBLIC_API_URL}/${sessionData?.user?.image_url}` ||
                   "johndoe.jpeg"
                 }
                 alt={userData.username}

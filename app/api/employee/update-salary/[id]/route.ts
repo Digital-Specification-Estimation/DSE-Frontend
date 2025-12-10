@@ -12,7 +12,7 @@ export async function PUT(
 
     // Forward the request to the backend
     const backendResponse = await fetch(
-      `http://localhost:4000/employee/update-salary/${id}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/employee/update-salary/${id}`,
       {
         method: "PUT",
         headers: {

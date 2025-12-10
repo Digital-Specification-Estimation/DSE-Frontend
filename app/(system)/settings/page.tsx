@@ -225,8 +225,12 @@ export default function Settings() {
           overtimeRate: company.overtime_rate,
         });
         if (company.company_profile) {
-          console.log(`http://localhost:4000/${company.company_profile}`);
-          setCompanyLogo(`http://localhost:4000/${company.company_profile}`);
+          console.log(
+            `${process.env.NEXT_PUBLIC_API_URL}/${company.company_profile}`
+          );
+          setCompanyLogo(
+            `${process.env.NEXT_PUBLIC_API_URL}/${company.company_profile}`
+          );
         }
       }
 

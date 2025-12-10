@@ -28,7 +28,7 @@ export default function ForgotPassword() {
     try {
       // TODO: Replace with your actual API call for password reset
       const response = await fetch(
-        "http://localhost:4000/auth/forgot-password",
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/forgot-password`,
         {
           method: "POST",
           headers: {

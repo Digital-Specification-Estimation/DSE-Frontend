@@ -301,7 +301,7 @@ const DashboardHeader = () => {
             >
               {sessionData?.user?.image_url ? (
                 <img
-                  src={"http://localhost:4000/" + sessionData.user.image_url}
+                  src={`${process.env.NEXT_PUBLIC_API_URL}/${sessionData.user.image_url}`}
                   alt={sessionData.user.username || "User"}
                   className="w-[40px] h-[40px] rounded-full object-cover"
                 />
